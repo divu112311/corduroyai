@@ -1,0 +1,3849 @@
+{
+  "01": {
+    "section": "I",
+    "section_title": "Live Animals; Animal Products",
+    "materials": [
+      "live animals",
+      "purebred breeding animals",
+      "cultures of microorganisms"
+    ],
+    "functions": [
+      "breeding",
+      "personal use",
+      "resale"
+    ],
+    "synonyms": [
+      "dehydrated products",
+      "evaporated products",
+      "freeze-dried products"
+    ]
+  },
+  "02": {
+    "section": "I",
+    "section_title": "Live Animals; Animal Products",
+    "materials": [
+      "meat",
+      "edible meat offal",
+      "non-living insects",
+      "animal guts",
+      "bladders",
+      "stomachs",
+      "blood",
+      "animal fat",
+      "high-quality beef cuts"
+    ],
+    "functions": [
+      "human consumption",
+      "retail preparation",
+      "importation",
+      "duty assessment"
+    ],
+    "synonyms": [
+      "processed meats",
+      "ground meats",
+      "diced meats",
+      "cut meats",
+      "rolled meats",
+      "skewered meats",
+      "certified beef"
+    ]
+  },
+  "03": {
+    "section": "I",
+    "section_title": "Live Animals; Animal Products",
+    "materials": [
+      "fish",
+      "crustaceans",
+      "molluscs",
+      "aquatic invertebrates",
+      "caviar",
+      "fish eggs",
+      "flours",
+      "meals",
+      "pellets",
+      "shrimp products"
+    ],
+    "functions": [
+      "consumption",
+      "agglomeration",
+      "statistical reporting"
+    ],
+    "synonyms": [
+      "dried products",
+      "dehydrated products",
+      "evaporated products",
+      "freeze-dried products"
+    ]
+  },
+  "04": {
+    "section": "I",
+    "section_title": "Live Animals; Animal Products",
+    "materials": [
+      "milk",
+      "yogurt",
+      "butter",
+      "dairy spreads",
+      "cheese",
+      "modified whey",
+      "dehydrated butter",
+      "ghee",
+      "malted milk",
+      "soft ripened cow's milk cheese"
+    ],
+    "functions": [
+      "consumption",
+      "emulsification",
+      "concentration",
+      "further processing"
+    ],
+    "synonyms": [
+      "full cream milk",
+      "skimmed milk",
+      "concentrated yogurt",
+      "natural butter",
+      "whey butter",
+      "water-in-oil emulsions",
+      "whey products",
+      "moldy cheese"
+    ]
+  },
+  "05": {
+    "section": "I",
+    "section_title": "Live Animals; Animal Products",
+    "materials": [
+      "guts",
+      "bladders",
+      "stomachs",
+      "animal blood",
+      "hides",
+      "skins",
+      "animal textile materials",
+      "horsehair",
+      "prepared knots",
+      "tufts",
+      "ivory",
+      "tusks",
+      "animal teeth",
+      "bird feathers",
+      "bird skins",
+      "pheasants"
+    ],
+    "functions": [
+      "consumption",
+      "textile production",
+      "broom or brush making",
+      "ornamental use",
+      "scientific purposes",
+      "educational purposes",
+      "fishing flies"
+    ],
+    "synonyms": [
+      "equine hair",
+      "bovine hair",
+      "dehydrated products",
+      "evaporated products",
+      "freeze-dried products"
+    ]
+  },
+  "06": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "live trees",
+      "plants",
+      "seedling vegetables",
+      "bouquets",
+      "floral baskets",
+      "wreaths"
+    ],
+    "functions": [
+      "ornamental use",
+      "decoration"
+    ],
+    "synonyms": [
+      "pellets"
+    ]
+  },
+  "07": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "edible vegetables",
+      "roots",
+      "tubers",
+      "mushrooms",
+      "truffles",
+      "olives",
+      "dried vegetables",
+      "leguminous vegetables",
+      "sweet corn",
+      "potato flour",
+      "dried leguminous flour",
+      "fruits of capsicum",
+      "vegetables treated for preservation",
+      "onions",
+      "potatoes",
+      "certified seed potatoes"
+    ],
+    "functions": [
+      "consumption",
+      "preservation",
+      "sowing",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "vegetable products",
+      "dried vegetables",
+      "certified seed",
+      "pellets"
+    ]
+  },
+  "08": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "edible fruits",
+      "nuts",
+      "chilled fruits",
+      "dried fruits",
+      "shelled nuts",
+      "unshelled nuts",
+      "miniature type watermelons",
+      "strawberries for processing",
+      "pellets"
+    ],
+    "functions": [
+      "consumption",
+      "preservation",
+      "rehydration",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "treated fruits",
+      "certified organic standards",
+      "loose strawberries"
+    ]
+  },
+  "09": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "cubeb pepper",
+      "tea",
+      "pepper shells"
+    ],
+    "functions": [
+      "seasoning",
+      "beverage preparation",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "mixed condiments",
+      "seasonings",
+      "pellets"
+    ]
+  },
+  "10": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "grains",
+      "rice",
+      "quinoa",
+      "durum wheat",
+      "seed corn",
+      "maize",
+      "pellets"
+    ],
+    "functions": [
+      "agglomeration",
+      "consumption",
+      "certification"
+    ],
+    "synonyms": [
+      "husked rice",
+      "milled rice",
+      "polished rice",
+      "glazed rice",
+      "parboiled rice",
+      "broken rice",
+      "partially removed pericarp quinoa",
+      "certified seed"
+    ]
+  },
+  "11": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "malt",
+      "starches",
+      "inulin",
+      "wheat gluten",
+      "groats",
+      "meal",
+      "corn products",
+      "cereals"
+    ],
+    "functions": [
+      "milling",
+      "agglomeration",
+      "classification based on sieve passage",
+      "dutiable mixtures"
+    ],
+    "synonyms": [
+      "pellets",
+      "prepared flours",
+      "corn flakes"
+    ]
+  },
+  "12": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "oil seeds",
+      "palm nuts",
+      "cotton seeds",
+      "sesame seeds",
+      "flours",
+      "meals",
+      "seeds",
+      "beet seeds",
+      "grass seeds",
+      "industrial plants",
+      "medicinal plants",
+      "basil",
+      "ginseng",
+      "seaweeds",
+      "algae"
+    ],
+    "functions": [
+      "oil production",
+      "food production",
+      "sowing",
+      "industrial use",
+      "medicinal use",
+      "fertilization"
+    ],
+    "synonyms": [
+      "low erucic acid rape seeds",
+      "colza seeds",
+      "pellets"
+    ]
+  },
+  "13": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "licorice extracts",
+      "pyrethrum extracts",
+      "hops extracts",
+      "aloe extracts",
+      "opium extracts",
+      "poppy straw concentrates",
+      "vegetable saps",
+      "essential oils",
+      "natural gums"
+    ],
+    "functions": [
+      "medicinal use",
+      "agglomeration",
+      "tanning",
+      "dyeing"
+    ],
+    "synonyms": [
+      "pellets",
+      "glycyrrhizin",
+      "camphor"
+    ]
+  },
+  "14": {
+    "section": "II",
+    "section_title": "Vegetable Products",
+    "materials": [
+      "bamboos",
+      "split osier",
+      "reeds",
+      "rattan cores",
+      "drawn rattans",
+      "split rattans"
+    ],
+    "functions": [
+      "plaiting",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "pellets"
+    ]
+  },
+  "15": {
+    "section": "III",
+    "section_title": "Animal or Vegetable Fats and Oils and Their Cleavage Products; Prepared Edible Fats; Animal or Vegetable Waxes",
+    "materials": [
+      "animal fats",
+      "vegetable fats",
+      "microbial fats",
+      "prepared edible fats",
+      "animal waxes",
+      "vegetable waxes",
+      "virgin olive oil",
+      "low erucic acid rape oil",
+      "low erucic acid colza oil",
+      "soap-stocks",
+      "greaves",
+      "fatty acids"
+    ],
+    "functions": [
+      "cooking",
+      "food preparation",
+      "edible use",
+      "industrial applications",
+      "cosmetic use"
+    ],
+    "synonyms": [
+      "cleavage products",
+      "fats and oils",
+      "edible fats",
+      "waxes"
+    ]
+  },
+  "16": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "meat",
+      "fish",
+      "crustaceans",
+      "molluscs",
+      "aquatic invertebrates",
+      "insects",
+      "blood",
+      "seasoning",
+      "tunas",
+      "skipjack"
+    ],
+    "functions": [
+      "food preparation",
+      "infant nutrition",
+      "dietetic use",
+      "preservation",
+      "packaging",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "homogenized preparations",
+      "canned",
+      "pellets",
+      "airtight containers"
+    ]
+  },
+  "17": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "sugars",
+      "sugar confectionery",
+      "raw sugar",
+      "cane sugar",
+      "microcrystals",
+      "molasses",
+      "blended syrups"
+    ],
+    "functions": [
+      "sweetening",
+      "preservation",
+      "agglomeration",
+      "marketing",
+      "processing"
+    ],
+    "synonyms": [
+      "canned",
+      "pellets",
+      "prepared foodstuffs",
+      "beverages",
+      "spirits",
+      "vinegar",
+      "tobacco substitutes"
+    ]
+  },
+  "18": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "cocoa",
+      "cocoa preparations",
+      "sugar confectionery",
+      "cocoa powder",
+      "chocolate",
+      "low-fat chocolate",
+      "meat",
+      "fish",
+      "aquatic invertebrates"
+    ],
+    "functions": [
+      "food preparation",
+      "sweetening",
+      "preservation",
+      "agglomeration",
+      "packaging for retail sale"
+    ],
+    "synonyms": [
+      "prepared foodstuffs",
+      "beverages",
+      "spirits",
+      "vinegar",
+      "tobacco substitutes",
+      "pellets",
+      "canned"
+    ]
+  },
+  "19": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "cereals",
+      "flour",
+      "starch",
+      "milk",
+      "bakers' wares",
+      "groats",
+      "sugars",
+      "infant formula",
+      "mixes",
+      "doughs",
+      "cocoa",
+      "chocolate",
+      "pellets",
+      "canned products"
+    ],
+    "functions": [
+      "food preparation",
+      "preservation",
+      "agglomeration",
+      "sweetening",
+      "infant nutrition",
+      "mixing",
+      "baking"
+    ],
+    "synonyms": [
+      "meal",
+      "prepared foodstuffs",
+      "beverages",
+      "spirits",
+      "vinegar",
+      "tobacco substitutes",
+      "percent by dry weight",
+      "capable of being further processed",
+      "ultimate consumer"
+    ]
+  },
+  "20": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "fruit",
+      "nut",
+      "vegetable preparations",
+      "pellets",
+      "canned products"
+    ],
+    "functions": [
+      "consumption",
+      "preservation",
+      "agglomeration",
+      "packaging for retail sale"
+    ],
+    "synonyms": [
+      "prepared foodstuffs",
+      "beverages",
+      "spirits",
+      "vinegar",
+      "manufactured tobacco substitutes"
+    ]
+  },
+  "21": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "prepared foodstuffs",
+      "beverages",
+      "spirits",
+      "vinegar",
+      "tobacco",
+      "manufactured tobacco substitutes",
+      "coffee substitutes",
+      "flavored tea",
+      "spices",
+      "medicinal yeast",
+      "prepared enzymes",
+      "concentrated fortified juices",
+      "non-concentrated juices",
+      "homogenized composite food preparations"
+    ],
+    "functions": [
+      "consumption",
+      "retail sale",
+      "dietetic purposes",
+      "preservation",
+      "agglomeration",
+      "mixing",
+      "packaging"
+    ],
+    "synonyms": [
+      "pellets",
+      "canned",
+      "ultimate consumer",
+      "brix value",
+      "liter"
+    ]
+  },
+  "22": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "beverages",
+      "spirits",
+      "vinegar",
+      "canned products",
+      "alcoholic beverages",
+      "non-alcoholic beverages",
+      "sparkling wine",
+      "effervescent wine",
+      "vitamin fortified juices",
+      "mineral fortified juices",
+      "concentrated juices",
+      "nicotine containing products"
+    ],
+    "functions": [
+      "consumption",
+      "preservation",
+      "fermentation",
+      "fortification",
+      "inhalation",
+      "agglomeration"
+    ],
+    "synonyms": [
+      "alcoholic strength",
+      "percent by dry weight",
+      "ultimate consumer",
+      "pellets"
+    ]
+  },
+  "23": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "animal feed",
+      "milk derivatives",
+      "low erucic acid rape seeds",
+      "colza seeds"
+    ],
+    "functions": [
+      "animal feeding",
+      "processing",
+      "preservation"
+    ],
+    "synonyms": [
+      "mixed feeds",
+      "mixed-feed ingredients",
+      "pellets",
+      "canned"
+    ]
+  },
+  "24": {
+    "section": "IV",
+    "section_title": "Prepared Foodstuffs; Beverages, Spirits, and Vinegar; Tobacco and Manufactured Tobacco Substitutes",
+    "materials": [
+      "tobacco",
+      "manufactured tobacco substitutes",
+      "nicotine",
+      "water pipe tobacco",
+      "glycerol",
+      "wrapper tobacco",
+      "filler tobacco",
+      "cigars",
+      "cigarettes",
+      "pellets"
+    ],
+    "functions": [
+      "inhalation without combustion",
+      "preservation",
+      "agglomeration",
+      "wrapper for cigars",
+      "filling for cigars",
+      "duty-free treatment"
+    ],
+    "synonyms": [
+      "canned",
+      "capable of being further processed",
+      "prepared for marketing",
+      "ultimate consumer"
+    ]
+  },
+  "25": {
+    "section": "V",
+    "section_title": "Mineral Products",
+    "materials": [
+      "salt",
+      "sulfur",
+      "earths",
+      "stone",
+      "plastering materials",
+      "lime",
+      "cement",
+      "vermiculite",
+      "perlite",
+      "chlorites",
+      "natural micaceous iron oxides",
+      "meerschaum",
+      "amber",
+      "broken pottery",
+      "concrete",
+      "split block mica",
+      "mica splittings"
+    ],
+    "functions": [
+      "construction",
+      "plastering",
+      "binding",
+      "insulation",
+      "decorative purposes",
+      "filler",
+      "ground cover"
+    ],
+    "synonyms": [
+      "mineral products",
+      "crude materials",
+      "natural minerals"
+    ]
+  },
+  "26": {
+    "section": "V",
+    "section_title": "Mineral Products",
+    "materials": [
+      "ores",
+      "slag",
+      "ash",
+      "residues",
+      "leaded gasoline sludges",
+      "arsenic-containing materials"
+    ],
+    "functions": [
+      "metal extraction",
+      "chemical manufacturing"
+    ],
+    "synonyms": [
+      "mineral products",
+      "slag for macadam",
+      "natural magnesium carbonate",
+      "petroleum oil sludges",
+      "basic slag",
+      "mineral wools",
+      "precious metal waste",
+      "copper mattes",
+      "nickel mattes",
+      "cobalt mattes"
+    ]
+  },
+  "27": {
+    "section": "V",
+    "section_title": "Mineral Products",
+    "materials": [
+      "mineral fuels",
+      "mineral oils",
+      "products of distillation",
+      "bituminous substances",
+      "mineral waxes",
+      "petroleum oils",
+      "waste oils",
+      "anthracite coal",
+      "bituminous coal",
+      "light oils",
+      "biodiesel",
+      "naphtha",
+      "petroleum jelly"
+    ],
+    "functions": [
+      "fuel",
+      "lubrication",
+      "solvent",
+      "energy production",
+      "blending in motor fuel manufacture",
+      "skin care"
+    ],
+    "synonyms": [
+      "mono-alkyl esters",
+      "used lubricating oils",
+      "sludge",
+      "emulsions",
+      "renewable fuels",
+      "motor fuel",
+      "motor fuel blending stock"
+    ]
+  },
+  "28": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "inorganic chemicals",
+      "organic compounds",
+      "inorganic compounds",
+      "precious metals",
+      "rare-earth metals",
+      "radioactive elements",
+      "isotopes",
+      "sodium chloride",
+      "magnesium oxide",
+      "carbon compounds",
+      "complex acids",
+      "metal salts",
+      "ammonium salts",
+      "peroxysalts",
+      "copper phosphide",
+      "silicon",
+      "selenium",
+      "mercury compounds",
+      "solutions"
+    ],
+    "functions": [
+      "chemical reactions",
+      "safety and transport",
+      "electronics applications",
+      "classification of radioactive materials",
+      "measurement of solutions"
+    ],
+    "synonyms": [
+      "natural isotopes",
+      "artificial isotopes",
+      "doped elements",
+      "aromatic compounds",
+      "modified aromatic compounds",
+      "alkyl groups"
+    ]
+  },
+  "29": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "chemically defined organic compounds",
+      "mixtures of isomers",
+      "solutions",
+      "stabilizers",
+      "additives",
+      "hormones",
+      "derivatives",
+      "epoxides",
+      "cyclic esters",
+      "crude glycerol",
+      "ethyl alcohol",
+      "biological products",
+      "coloring products"
+    ],
+    "functions": [
+      "safety in transport",
+      "chemical reactions",
+      "biological activity",
+      "coloring",
+      "stabilization"
+    ],
+    "synonyms": [
+      "aromatic compounds",
+      "modified aromatic compounds",
+      "alkyl groups",
+      "coordination compounds",
+      "metal alcoholates"
+    ]
+  },
+  "30": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "monoclonal antibodies",
+      "simple vegetable extracts",
+      "colloidal solutions",
+      "sterile surgical materials",
+      "hemostatics",
+      "dental cements",
+      "first-aid kits",
+      "hormonal contraceptives",
+      "ostomy appliances",
+      "artemisinin",
+      "amodiaquine",
+      "chloroquine",
+      "mefloquine"
+    ],
+    "functions": [
+      "therapeutic use",
+      "diagnostic use",
+      "surgical application",
+      "contraception",
+      "first aid",
+      "blood clotting",
+      "ostomy care",
+      "medication"
+    ],
+    "synonyms": [
+      "peptides",
+      "proteins",
+      "medicaments",
+      "active ingredients",
+      "mixed products",
+      "unmixed products"
+    ]
+  },
+  "31": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "sodium nitrate",
+      "ammonium nitrate",
+      "mixed fertilizers",
+      "liquid fertilizers",
+      "basic slag",
+      "superphosphates",
+      "crude natural potassium salts",
+      "potassium chloride",
+      "ammonium dihydrogenorthophosphate",
+      "diammonium hydrogenorthophosphate"
+    ],
+    "functions": [
+      "fertilization",
+      "nutrient supply",
+      "agricultural enhancement"
+    ],
+    "synonyms": [
+      "nitrogen-based fertilizers",
+      "phosphate-based fertilizers",
+      "potassium-based fertilizers",
+      "other fertilizers"
+    ]
+  },
+  "32": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "tanning extracts",
+      "dyeing extracts",
+      "tannins",
+      "dyes",
+      "pigments",
+      "paints",
+      "varnishes",
+      "putty",
+      "mastic",
+      "inks",
+      "coloring matter preparations",
+      "azo dye mixtures",
+      "volatile organic solvents",
+      "stamping foils",
+      "metallic powder",
+      "binder"
+    ],
+    "functions": [
+      "tanning",
+      "dyeing",
+      "coloring",
+      "coating",
+      "printing",
+      "preparation of pigments",
+      "production of azo dyes",
+      "solvent solutions"
+    ],
+    "synonyms": [
+      "coloring matter",
+      "mixtures for azo dye production",
+      "solutions in volatile organic solvents",
+      "thin sheets for printing"
+    ]
+  },
+  "33": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "essential oils",
+      "resinoids",
+      "odoriferous substances",
+      "scented sachets",
+      "odoriferous preparations for burning",
+      "perfumed papers",
+      "contact lens solutions",
+      "animal toilet preparations"
+    ],
+    "functions": [
+      "perfumery",
+      "cosmetic use",
+      "toilet preparations",
+      "scenting",
+      "burning for fragrance",
+      "cleaning contact lenses"
+    ],
+    "synonyms": [
+      "aromatics",
+      "fragrance compounds",
+      "scented products"
+    ]
+  },
+  "34": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "soap",
+      "organic surface-active agents",
+      "washing preparations",
+      "lubricating preparations",
+      "artificial waxes",
+      "prepared waxes",
+      "polishing preparations",
+      "scouring preparations",
+      "candles",
+      "modeling pastes",
+      "dental waxes"
+    ],
+    "functions": [
+      "cleaning",
+      "polishing",
+      "waxing",
+      "lubricating",
+      "scouring",
+      "modeling",
+      "providing light"
+    ],
+    "synonyms": [
+      "surface-active agents",
+      "emulsifiers",
+      "chemical waxes",
+      "synthetic waxes"
+    ]
+  },
+  "35": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "albuminoidal substances",
+      "modified starches",
+      "glues",
+      "enzymes",
+      "dextrins",
+      "milk protein concentrate"
+    ],
+    "functions": [
+      "adhesion",
+      "thickening",
+      "binding",
+      "biocatalysis",
+      "nutritional supplement"
+    ],
+    "synonyms": [
+      "casein",
+      "lactalbumin",
+      "starch degradation products"
+    ]
+  },
+  "36": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "explosives",
+      "pyrotechnic products",
+      "matches",
+      "pyrophoric alloys",
+      "metaldehyde",
+      "hexamethylenetetramine",
+      "solid alcohol-based fuels",
+      "semi-solid alcohol-based fuels",
+      "liquid fuels",
+      "liquefied-gas fuels",
+      "resin torches",
+      "firelighters",
+      "white phosphorus matches"
+    ],
+    "functions": [
+      "detonation",
+      "illumination",
+      "combustion",
+      "fuel source",
+      "fire starting"
+    ],
+    "synonyms": [
+      "combustible materials",
+      "chemical compounds",
+      "retail sale products",
+      "measured doses",
+      "sets of constituents"
+    ]
+  },
+  "37": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "photographic goods",
+      "cinematographic goods",
+      "thermosensitive surfaces",
+      "radioactive ores",
+      "solutions",
+      "aromatic compounds",
+      "modified aromatic compounds",
+      "alkyl groups"
+    ],
+    "functions": [
+      "formation of images",
+      "statistical reporting",
+      "retail sale",
+      "mixed together to obtain a product",
+      "chemical identification"
+    ],
+    "synonyms": [
+      "chemical abstract service (c.a.s.) registry number",
+      "benzene rings",
+      "heterocyclic rings"
+    ]
+  },
+  "38": {
+    "section": "VI",
+    "section_title": "Products of the Chemical or Allied Industries",
+    "materials": [
+      "radioactive ores",
+      "aromatic compounds",
+      "modified aromatic compounds",
+      "alkyl groups",
+      "solutions",
+      "measured doses",
+      "retail sale products"
+    ],
+    "functions": [
+      "classification in tariff schedule",
+      "chemical composition",
+      "duty determination",
+      "retail packaging",
+      "mixing to obtain products"
+    ],
+    "synonyms": [
+      "benzene rings",
+      "heterocyclic rings",
+      "chemical abstract service (c.a.s.) registry number"
+    ]
+  },
+  "39": {
+    "section": "VII",
+    "section_title": "Plastics and Articles Thereof Rubber and Articles Thereof",
+    "materials": [
+      "plastics",
+      "synthetic polyolefins",
+      "coumarone-indene resins",
+      "polymers",
+      "copolymers",
+      "chemically modified polymers",
+      "tubes",
+      "pipes",
+      "hoses",
+      "wall coverings"
+    ],
+    "functions": [
+      "shaping through heat and pressure",
+      "conveying gases or liquids",
+      "covering walls or ceilings"
+    ],
+    "synonyms": [
+      "thermoplastic materials",
+      "primary forms",
+      "graft copolymers"
+    ]
+  },
+  "40": {
+    "section": "VII",
+    "section_title": "Plastics and Articles Thereof Rubber and Articles Thereof",
+    "materials": [
+      "natural rubber",
+      "balata",
+      "gutta-percha",
+      "guayule",
+      "chicle",
+      "synthetic rubber",
+      "reclaimed substances",
+      "vulcanized rubber thread",
+      "conveyor belts",
+      "transmission belts",
+      "waste rubber",
+      "parings",
+      "scrap",
+      "plates",
+      "sheets",
+      "strips",
+      "rods",
+      "profile shapes"
+    ],
+    "functions": [
+      "vulcanization",
+      "manufacturing of belts",
+      "waste disposal",
+      "cutting to length",
+      "surface working"
+    ],
+    "synonyms": [
+      "unsaturated synthetic substances",
+      "thioplasts",
+      "modified natural rubber",
+      "emulsifiers",
+      "heat-sensitive agents",
+      "antioxidants"
+    ]
+  },
+  "41": {
+    "section": "VIII",
+    "section_title": "Raw Hides and Skins, Leather, Furskins and Articles Thereof; Saddlery and Harness; Travel Goods, Handbags and Similar Containers; Articles of Animal Gut (Other Than Silkworm Gut)",
+    "materials": [
+      "raw hides",
+      "skins",
+      "leather",
+      "furskins",
+      "animal gut",
+      "bovine hides",
+      "equine hides",
+      "sheep hides",
+      "lamb hides",
+      "goat hides",
+      "kid hides",
+      "swine hides",
+      "crust leather",
+      "composition leather",
+      "fancy leather"
+    ],
+    "functions": [
+      "manufacturing leather goods",
+      "saddlery",
+      "harness making",
+      "travel goods production",
+      "handbag creation",
+      "container production"
+    ],
+    "synonyms": [
+      "tanned hides",
+      "retanned hides",
+      "colored hides",
+      "fat-liquored hides",
+      "embossed leather",
+      "printed leather",
+      "decorated leather"
+    ]
+  },
+  "42": {
+    "section": "VIII",
+    "section_title": "Raw Hides and Skins, Leather, Furskins and Articles Thereof; Saddlery and Harness; Travel Goods, Handbags and Similar Containers; Articles of Animal Gut (Other Than Silkworm Gut)",
+    "materials": [
+      "leather",
+      "chamois",
+      "patent leather",
+      "patent laminated leather",
+      "metalized leather",
+      "animal gut",
+      "plastic bags",
+      "plaiting materials"
+    ],
+    "functions": [
+      "saddlery",
+      "harness",
+      "travel goods",
+      "handbags",
+      "carrying clothing and personal effects"
+    ],
+    "synonyms": [
+      "furskins",
+      "articles of animal gut",
+      "travel bags",
+      "sports bags"
+    ]
+  },
+  "43": {
+    "section": "VIII",
+    "section_title": "Raw Hides and Skins, Leather, Furskins and Articles Thereof; Saddlery and Harness; Travel Goods, Handbags and Similar Containers; Articles of Animal Gut (Other Than Silkworm Gut)",
+    "materials": [
+      "furskins",
+      "hides",
+      "skins",
+      "artificial fur",
+      "animal gut"
+    ],
+    "functions": [
+      "apparel lining",
+      "garment assembly",
+      "accessory creation"
+    ],
+    "synonyms": [
+      "tanned hides",
+      "dressed skins",
+      "imitation furskin"
+    ]
+  },
+  "44": {
+    "section": "IX",
+    "section_title": "Wood and Articles of Wood; Wood Charcoal; Cork and Articles of Cork; Manufacturers of Straw,of Esparto or of Other Plaiting Materials; Basketware and Wickerwork",
+    "materials": [
+      "wood",
+      "wood charcoal",
+      "cork",
+      "straw",
+      "esparto",
+      "bamboo",
+      "particle board",
+      "fiberboard",
+      "laminated wood",
+      "densified wood",
+      "wood pellets",
+      "wood briquettes",
+      "wood waste",
+      "standard wood moldings"
+    ],
+    "functions": [
+      "construction",
+      "fuel",
+      "packaging",
+      "plaiting",
+      "enhanced density and strength",
+      "residual material processing",
+      "exterior treatment"
+    ],
+    "synonyms": [
+      "wood products",
+      "wood articles",
+      "basketware",
+      "wickerwork",
+      "surface covered"
+    ]
+  },
+  "45": {
+    "section": "IX",
+    "section_title": "Wood and Articles of Wood; Wood Charcoal; Cork and Articles of Cork; Manufacturers of Straw,of Esparto or of Other Plaiting Materials; Basketware and Wickerwork",
+    "materials": [
+      "wood",
+      "wood charcoal",
+      "cork",
+      "straw",
+      "esparto",
+      "plaiting materials"
+    ],
+    "functions": [
+      "construction",
+      "fuel",
+      "insulation",
+      "manufacturing",
+      "basketry",
+      "wickerwork"
+    ],
+    "synonyms": [
+      "timber",
+      "charcoal",
+      "corkboard",
+      "baskets",
+      "woven goods"
+    ]
+  },
+  "46": {
+    "section": "IX",
+    "section_title": "Wood and Articles of Wood; Wood Charcoal; Cork and Articles of Cork; Manufacturers of Straw,of Esparto or of Other Plaiting Materials; Basketware and Wickerwork",
+    "materials": [
+      "straw",
+      "osier",
+      "willow",
+      "bamboos",
+      "rattans",
+      "rushes",
+      "reeds",
+      "strips of wood",
+      "bark",
+      "leaves",
+      "raffia",
+      "unspun natural textile fibers",
+      "plastics",
+      "paper strips"
+    ],
+    "functions": [
+      "plaiting",
+      "manufacturing basketware",
+      "creating wickerwork"
+    ],
+    "synonyms": [
+      "plaiting materials",
+      "vegetable materials"
+    ]
+  },
+  "47": {
+    "section": "X",
+    "section_title": "Pulp of Wood or of Other Fibrous Cellulosic Material; Waste and Scrap of Paper or Paperboard; Paper and Paperboard and Articles Thereof",
+    "materials": [
+      "pulp",
+      "wood",
+      "fibrous cellulosic materials",
+      "recovered paper",
+      "paperboard",
+      "soda woodpulp",
+      "sulfate woodpulp",
+      "sulfite woodpulp",
+      "sodium hydroxide",
+      "ash"
+    ],
+    "functions": [
+      "manufacture of paper",
+      "testing for quality",
+      "exportation regulation"
+    ],
+    "synonyms": [
+      "chemical wood pulp",
+      "dissolving grades",
+      "printing paper"
+    ]
+  },
+  "48": {
+    "section": "X",
+    "section_title": "Pulp of Wood or of Other Fibrous Cellulosic Material; Waste and Scrap of Paper or Paperboard; Paper and Paperboard and Articles Thereof",
+    "materials": [
+      "pulp of wood",
+      "fibrous cellulosic material",
+      "waste paper",
+      "scrap paper",
+      "paper",
+      "paperboard",
+      "newsprint",
+      "writing paper",
+      "printing paper",
+      "kraft paper",
+      "kraftliner",
+      "sack kraft paper",
+      "wallpaper",
+      "wall coverings",
+      "lightweight coated paper",
+      "semichemical fluting paper",
+      "recovered paper products",
+      "sulfite wrapping paper",
+      "cellulose wadding",
+      "disposable shoe coverings"
+    ],
+    "functions": [
+      "manufacturing paper products",
+      "printing",
+      "packaging",
+      "covering walls",
+      "wrapping",
+      "absorption",
+      "supporting printed materials"
+    ],
+    "synonyms": [
+      "uncoated paper",
+      "coated paper",
+      "kraft",
+      "fluting paper",
+      "wadding"
+    ]
+  },
+  "49": {
+    "section": "X",
+    "section_title": "Pulp of Wood or of Other Fibrous Cellulosic Material; Waste and Scrap of Paper or Paperboard; Paper and Paperboard and Articles Thereof",
+    "materials": [
+      "printed materials",
+      "books",
+      "newspapers",
+      "pictures",
+      "brochures",
+      "children's picture books",
+      "currency",
+      "securities",
+      "printing paper",
+      "woodpulp",
+      "wood"
+    ],
+    "functions": [
+      "publication",
+      "advertising",
+      "reproduction",
+      "binding",
+      "currency issuance",
+      "reporting for transfers"
+    ],
+    "synonyms": [
+      "periodicals",
+      "printed pictures",
+      "cover paper",
+      "india paper",
+      "bible paper"
+    ]
+  },
+  "50": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "silk",
+      "silk blends",
+      "animal brush-making bristles",
+      "human hair",
+      "cotton linters",
+      "asbestos",
+      "hides",
+      "skins",
+      "glass fibers",
+      "carbon fibers",
+      "yarn",
+      "dental floss",
+      "monofilament",
+      "textile materials",
+      "rubber threads",
+      "synthetic textile material",
+      "polyamides",
+      "aramids",
+      "elastomeric yarn",
+      "gimped horsehair yarn",
+      "metalized yarn",
+      "chenille yarn",
+      "gimped yarn",
+      "loop wale-yarn",
+      "sewing thread",
+      "high tenacity yarn",
+      "unbleached yarn",
+      "bleached yarn",
+      "colored yarn",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric",
+      "printed woven fabric",
+      "plain weave",
+      "elastic products"
+    ],
+    "functions": [
+      "statistical reporting",
+      "trade regulation",
+      "tariff classification",
+      "cleaning",
+      "filtering",
+      "sewing",
+      "textile production",
+      "bonding",
+      "impregnation",
+      "dipping",
+      "reinforcement",
+      "packaging for retail sale",
+      "high tenacity applications",
+      "textile assembly",
+      "coloring",
+      "printing",
+      "fabric construction"
+    ],
+    "synonyms": [
+      "waste silk",
+      "animal hair",
+      "dental floss",
+      "monofilament",
+      "textile articles",
+      "synthetic fibers",
+      "natural fibers",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "unbleached yarn",
+      "bleached yarn",
+      "dyed yarn",
+      "printed fabric",
+      "elastic textiles"
+    ]
+  },
+  "51": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "wool",
+      "fine animal hair",
+      "coarse animal hair",
+      "alpaca",
+      "llama",
+      "unimproved wool",
+      "dental floss",
+      "gimped horsehair yarn",
+      "metalized yarn",
+      "silk",
+      "waste silk",
+      "man-made fibers",
+      "true hemp",
+      "flax",
+      "coir",
+      "vegetable fibers",
+      "nylon",
+      "polyamides",
+      "polyesters",
+      "viscose rayon",
+      "textile garments",
+      "carbon fibers",
+      "glass fibers",
+      "asbestos"
+    ],
+    "functions": [
+      "manufacturing purposes",
+      "cleaning",
+      "sewing",
+      "textile production",
+      "filtering",
+      "binding",
+      "insulation",
+      "decorative use",
+      "clothing",
+      "packaging",
+      "furniture",
+      "bedding",
+      "toys",
+      "sports requisites"
+    ],
+    "synonyms": [
+      "animal hair",
+      "grey yarn",
+      "bleached yarn",
+      "dyed yarn",
+      "printed woven fabric",
+      "unbleached woven fabric",
+      "multiple yarn",
+      "cabled yarn",
+      "high tenacity yarn",
+      "elastomeric yarn",
+      "impregnated textiles",
+      "hand-loomed products",
+      "folklore products"
+    ]
+  },
+  "52": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "animal brush-making bristles",
+      "human hair",
+      "cotton linters",
+      "asbestos",
+      "dental floss",
+      "sensitized textiles",
+      "monofilament",
+      "woven fabrics",
+      "hides",
+      "skins",
+      "hair-nets",
+      "glass fibers",
+      "carbon fibers",
+      "cellulose wadding",
+      "footwear",
+      "gaiters",
+      "leggings",
+      "toys",
+      "games",
+      "sports requisites",
+      "diapers",
+      "sanitary pads",
+      "textile garments",
+      "gimped horsehair yarn",
+      "metalized yarn",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "polyamides",
+      "aramids",
+      "elastomeric yarn",
+      "high tenacity yarn",
+      "sewing thread",
+      "pocket fabrics",
+      "impregnated fabrics",
+      "bleached yarn",
+      "colored yarn",
+      "unbleached woven fabric",
+      "bleached woven fabric",
+      "dyed woven fabric",
+      "printed woven fabric",
+      "plain weave"
+    ],
+    "functions": [
+      "filtering",
+      "cleaning",
+      "construction of textiles",
+      "apparel manufacturing",
+      "sewing",
+      "packaging",
+      "insulation",
+      "decorative purposes",
+      "supporting structures",
+      "binding",
+      "reinforcement",
+      "stretching",
+      "holding",
+      "lamination",
+      "bonding",
+      "impregnation",
+      "dyeing",
+      "printing",
+      "weaving",
+      "knitting",
+      "crocheting"
+    ],
+    "synonyms": [
+      "horsehair waste",
+      "articles of human hair",
+      "vegetable materials",
+      "articles of asbestos",
+      "articles of furskin",
+      "artificial fur",
+      "textile materials",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "multiple yarn",
+      "cabled yarn",
+      "folded yarn",
+      "retail yarn",
+      "high tenacity",
+      "made up textiles",
+      "textile articles",
+      "chemical components",
+      "mechanical components",
+      "electronic components"
+    ]
+  },
+  "53": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "vegetable textile fibers",
+      "paper yarn",
+      "woven fabrics",
+      "poplin",
+      "broadcloth",
+      "sheeting",
+      "printcloth",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "flax",
+      "true hemp",
+      "coir",
+      "asbestos",
+      "human hair",
+      "animal hair",
+      "glass fibers",
+      "carbon fibers",
+      "dental floss",
+      "cellulose wadding",
+      "hides",
+      "skins",
+      "footwear",
+      "headgear",
+      "textile garments",
+      "elastomeric yarn",
+      "high tenacity yarn",
+      "gimped horsehair yarn",
+      "metalized yarn",
+      "chenille yarn",
+      "loop wale-yarn"
+    ],
+    "functions": [
+      "textile production",
+      "fabric construction",
+      "filtering",
+      "straining",
+      "cleaning",
+      "sewing",
+      "binding",
+      "insulation",
+      "reinforcement",
+      "packaging",
+      "decorative purposes",
+      "wearing",
+      "protection",
+      "supporting",
+      "stretching",
+      "holding shape"
+    ],
+    "synonyms": [
+      "plain weave",
+      "napped fabrics",
+      "unbleached yarn",
+      "bleached yarn",
+      "dyed yarn",
+      "colored yarn",
+      "multiple yarn",
+      "cabled yarn",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "textile articles",
+      "woven fabrics of yarns of different colors",
+      "printed woven fabric",
+      "impregnated fabrics",
+      "laminated fabrics"
+    ]
+  },
+  "54": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "man-made fibers",
+      "polyamides",
+      "polyesters",
+      "cellulose",
+      "viscose rayon",
+      "woven fabrics",
+      "poplin",
+      "broadcloth",
+      "sheeting",
+      "printcloth",
+      "napped fabrics",
+      "outing flannel",
+      "canton flannel",
+      "cotton",
+      "vegetable fibers",
+      "wool",
+      "animal hair",
+      "yarn",
+      "monofilament",
+      "filament tow",
+      "dental floss",
+      "sensitized textiles",
+      "glass fibers",
+      "carbon fibers",
+      "rubber threads",
+      "elastomeric yarn",
+      "high tenacity yarn",
+      "sewing thread",
+      "textile garments",
+      "chemical components",
+      "mechanical components",
+      "electronic components"
+    ],
+    "functions": [
+      "textile production",
+      "fabric construction",
+      "dying",
+      "printing",
+      "raising fibers",
+      "cleaning between teeth",
+      "filtering",
+      "impregnating",
+      "coating",
+      "laminating",
+      "sewing",
+      "extending",
+      "returning to original length",
+      "providing additional functionality"
+    ],
+    "synonyms": [
+      "staple fibers",
+      "filaments",
+      "flat fabrics",
+      "combed cotton",
+      "not combed cotton",
+      "multiple yarn",
+      "cabled yarn",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "bleached yarn",
+      "colored yarn",
+      "unbleached yarn",
+      "printed woven fabric",
+      "dyed woven fabric",
+      "woven fabric of yarns of different colors"
+    ]
+  },
+  "55": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "man-made staple fibers",
+      "man-made filament tow",
+      "woven fabrics",
+      "poplin",
+      "sheeting",
+      "printcloth",
+      "cheesecloth",
+      "lawns",
+      "voiles",
+      "batistes",
+      "duck",
+      "oxford cloth",
+      "blue denim",
+      "yarn",
+      "silk",
+      "wool",
+      "fine animal hair",
+      "vegetable fibers",
+      "coir",
+      "metal thread",
+      "high tenacity yarn",
+      "elastomeric yarn",
+      "textile garments",
+      "dental floss",
+      "carbon fibers",
+      "glass fibers",
+      "abrasive-coated textile material",
+      "sensitized textiles",
+      "monofilament",
+      "hides",
+      "skins",
+      "furskin",
+      "asbestos",
+      "cellulose wadding",
+      "footwear",
+      "headgear",
+      "toys",
+      "games",
+      "sports requisites",
+      "brushes",
+      "sanitary pads",
+      "diapers"
+    ],
+    "functions": [
+      "textile production",
+      "filtering",
+      "cleaning",
+      "sewing",
+      "dying",
+      "printing",
+      "impregnating",
+      "coating",
+      "laminating",
+      "bonding",
+      "reinforcing",
+      "packaging",
+      "insulating",
+      "decorating",
+      "protecting",
+      "wearing",
+      "furnishing"
+    ],
+    "synonyms": [
+      "filament",
+      "tow",
+      "fabric",
+      "thread",
+      "cordage",
+      "rope",
+      "cable",
+      "yarn",
+      "textile articles",
+      "garments",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric",
+      "bleached yarn",
+      "dyed yarn",
+      "printed fabric",
+      "unbleached fabric",
+      "high tenacity",
+      "elastomeric",
+      "man-made fibers"
+    ]
+  },
+  "56": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "wadding",
+      "felt",
+      "nonwovens",
+      "yarns",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "cotton",
+      "flax",
+      "hemp",
+      "coir",
+      "asbestos",
+      "glass fibers",
+      "carbon fibers",
+      "animal hair",
+      "human hair",
+      "dental floss",
+      "textile materials",
+      "impregnated textiles",
+      "rubber",
+      "plastic",
+      "embroidery threads"
+    ],
+    "functions": [
+      "insulation",
+      "binding",
+      "reinforcement",
+      "construction",
+      "filtering",
+      "straining",
+      "cleaning",
+      "sewing",
+      "packaging",
+      "decorating",
+      "supporting",
+      "laminating",
+      "coating",
+      "protecting"
+    ],
+    "synonyms": [
+      "needleloom felt",
+      "gimped yarn",
+      "metalized yarn",
+      "high tenacity yarn",
+      "elastomeric yarn",
+      "bleached yarn",
+      "dyed yarn",
+      "colored yarn",
+      "unbleached yarn",
+      "printed woven fabric",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric"
+    ]
+  },
+  "57": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "carpets",
+      "textile floor coverings",
+      "animal brush-making bristles",
+      "human hair",
+      "cotton linters",
+      "asbestos",
+      "hides",
+      "skins",
+      "hair-nets",
+      "glass fibers",
+      "carbon fibers",
+      "textile materials",
+      "yarn",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "flax",
+      "coir",
+      "viscose rayon",
+      "rubber threads",
+      "elastomeric yarn",
+      "embroidery threads"
+    ],
+    "functions": [
+      "floor covering",
+      "filtering",
+      "cleaning",
+      "sewing",
+      "textile production",
+      "insulation",
+      "decorative purposes",
+      "support for other materials",
+      "high tenacity applications"
+    ],
+    "synonyms": [
+      "textile articles",
+      "wool or fine animal hair",
+      "multiple (folded) or cabled yarn",
+      "unbleached yarn",
+      "bleached yarn",
+      "colored yarn",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric",
+      "high tenacity yarn"
+    ]
+  },
+  "58": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "woven fabrics",
+      "tufted fabrics",
+      "lace",
+      "tapestries",
+      "trimmings",
+      "embroidery",
+      "metal thread",
+      "glass thread",
+      "yarn",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "cotton",
+      "flax",
+      "hemp",
+      "coir",
+      "viscose rayon",
+      "rubber threads",
+      "asbestos",
+      "animal hair",
+      "human hair",
+      "hides",
+      "skins",
+      "glass fibers",
+      "carbon fibers",
+      "synthetic textile material"
+    ],
+    "functions": [
+      "textile production",
+      "decorative purposes",
+      "apparel manufacturing",
+      "furnishing",
+      "sewing",
+      "cleaning",
+      "filtering",
+      "straining",
+      "insulation",
+      "reinforcement",
+      "packaging",
+      "binding",
+      "supporting",
+      "embellishment"
+    ],
+    "synonyms": [
+      "high tenacity yarn",
+      "unbleached yarn",
+      "bleached yarn",
+      "colored yarn",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "multiple yarn",
+      "cabled yarn",
+      "folded yarn",
+      "gimped yarn",
+      "metalized yarn",
+      "elastic products",
+      "impregnated fabrics",
+      "laminated fabrics"
+    ]
+  },
+  "59": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "textile fabrics",
+      "plastics",
+      "rubberized textile fabrics",
+      "textile wall coverings",
+      "bolting cloth",
+      "filtering cloth",
+      "reinforced textiles",
+      "gimped horsehair yarn",
+      "metalized yarn",
+      "monofilament",
+      "asbestos",
+      "glass fibers",
+      "carbon fibers",
+      "animal brush-making bristles",
+      "human hair",
+      "cotton linters",
+      "wood veneered textiles",
+      "imitation pile fabrics",
+      "abrasive powders",
+      "metal foils",
+      "sensitized textiles",
+      "yarn",
+      "elastomeric yarn",
+      "high tenacity yarn"
+    ],
+    "functions": [
+      "industrial use",
+      "decoration",
+      "filtering",
+      "reinforcement",
+      "cleaning",
+      "sewing",
+      "textile applications",
+      "impregnation",
+      "coating",
+      "lamination"
+    ],
+    "synonyms": [
+      "coated fabrics",
+      "laminated fabrics",
+      "dipped fabrics",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "unbleached yarn",
+      "bleached yarn",
+      "colored yarn",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric"
+    ]
+  },
+  "60": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "crochet lace",
+      "knitted fabrics",
+      "crocheted fabrics",
+      "metal thread",
+      "polyethylene fabrics",
+      "polyester fabrics",
+      "long pile fabrics",
+      "open-work fabrics",
+      "velour",
+      "yarn",
+      "silk",
+      "wool",
+      "fine animal hair",
+      "man-made fibers",
+      "coir",
+      "flax",
+      "true hemp",
+      "paper yarn",
+      "dental floss",
+      "carbon fibers",
+      "glass fibers",
+      "rubber threads",
+      "elastomeric yarn",
+      "aramids",
+      "textile garments"
+    ],
+    "functions": [
+      "apparel",
+      "furnishings",
+      "insecticide treatment",
+      "cleaning between teeth",
+      "filtering or straining",
+      "sewing",
+      "textile industry use",
+      "high tenacity applications",
+      "elastic products",
+      "decorative purposes"
+    ],
+    "synonyms": [
+      "heading 5804",
+      "heading 5807",
+      "heading 5911",
+      "heading 3005",
+      "heading 3006",
+      "heading 3306",
+      "heading 3701",
+      "heading 3704",
+      "heading 6805",
+      "heading 6815",
+      "heading 4303",
+      "heading 4304",
+      "heading 4201",
+      "heading 4202",
+      "heading 2524",
+      "heading 0511",
+      "heading 0501",
+      "heading 0502",
+      "heading 5605",
+      "heading 5606",
+      "heading 5810",
+      "heading 5902",
+      "heading 5204",
+      "heading 5401",
+      "heading 5508"
+    ]
+  },
+  "61": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "knitted articles",
+      "crocheted articles",
+      "sweaters",
+      "metal thread",
+      "yarn",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "cotton",
+      "flax",
+      "hemp",
+      "coir",
+      "viscose rayon",
+      "rubber threads",
+      "elastomeric yarn",
+      "human hair",
+      "animal hair",
+      "asbestos",
+      "glass fibers",
+      "carbon fibers",
+      "dental floss",
+      "textile materials"
+    ],
+    "functions": [
+      "apparel",
+      "clothing accessories",
+      "insulation",
+      "sewing",
+      "cleaning",
+      "filtering",
+      "binding",
+      "stretching",
+      "supporting",
+      "decorating"
+    ],
+    "synonyms": [
+      "apparel articles",
+      "clothing items",
+      "garments",
+      "textile articles",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "high tenacity yarn",
+      "bleached yarn",
+      "unbleached yarn",
+      "colored yarn",
+      "printed fabric",
+      "woven fabric",
+      "knitted fabric"
+    ]
+  },
+  "62": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "textile fabric",
+      "ski suits",
+      "scarves",
+      "metal thread",
+      "treated fabrics",
+      "sealed seams",
+      "occupational outerwear",
+      "yarn",
+      "silk",
+      "wool",
+      "man-made fibers",
+      "cotton",
+      "asbestos",
+      "human hair",
+      "animal hair",
+      "glass fibers",
+      "carbon fibers",
+      "rubber threads",
+      "elastomeric yarn",
+      "polyamides",
+      "aramids"
+    ],
+    "functions": [
+      "water resistance",
+      "recreational performance",
+      "insulation",
+      "mobility",
+      "sewing",
+      "cleaning",
+      "filtering",
+      "straining",
+      "textile production",
+      "garment construction"
+    ],
+    "synonyms": [
+      "made-up articles",
+      "matching garments",
+      "ensemble",
+      "upper body garments",
+      "shirts",
+      "blouses",
+      "accessories",
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "unbleached yarn",
+      "bleached yarn",
+      "dyed yarn",
+      "woven fabric",
+      "knitted fabric",
+      "crocheted fabric"
+    ]
+  },
+  "63": {
+    "section": "XI",
+    "section_title": "Textile and Textile Articles",
+    "materials": [
+      "textile fabric",
+      "warp knit fabrics",
+      "animal brush-making bristles",
+      "human hair",
+      "cotton linters",
+      "asbestos",
+      "hides",
+      "skins",
+      "hair-nets",
+      "glass fibers",
+      "carbon fibers",
+      "rubber threads",
+      "synthetic textile material",
+      "natural fibers",
+      "metal thread",
+      "yarn",
+      "woven fabrics",
+      "knitted fabrics",
+      "crocheted fabrics",
+      "elastic products"
+    ],
+    "functions": [
+      "made-up articles",
+      "clothing",
+      "accessories",
+      "linens",
+      "footwear",
+      "headgear",
+      "cleaning",
+      "sewing",
+      "textile industry use",
+      "impregnation",
+      "bonding",
+      "reinforcement"
+    ],
+    "synonyms": [
+      "twine",
+      "cordage",
+      "ropes",
+      "cables",
+      "bleached yarn",
+      "unbleached yarn",
+      "colored yarn",
+      "printed woven fabric",
+      "high tenacity yarn",
+      "elastomeric yarn"
+    ]
+  },
+  "64": {
+    "section": "XII",
+    "section_title": "Footwear, Headgear, Umbrellas, Sun Umbrellas, Walking Sticks, Seatsticks, Whips, Riding-Crops and Parts Thereof; Prepared Feathers and Articles Made Therewith; Artificial Flowers; Articles of Human Hair",
+    "materials": [
+      "rubber",
+      "plastics",
+      "leather",
+      "prepared feathers",
+      "artificial flowers"
+    ],
+    "functions": [
+      "footwear production",
+      "water protection",
+      "sports activity support",
+      "protection against water penetration"
+    ],
+    "synonyms": [
+      "gaiters",
+      "uppers",
+      "outer sole",
+      "hiking shoes",
+      "athletic footwear"
+    ]
+  },
+  "65": {
+    "section": "XII",
+    "section_title": "Footwear, Headgear, Umbrellas, Sun Umbrellas, Walking Sticks, Seatsticks, Whips, Riding-Crops and Parts Thereof; Prepared Feathers and Articles Made Therewith; Artificial Flowers; Articles of Human Hair",
+    "materials": [
+      "headgear",
+      "prepared feathers",
+      "artificial flowers",
+      "human hair"
+    ],
+    "functions": [
+      "protection from elements",
+      "decoration",
+      "fashion accessory"
+    ],
+    "synonyms": [
+      "hats",
+      "caps",
+      "feather articles",
+      "hairpieces"
+    ]
+  },
+  "66": {
+    "section": "XII",
+    "section_title": "Footwear, Headgear, Umbrellas, Sun Umbrellas, Walking Sticks, Seatsticks, Whips, Riding-Crops and Parts Thereof; Prepared Feathers and Articles Made Therewith; Artificial Flowers; Articles of Human Hair",
+    "materials": [
+      "umbrellas",
+      "sun umbrellas",
+      "walking-sticks",
+      "seat-sticks",
+      "whips",
+      "riding-crops",
+      "prepared feathers",
+      "artificial flowers",
+      "articles of human hair"
+    ],
+    "functions": [
+      "protection from rain or sun",
+      "support while walking",
+      "control of animals",
+      "decoration",
+      "crafting"
+    ],
+    "synonyms": [
+      "parasol",
+      "cane",
+      "crop",
+      "feathered articles",
+      "synthetic blooms"
+    ]
+  },
+  "67": {
+    "section": "XII",
+    "section_title": "Footwear, Headgear, Umbrellas, Sun Umbrellas, Walking Sticks, Seatsticks, Whips, Riding-Crops and Parts Thereof; Prepared Feathers and Articles Made Therewith; Artificial Flowers; Articles of Human Hair",
+    "materials": [
+      "prepared feathers",
+      "down",
+      "artificial flowers",
+      "human hair"
+    ],
+    "functions": [
+      "decoration",
+      "filling",
+      "trimming"
+    ],
+    "synonyms": [
+      "feather articles",
+      "floral motifs"
+    ]
+  },
+  "68": {
+    "section": "XIII",
+    "section_title": "Articles of Stone, Plaster, Cement, Asbestos, Mica or Similar Materials; Ceramic Products; Glass and Glassware",
+    "materials": [
+      "stone",
+      "plaster",
+      "cement",
+      "asbestos",
+      "mica",
+      "quartzite",
+      "dolomite",
+      "slabs",
+      "tiles"
+    ],
+    "functions": [
+      "construction",
+      "insulation",
+      "ceramic production",
+      "glass production"
+    ],
+    "synonyms": [
+      "worked stone",
+      "flat stone pieces",
+      "articles of stone",
+      "ceramic products",
+      "glassware"
+    ]
+  },
+  "69": {
+    "section": "XIII",
+    "section_title": "Articles of Stone, Plaster, Cement, Asbestos, Mica or Similar Materials; Ceramic Products; Glass and Glassware",
+    "materials": [
+      "ceramic products",
+      "clays",
+      "siliceous materials",
+      "refractory articles",
+      "porcelain",
+      "china",
+      "stoneware",
+      "bone chinaware",
+      "earthenware",
+      "bricks",
+      "tiles"
+    ],
+    "functions": [
+      "fired products",
+      "construction",
+      "tableware",
+      "insulation",
+      "artistic expression"
+    ],
+    "synonyms": [
+      "cermets",
+      "glassware",
+      "available in specified sets"
+    ]
+  },
+  "70": {
+    "section": "XIII",
+    "section_title": "Articles of Stone, Plaster, Cement, Asbestos, Mica or Similar Materials; Ceramic Products; Glass and Glassware",
+    "materials": [
+      "glass",
+      "glassware",
+      "vitrifiable enamels",
+      "optical fiber cables",
+      "vehicle windows",
+      "glass wool",
+      "fused quartz",
+      "fused silica",
+      "lead crystal",
+      "silica",
+      "alkaline oxide"
+    ],
+    "functions": [
+      "enhancing glass properties",
+      "providing transparency",
+      "insulation",
+      "decorative purposes",
+      "light transmittance"
+    ],
+    "synonyms": [
+      "colored throughout the mass",
+      "absorbent layer",
+      "reflecting layer",
+      "non-reflecting layer"
+    ]
+  },
+  "71": {
+    "section": "XIV",
+    "section_title": "Natural or Cultured Pearls, Precious or Semiprecious Stones, Precious Metals, Metals Clad With Precious Metal, and Articles Thereof; Imitation Jewelry; Coin",
+    "materials": [
+      "natural pearls",
+      "cultured pearls",
+      "precious stones",
+      "semiprecious stones",
+      "precious metals",
+      "silver",
+      "gold",
+      "platinum",
+      "iridium",
+      "osmium",
+      "palladium",
+      "rhodium",
+      "ruthenium",
+      "alloys",
+      "base metals",
+      "imitation jewelry",
+      "coins"
+    ],
+    "functions": [
+      "adornment",
+      "monetary purposes",
+      "household items",
+      "recovery of precious metals"
+    ],
+    "synonyms": [
+      "jewelry",
+      "goldsmiths' wares",
+      "silversmiths' wares",
+      "articles for personal use",
+      "waste and scrap"
+    ]
+  },
+  "72": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "pig iron",
+      "spiegeleisen",
+      "ferroalloys",
+      "steel",
+      "stainless steel",
+      "other alloy steel",
+      "remelting scrap",
+      "granules",
+      "semifinished products",
+      "flat-rolled products",
+      "hot-rolled bars and rods",
+      "other bars and rods",
+      "angles",
+      "shapes",
+      "sections",
+      "wire",
+      "hollow drill bars and rods",
+      "electrical steel",
+      "high-speed steel",
+      "silico-manganese steel",
+      "cermets"
+    ],
+    "functions": [
+      "used as additives in metallurgy",
+      "manufacturing malleable ferrous materials",
+      "producing specific alloy compositions",
+      "providing structural support",
+      "forming continuous cast or hot-rolled products",
+      "creating uniform solid cross sections",
+      "producing cold-formed products",
+      "serving as raw materials for further processing"
+    ],
+    "synonyms": [
+      "iron-carbon alloys",
+      "alloy steels",
+      "sintered metal carbides",
+      "waste and scrap",
+      "powders",
+      "bars",
+      "rods",
+      "profiles",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ]
+  },
+  "73": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "iron",
+      "steel",
+      "cast iron",
+      "wire",
+      "tubes",
+      "pipes",
+      "fittings",
+      "ductile fittings",
+      "stainless steel kegs",
+      "cermets",
+      "alloys",
+      "metal powders",
+      "waste",
+      "scrap",
+      "bars",
+      "rods",
+      "profiles",
+      "plates",
+      "sheets",
+      "strip",
+      "foil"
+    ],
+    "functions": [
+      "conduction of gas or liquid",
+      "storage of liquids",
+      "structural support",
+      "manufacturing of components",
+      "waste recycling",
+      "forming shapes",
+      "providing structural integrity"
+    ],
+    "synonyms": [
+      "ferrous metals",
+      "non-ferrous metals",
+      "metallic components",
+      "sintered mixtures",
+      "hollow products",
+      "flat-surfaced products",
+      "rolled products",
+      "extruded products",
+      "drawn products",
+      "forged products"
+    ]
+  },
+  "74": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "copper",
+      "copper alloys",
+      "master alloys",
+      "beryllium copper master alloy",
+      "copper-zinc base alloys",
+      "brasses",
+      "copper-tin base alloys",
+      "bronzes",
+      "copper-nickel-zinc base alloys",
+      "nickel silvers",
+      "copper-nickel base alloys",
+      "cement copper",
+      "copper precipitates",
+      "metal waste",
+      "metal scrap",
+      "metal powders",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ],
+    "functions": [
+      "additives in metallurgy",
+      "statistical reporting",
+      "waste recycling",
+      "manufacturing of various metal forms",
+      "construction of articles",
+      "conducting electricity",
+      "structural applications"
+    ],
+    "synonyms": [
+      "refined copper",
+      "copper alloys",
+      "sintered metal carbides",
+      "hollow products",
+      "flat-surfaced products",
+      "unwrought metal"
+    ]
+  },
+  "75": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "nickel",
+      "cobalt",
+      "ferrocerium",
+      "metallic flakes",
+      "metal powders",
+      "cermets",
+      "sintered metal carbides",
+      "alloys",
+      "waste",
+      "scrap",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ],
+    "functions": [
+      "base metal composition",
+      "alloy formation",
+      "waste recycling",
+      "structural applications",
+      "electrical conductivity",
+      "mechanical strength",
+      "manufacturing components",
+      "forming shapes",
+      "providing uniform cross sections"
+    ],
+    "synonyms": [
+      "unwrought metal",
+      "sintered mixtures",
+      "metal goods",
+      "powders",
+      "hollow products",
+      "flat-surfaced products",
+      "rolled products",
+      "extruded products",
+      "drawn products",
+      "forged products"
+    ]
+  },
+  "76": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "aluminum",
+      "aluminum alloys",
+      "aluminum vanadium master alloy",
+      "aluminum can stock",
+      "body stock",
+      "lid stock",
+      "sheet ingot",
+      "foundry ingot",
+      "recyclable aluminum",
+      "high-strength heat-treatable alloys",
+      "heat-treatable industrial alloys",
+      "wire",
+      "tubes",
+      "pipes",
+      "fittings"
+    ],
+    "functions": [
+      "gas/liquid conduction",
+      "packaging",
+      "structural applications",
+      "recycling",
+      "manufacturing of alloys"
+    ],
+    "synonyms": [
+      "non-alloyed aluminum",
+      "manganese predominant stock",
+      "magnesium predominant stock",
+      "metal powders",
+      "cermets",
+      "bars",
+      "rods",
+      "profiles",
+      "plates",
+      "sheets",
+      "strip",
+      "foil"
+    ]
+  },
+  "77": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "iron",
+      "steel",
+      "copper",
+      "nickel",
+      "aluminum",
+      "lead",
+      "zinc",
+      "tin",
+      "tungsten",
+      "molybdenum",
+      "tantalum",
+      "magnesium",
+      "cobalt",
+      "bismuth",
+      "cadmium",
+      "titanium",
+      "zirconium",
+      "antimony",
+      "manganese",
+      "beryllium",
+      "chromium",
+      "germanium",
+      "vanadium",
+      "gallium",
+      "hafnium",
+      "indium",
+      "niobium",
+      "rhenium",
+      "thallium",
+      "cermets",
+      "sintered metal carbides",
+      "alloys",
+      "metal waste",
+      "metal scrap",
+      "powders",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ],
+    "functions": [
+      "construction",
+      "manufacturing",
+      "alloying",
+      "waste recycling",
+      "sintering",
+      "forming",
+      "shaping",
+      "coiling",
+      "extruding",
+      "drawing",
+      "forging",
+      "casting",
+      "machining",
+      "processing"
+    ],
+    "synonyms": [
+      "ferroalloys",
+      "master alloys",
+      "metal powders",
+      "hollow products",
+      "flat-surfaced products",
+      "unwrought metals",
+      "composite articles",
+      "mixed materials"
+    ]
+  },
+  "78": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "lead",
+      "refined lead",
+      "alloys of lead",
+      "silver",
+      "arsenic",
+      "bismuth",
+      "calcium",
+      "cadmium",
+      "copper",
+      "iron",
+      "sulfur",
+      "antimony",
+      "tin",
+      "zinc",
+      "tellurium",
+      "cermets",
+      "metal carbides",
+      "waste and scrap",
+      "powders",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ],
+    "functions": [
+      "metal extraction",
+      "alloy formation",
+      "metal refinement",
+      "statistical reporting",
+      "duty assessment",
+      "waste recycling",
+      "powder production",
+      "structural applications",
+      "manufacturing components",
+      "conduit for fluids",
+      "support structures"
+    ],
+    "synonyms": [
+      "base metals",
+      "sintered mixtures",
+      "hollow products",
+      "unwrought metal",
+      "metal goods",
+      "metallic components"
+    ]
+  },
+  "79": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "zinc",
+      "zinc alloys",
+      "zinc dust",
+      "casting-grade zinc",
+      "lead",
+      "cadmium",
+      "iron",
+      "aluminum",
+      "copper",
+      "titanium",
+      "base metals",
+      "cermets",
+      "metal powders",
+      "metal waste",
+      "scrap"
+    ],
+    "functions": [
+      "metallic substance for construction",
+      "alloying agent",
+      "coating material",
+      "casting material",
+      "component in metal mixtures",
+      "waste recycling",
+      "powdered metal applications"
+    ],
+    "synonyms": [
+      "unwrought zinc",
+      "metallic zinc",
+      "sintered mixtures",
+      "metal carbides",
+      "ferroalloys",
+      "master alloys"
+    ]
+  },
+  "80": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "tin",
+      "bismuth",
+      "copper",
+      "ferrocerium",
+      "pyrophoric alloys",
+      "headgear",
+      "umbrella frames",
+      "precious metal alloys",
+      "base metal",
+      "cermets",
+      "metal powders",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes",
+      "waste",
+      "scrap"
+    ],
+    "functions": [
+      "statistical reporting",
+      "duty classification",
+      "metallic component",
+      "ceramic component",
+      "alloy classification",
+      "wrought metal forms",
+      "hollow products",
+      "uniform cross section"
+    ],
+    "synonyms": [
+      "alloys",
+      "sintered mixtures",
+      "intermetallic compounds",
+      "unwrought metal",
+      "metal goods",
+      "powders",
+      "hollow products"
+    ]
+  },
+  "81": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "base metals",
+      "cermets",
+      "alloys",
+      "tubes",
+      "pipes",
+      "fittings",
+      "metal powders",
+      "metal waste",
+      "scrap",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil"
+    ],
+    "functions": [
+      "conducting gases",
+      "conducting liquids",
+      "forming structures",
+      "providing strength",
+      "manufacturing components",
+      "creating alloys",
+      "waste recycling",
+      "forming shapes",
+      "providing uniform cross section"
+    ],
+    "synonyms": [
+      "ferroalloys",
+      "sintered mixtures",
+      "intermetallic compounds",
+      "hollow products",
+      "unwrought metal",
+      "metal carbides"
+    ]
+  },
+  "82": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "base metal",
+      "metal carbides",
+      "cermets",
+      "iron",
+      "steel",
+      "copper",
+      "nickel",
+      "aluminum",
+      "lead",
+      "zinc",
+      "tin",
+      "tungsten",
+      "molybdenum",
+      "tantalum",
+      "magnesium",
+      "cobalt",
+      "bismuth",
+      "cadmium",
+      "titanium",
+      "zirconium",
+      "antimony",
+      "manganese",
+      "beryllium",
+      "chromium",
+      "germanium",
+      "vanadium",
+      "gallium",
+      "hafnium",
+      "indium",
+      "niobium",
+      "rhenium",
+      "thallium",
+      "alloys",
+      "sintered metal carbides",
+      "metal powders"
+    ],
+    "functions": [
+      "cutting",
+      "scooping",
+      "holding",
+      "supporting",
+      "manufacturing tools",
+      "creating kitchenware",
+      "forming articles",
+      "providing structural integrity",
+      "serving food",
+      "performing mechanical tasks"
+    ],
+    "synonyms": [
+      "tools",
+      "implements",
+      "cutlery",
+      "spoons",
+      "forks",
+      "articles of base metal",
+      "waste and scrap",
+      "powders",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ]
+  },
+  "83": {
+    "section": "XV",
+    "section_title": "Base Metals and Articles of Base Metal",
+    "materials": [
+      "base metals",
+      "iron",
+      "steel",
+      "copper",
+      "nickel",
+      "aluminum",
+      "lead",
+      "zinc",
+      "tin",
+      "tungsten",
+      "molybdenum",
+      "tantalum",
+      "magnesium",
+      "cobalt",
+      "bismuth",
+      "cadmium",
+      "titanium",
+      "zirconium",
+      "antimony",
+      "manganese",
+      "beryllium",
+      "chromium",
+      "germanium",
+      "vanadium",
+      "gallium",
+      "hafnium",
+      "indium",
+      "niobium",
+      "rhenium",
+      "thallium",
+      "cermets",
+      "metal powders",
+      "hooks",
+      "eyes",
+      "eyelets",
+      "castors",
+      "beverage cans"
+    ],
+    "functions": [
+      "construction",
+      "manufacturing",
+      "packaging",
+      "supporting",
+      "fastening",
+      "weight bearing",
+      "alloying",
+      "waste recycling",
+      "statistical reporting"
+    ],
+    "synonyms": [
+      "ferroalloys",
+      "pyrophoric alloys",
+      "sintered metal carbides",
+      "metal goods",
+      "waste and scrap",
+      "bars",
+      "rods",
+      "profiles",
+      "wire",
+      "plates",
+      "sheets",
+      "strip",
+      "foil",
+      "tubes",
+      "pipes"
+    ]
+  },
+  "84": {
+    "section": "XVI",
+    "section_title": "Machinery and Mechanical Appliances; Electrical Equipment; Parts Thereof; Sound Recorders and Reproducers, Television Image and Sound Recorders and Reproducers, and Parts and Accessories of Such Articles",
+    "materials": [
+      "nuclear reactors",
+      "boilers",
+      "machinery",
+      "mechanical appliances",
+      "electrical equipment",
+      "printed circuit boards",
+      "semiconductor devices",
+      "flat panel displays",
+      "polished steel balls",
+      "wafer manufacturing equipment",
+      "crystal growers",
+      "crystal grinders",
+      "wafer slicing saws",
+      "wafer grinders",
+      "oxidation furnaces",
+      "chemical vapor deposition equipment",
+      "physical vapor deposition equipment",
+      "molecular beam epitaxy equipment",
+      "doping equipment",
+      "etching and stripping equipment",
+      "lithography equipment",
+      "assembly equipment",
+      "testing and inspection equipment"
+    ],
+    "functions": [
+      "energy generation",
+      "heat production",
+      "mechanical operation",
+      "electrical operation",
+      "circuit assembly",
+      "semiconductor processing",
+      "film deposition",
+      "doping",
+      "etching",
+      "circuit design transfer",
+      "wafer preparation",
+      "die bonding",
+      "wire bonding",
+      "packaging",
+      "testing"
+    ],
+    "synonyms": [
+      "machines",
+      "appliances",
+      "equipment",
+      "assemblies",
+      "devices",
+      "tools",
+      "components",
+      "units"
+    ]
+  },
+  "85": {
+    "section": "XVI",
+    "section_title": "Machinery and Mechanical Appliances; Electrical Equipment; Parts Thereof; Sound Recorders and Reproducers, Television Image and Sound Recorders and Reproducers, and Parts and Accessories of Such Articles",
+    "materials": [
+      "electric accumulators",
+      "domestic electromechanical machines",
+      "solid-state non-volatile storage devices",
+      "smart cards",
+      "flat panel display modules",
+      "printed circuits",
+      "optical fibers",
+      "led light sources",
+      "semiconductor devices",
+      "electronic integrated circuits",
+      "printed circuit assemblies",
+      "spent batteries",
+      "wafer manufacturing equipment",
+      "mask fabrication equipment",
+      "wafer fabrication equipment",
+      "doping equipment",
+      "etching and stripping equipment",
+      "lithography equipment",
+      "assembly equipment",
+      "testing and inspection equipment"
+    ],
+    "functions": [
+      "energy storage",
+      "domestic use",
+      "data storage",
+      "communication",
+      "display technology",
+      "circuit design",
+      "signal transmission",
+      "lighting",
+      "signal conversion",
+      "electrical signal processing",
+      "waste management",
+      "semiconductor production",
+      "circuit pattern transfer",
+      "wafer preparation",
+      "conductivity modification",
+      "surface cleaning",
+      "circuit design exposure",
+      "device assembly",
+      "device testing"
+    ],
+    "synonyms": [
+      "batteries",
+      "home appliances",
+      "memory cards",
+      "display panels",
+      "circuit boards",
+      "fiber optics",
+      "light-emitting diodes",
+      "chips",
+      "integrated circuits",
+      "printed circuit boards",
+      "recycled batteries",
+      "wafer processing tools",
+      "masking tools",
+      "fabrication tools",
+      "doping tools",
+      "etching tools",
+      "photoresist equipment",
+      "packaging tools",
+      "inspection tools"
+    ]
+  },
+  "86": {
+    "section": "XVII",
+    "section_title": "Vehicles, Aircraft, Vessels and Associated Transport Equipment",
+    "materials": [
+      "railway locomotives",
+      "freight cars",
+      "axles",
+      "wheels",
+      "frames",
+      "brake gear",
+      "assembled track",
+      "turntables",
+      "mechanical signaling equipment",
+      "railway sleepers",
+      "track construction materials",
+      "electrical signaling equipment"
+    ],
+    "functions": [
+      "transportation",
+      "railway operation",
+      "traffic signaling",
+      "track assembly",
+      "locomotion",
+      "freight movement"
+    ],
+    "synonyms": [
+      "rolling stock",
+      "track fixtures",
+      "fittings",
+      "traffic control equipment"
+    ]
+  },
+  "87": {
+    "section": "XVII",
+    "section_title": "Vehicles, Aircraft, Vessels and Associated Transport Equipment",
+    "materials": [
+      "tractors",
+      "motor chassis",
+      "children's bicycles",
+      "framed windows",
+      "unframed windows",
+      "road tractors",
+      "trailers",
+      "semi-trailers"
+    ],
+    "functions": [
+      "hauling",
+      "pushing",
+      "transportation",
+      "classification of vehicles",
+      "statistical reporting"
+    ],
+    "synonyms": [
+      "vehicles",
+      "cycles",
+      "cabs",
+      "parts and accessories"
+    ]
+  },
+  "88": {
+    "section": "XVII",
+    "section_title": "Vehicles, Aircraft, Vessels and Associated Transport Equipment",
+    "materials": [
+      "unmanned aircraft",
+      "payloads",
+      "cameras",
+      "joints",
+      "washers",
+      "vulcanized rubber",
+      "base metal",
+      "plastics",
+      "tools",
+      "electrical machinery",
+      "arms",
+      "luminaires",
+      "brushes"
+    ],
+    "functions": [
+      "transportation",
+      "surveillance",
+      "amusement",
+      "fastening",
+      "sealing",
+      "general use",
+      "manufacturing",
+      "lighting",
+      "cleaning"
+    ],
+    "synonyms": [
+      "drones",
+      "payload carriers",
+      "optical devices",
+      "fasteners",
+      "hardware",
+      "machinery",
+      "lighting fixtures",
+      "cleaning tools"
+    ]
+  },
+  "89": {
+    "section": "XVII",
+    "section_title": "Vehicles, Aircraft, Vessels and Associated Transport Equipment",
+    "materials": [
+      "hulls",
+      "vessels",
+      "joints",
+      "washers",
+      "vulcanized rubber",
+      "base metal",
+      "plastics",
+      "tools",
+      "electrical machinery",
+      "lighting fittings",
+      "brushes"
+    ],
+    "functions": [
+      "transportation",
+      "floating",
+      "sealing",
+      "supporting",
+      "insulating",
+      "structural use",
+      "cutting",
+      "illumination",
+      "cleaning"
+    ],
+    "synonyms": [
+      "boats",
+      "ships",
+      "fasteners",
+      "gaskets",
+      "synthetic materials",
+      "instruments",
+      "devices",
+      "lamps",
+      "cleaning tools"
+    ]
+  },
+  "90": {
+    "section": "XVIII",
+    "section_title": "Optical, Photographic, Cinematographic, Measuring, Checking, Precision, Medical or Surgical Instruments and Apparatus; Clocks and Watches; Musical Instruments; Parts and Accessories Thereof",
+    "materials": [
+      "optical instruments",
+      "photographic instruments",
+      "cinematographic instruments",
+      "measuring instruments",
+      "checking instruments",
+      "precision instruments",
+      "medical instruments",
+      "surgical instruments",
+      "clocks",
+      "watches",
+      "musical instruments"
+    ],
+    "functions": [
+      "measurement",
+      "checking",
+      "precision control",
+      "medical use",
+      "surgical use",
+      "timekeeping",
+      "musical performance"
+    ],
+    "synonyms": [
+      "apparatus",
+      "devices",
+      "accessories"
+    ]
+  },
+  "91": {
+    "section": "XVIII",
+    "section_title": "Optical, Photographic, Cinematographic, Measuring, Checking, Precision, Medical or Surgical Instruments and Apparatus; Clocks and Watches; Musical Instruments; Parts and Accessories Thereof",
+    "materials": [
+      "clocks",
+      "watches",
+      "watch movements",
+      "clock movements",
+      "watch straps",
+      "batteries"
+    ],
+    "functions": [
+      "timekeeping",
+      "regulating time",
+      "supporting watch mechanisms",
+      "powering watches or clocks"
+    ],
+    "synonyms": [
+      "timepieces",
+      "horological instruments",
+      "time regulators"
+    ]
+  },
+  "92": {
+    "section": "XVIII",
+    "section_title": "Optical, Photographic, Cinematographic, Measuring, Checking, Precision, Medical or Surgical Instruments and Apparatus; Clocks and Watches; Musical Instruments; Parts and Accessories Thereof",
+    "materials": [
+      "musical instruments",
+      "parts",
+      "accessories",
+      "bows",
+      "sticks",
+      "cards",
+      "discs",
+      "rolls"
+    ],
+    "functions": [
+      "musical performance",
+      "support for instruments",
+      "storage of music",
+      "measurement of piano dimensions"
+    ],
+    "synonyms": [
+      "musical devices",
+      "instrument components",
+      "musical accessories"
+    ]
+  },
+  "93": {
+    "section": "XIX",
+    "section_title": "Arms and Ammunition; Parts and Accessories Thereof",
+    "materials": [
+      "arms",
+      "ammunition",
+      "parts",
+      "accessories",
+      "base metal",
+      "plastics",
+      "armored fighting vehicles",
+      "telescopic sights",
+      "optical devices",
+      "bows",
+      "arrows",
+      "fencing foils",
+      "toys",
+      "collectors' pieces",
+      "antiques",
+      "radio apparatus",
+      "radar apparatus"
+    ],
+    "functions": [
+      "defense",
+      "offense",
+      "support",
+      "protection",
+      "optical enhancement",
+      "sporting",
+      "collecting",
+      "communication"
+    ],
+    "synonyms": [
+      "weapons",
+      "munitions",
+      "components",
+      "attachments",
+      "military vehicles",
+      "scopes",
+      "sights",
+      "projectiles",
+      "playthings",
+      "curios",
+      "historical artifacts"
+    ]
+  },
+  "94": {
+    "section": "XX",
+    "section_title": "Miscellaneous Manufactured Articles",
+    "materials": [
+      "furniture",
+      "bedding",
+      "mattresses",
+      "mattress supports",
+      "cushions",
+      "lighting fittings",
+      "illuminated signs",
+      "prefabricated buildings"
+    ],
+    "functions": [
+      "support",
+      "comfort",
+      "illumination",
+      "signage",
+      "shelter"
+    ],
+    "synonyms": [
+      "beds",
+      "sofas",
+      "light fixtures",
+      "prebuilt structures"
+    ]
+  },
+  "95": {
+    "section": "XX",
+    "section_title": "Miscellaneous Manufactured Articles",
+    "materials": [
+      "toys",
+      "games",
+      "sports equipment",
+      "parts",
+      "accessories",
+      "candles",
+      "fireworks",
+      "fishing-related materials",
+      "sports bags",
+      "fancy dress",
+      "sports clothing",
+      "textile flags",
+      "sports footwear",
+      "walking sticks",
+      "unmounted glass eyes",
+      "base metal",
+      "plastics",
+      "bells",
+      "gongs",
+      "machinery",
+      "electronic devices",
+      "sports vehicles",
+      "children's bicycles",
+      "unmanned aircraft",
+      "sports craft",
+      "sports eyewear",
+      "decoy calls",
+      "arms",
+      "lighting strings",
+      "tripods",
+      "racket strings",
+      "camping goods",
+      "gloves",
+      "tableware",
+      "textiles"
+    ],
+    "functions": [
+      "play",
+      "entertainment",
+      "sporting activities",
+      "decoration",
+      "lighting",
+      "transportation",
+      "fishing",
+      "dressing up",
+      "communication",
+      "protection",
+      "utilitarian use"
+    ],
+    "synonyms": [
+      "playthings",
+      "recreational items",
+      "athletic gear",
+      "accessory parts",
+      "candles",
+      "pyrotechnics",
+      "fishing gear",
+      "costumes",
+      "apparel",
+      "flags",
+      "footwear",
+      "canes",
+      "glass eyes",
+      "metal parts",
+      "plastic items",
+      "sound devices",
+      "mechanical devices",
+      "electronic gadgets",
+      "vehicles",
+      "bikes",
+      "drones",
+      "watercraft",
+      "eyewear",
+      "calls",
+      "weapons",
+      "illumination strings",
+      "supports",
+      "strings",
+      "outdoor gear",
+      "handwear",
+      "dinnerware",
+      "fabrics"
+    ]
+  },
+  "96": {
+    "section": "XX",
+    "section_title": "Miscellaneous Manufactured Articles",
+    "materials": [
+      "hard seeds",
+      "pips",
+      "hulls",
+      "nuts",
+      "amber",
+      "meerschaum"
+    ],
+    "functions": [
+      "carving",
+      "preparation of knots and tufts for brooms or brushes"
+    ],
+    "synonyms": [
+      "vegetable or mineral carving material",
+      "prepared knots",
+      "prepared tufts"
+    ]
+  },
+  "97": {
+    "section": "XXI",
+    "section_title": "Works of Art, Collectors' Pieces and Antiques",
+    "materials": [
+      "works of art",
+      "collectors' pieces",
+      "antiques",
+      "mosaics",
+      "original engravings",
+      "sculpture",
+      "frames",
+      "archaeological pieces",
+      "ethnographic pieces",
+      "cultural property"
+    ],
+    "functions": [
+      "aesthetic appreciation",
+      "collection",
+      "historical significance",
+      "cultural representation",
+      "decorative purposes"
+    ],
+    "synonyms": [
+      "artworks",
+      "collectibles",
+      "historical artifacts",
+      "hand-executed impressions",
+      "castings",
+      "replicas"
+    ]
+  },
+  "98": {
+    "section": "XXII",
+    "section_title": "Special Classification Provisions; Temporary Legislation; Temporary Modifications Proclaimed pursuant to Trade Agreements Legislation; Additional Import Restrictions Proclaimed Pursuant to Section 22 of the Agricultural Adjustment Act, As Amended",
+    "materials": [],
+    "functions": [],
+    "synonyms": []
+  },
+  "99": {
+    "section": "XXII",
+    "section_title": "Special Classification Provisions; Temporary Legislation; Temporary Modifications Proclaimed pursuant to Trade Agreements Legislation; Additional Import Restrictions Proclaimed Pursuant to Section 22 of the Agricultural Adjustment Act, As Amended",
+    "materials": [],
+    "functions": [
+      "imposition of additional duties",
+      "import restrictions",
+      "statistical reporting"
+    ],
+    "synonyms": [
+      "temporary legislation",
+      "special classification provisions",
+      "collateral legislation"
+    ]
+  }
+}

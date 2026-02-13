@@ -1,0 +1,12 @@
+.env
+.env.*
+**/.env
+**/.env.*
+**/node_modules/
+**/__pycache__/
+**/*.pyc
+**/*.log
+.DS_Store
+backend/corduroyai/build_docs_progress*.json
+backend/corduroyai/hts_rich_docs_v2.json
+backend/corduroyai/tariff_database_2025.json

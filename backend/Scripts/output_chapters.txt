@@ -1,0 +1,495 @@
+
+Processing Chapter 1 - Live animals
+→ Found chapter start on page 921: CHAPTER 1
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 1 (page 921)
+
+Processing Chapter 10 - Cereals
+→ Found chapter start on page 1130: CHAPTER 10
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 10 (page 1130)
+
+Processing Chapter 11 - Products of the milling industry; malt; starches; inulin; wheat gluten
+→ Found chapter start on page 1137: CHAPTER 11
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 11 (page 1137)
+
+Processing Chapter 12 - Oil seeds and oleaginous fruits; miscellaneous grains, seeds and fruits; industrial or medicinal plants; straw and fodder
+→ Found chapter start on page 1145: CHAPTER 12
+→ Table detected with signals {'QUANTITY', 'HEADING', 'FIX', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 12 (page 1145)
+
+Processing Chapter 13 - Lac; gums, resins and other vegetable saps and extracts
+→ Found chapter start on page 1159: CHAPTER 13
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 13 (page 1159)
+
+Processing Chapter 14 - Vegetable plaiting materials; vegetable products not elsewhere specified or included
+→ Found chapter start on page 1163: CHAPTER 14
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 14 (page 1163)
+
+Processing Chapter 15 - Animal or vegetable fats and oils and their cleavage products prepared edible fats; animal or vegetable waxes
+→ Found chapter start on page 1168: CHAPTER 15
+→ Table detected with signals {'HEADING', 'FIX', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 15 (page 1168)
+
+Processing Chapter 16 - Preparations of meat, of fish or of crustaceans, molluscs or other aquatic invertebrates
+→ Found chapter start on page 1184: CHAPTER 16
+→ Table detected with signals {'HEADING', 'QUANTITY', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 16 (page 1184)
+
+Processing Chapter 17 - Sugars and sugar confectionery
+→ Found chapter start on page 1201: CHAPTER 17
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 17 (page 1201)
+
+Processing Chapter 18 - Cocoa and cocoa preparations
+→ Found chapter start on page 1224: CHAPTER 18
+→ Table detected with signals {'HEADING', 'QUANTITY', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 18 (page 1224)
+
+Processing Chapter 19 - Preparations of cereals, flour, starch or milk; bakers' wares
+→ Found chapter start on page 1245: CHAPTER 19
+→ Table detected with signals {'HEADING', 'QUANTITY', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 19 (page 1245)
+
+Processing Chapter 2 - Meat and edible meat offal
+→ Found chapter start on page 929: CHAPTER 2
+→ Table detected with signals {'HEADING', 'QUANTITY', 'UNIT', 'SUBHEADING', 'SPECIAL'}, stopping chapter
+✅ Inserted chapter 2 (page 929)
+
+Processing Chapter 20 - Preparations of vegetables, fruit, nuts or other parts of plants
+→ Found chapter start on page 841: Chapter 20
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 20 (page 841)
+
+Processing Chapter 21 - Miscellaneous edible preparations
+→ Found chapter start on page 1300: CHAPTER 21
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'QUANTITY', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 21 (page 1300)
+
+Processing Chapter 22 - Beverages, spirits and vinegar
+→ Found chapter start on page 1322: CHAPTER 22
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'QUANTITY', 'SUBHEADING', 'GENERAL'}, stopping chapter
+✅ Inserted chapter 22 (page 1322)
+
+Processing Chapter 23 - Residues and waste from the food industries; prepared animal feed
+→ Found chapter start on page 1337: CHAPTER 23
+→ Table detected with signals {'HEADING', 'QUANTITY', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 23 (page 1337)
+
+Processing Chapter 24 - Tobacco and manufactured tobacco substitutes
+→ Found chapter start on page 1344: CHAPTER 24
+→ Table detected with signals {'QUANTITY', 'HEADING', 'SUF', 'UNIT', 'SUBHEADING'}, stopping chapter
+✅ Inserted chapter 24 (page 1344)
+
+Processing Chapter 25 - Salt; sulfur; earths and stone; plastering materials, lime and cement
+→ Found chapter start on page 1363: CHAPTER 25
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 25 (page 1363)
+
+Processing Chapter 26 - Ores, slag and ash
+→ Found chapter start on page 1371: CHAPTER 26
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'QUANTITY', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 26 (page 1371)
+
+Processing Chapter 27 - Mineral fuels, mineral oils and products of their distillation; bituminous substances; mineral waxes
+→ Found chapter start on page 1381: CHAPTER 27
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 27 (page 1381)
+
+Processing Chapter 28 - Inorganic chemicals; organic or inorganic compounds of precious metals, of rare-earth metals, of radioactive elements or of isotopes
+→ Found chapter start on page 1402: CHAPTER 28
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 28 (page 1402)
+
+Processing Chapter 29 - Organic chemicals
+→ Found chapter start on page 1438: CHAPTER 29
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 29 (page 1438)
+
+Processing Chapter 3 - Fish and crustaceans, molluscs and other aquatic invertebrates
+→ Found chapter start on page 945: CHAPTER 3
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'QUANTITY', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 3 (page 945)
+
+Processing Chapter 30 - Pharmaceutical products
+→ Found chapter start on page 1590: CHAPTER 30
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 30 (page 1590)
+
+Processing Chapter 31 - Fertilizers
+→ Found chapter start on page 1603: CHAPTER 31
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 31 (page 1603)
+
+Processing Chapter 32 - Tanning or dyeing extracts; dyes, pigments, paints, varnishes, putty and mastics
+→ Found chapter start on page 1608: CHAPTER 32
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 32 (page 1608)
+
+Processing Chapter 33 - Essential oils and resinoids; perfumery, cosmetic or toilet preparations
+→ Found chapter start on page 1630: CHAPTER 33
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 33 (page 1630)
+
+Processing Chapter 34 - Soap, organic surface-active agents, washing preparations, lubricating preparations, artificial waxes, prepared waxes, polishing or scouring preparations, candles and similar articles, modeling pastes, "dental waxes" and dental preparations with a basis of plaster
+→ Found chapter start on page 1637: CHAPTER 34
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 34 (page 1637)
+
+Processing Chapter 35 - Albuminoidal substances; modified starches; glues; enzymes
+→ Found chapter start on page 1644: CHAPTER 35
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 35 (page 1644)
+
+Processing Chapter 36 - Explosives; pyrotechnic products; matches; pyrophoric alloys; certain combustible preparations
+→ Found chapter start on page 1649: CHAPTER 36
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 36 (page 1649)
+
+Processing Chapter 37 - Photographic or cinematographic goods
+→ Found chapter start on page 1653: CHAPTER 37
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'UNIT', 'ARTICLE DESCRIPTION', 'STAT'}, stopping chapter
+✅ Inserted chapter 37 (page 1653)
+
+Processing Chapter 38 - Miscellaneous chemical products
+→ Found chapter start on page 847: Chapter 38
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 38 (page 847)
+
+Processing Chapter 39 - Plastics and articles thereof
+→ Found chapter start on page 1694: CHAPTER 39
+→ Table detected with signals {'HEADING', 'FIX', 'UNIT', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 39 (page 1694)
+
+Processing Chapter 4 - Dairy produce; birds eggs; natural honey; edible products of animal origin, not elsewhere specified or included
+→ Found chapter start on page 982: CHAPTER 4
+→ Table detected with signals {'QUANTITY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 4 (page 982)
+
+Processing Chapter 40 - Rubber and articles thereof
+→ Found chapter start on page 1734: CHAPTER 40
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 40 (page 1734)
+
+Processing Chapter 41 - Raw hides and skins (other than furskins) and leather
+→ Found chapter start on page 1759: CHAPTER 41
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 41 (page 1759)
+
+Processing Chapter 42 - Articles of leather; saddlery and harness; travel goods, handbags and similar containers; articles of animal gut (other than silkworm gut)
+→ Found chapter start on page 1780: CHAPTER 42
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 42 (page 1780)
+
+Processing Chapter 43 - Furskins and artificial fur; manufactures thereof
+→ Found chapter start on page 1803: CHAPTER 43
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 43 (page 1803)
+
+Processing Chapter 44 - Wood and articles of wood; wood charcoal
+→ Found chapter start on page 1811: CHAPTER 44
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 44 (page 1811)
+
+Processing Chapter 45 - Cork and articles of cork
+→ Found chapter start on page 850: Chapter 45
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 45 (page 850)
+
+Processing Chapter 46 - Manufactures of straw, of esparto or of other plaiting materials; basketware and wickerwork
+→ Found chapter start on page 1865: CHAPTER 46
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 46 (page 1865)
+
+Processing Chapter 47 - Pulp of wood or of other fibrous cellulosic material; waste and scrap of paper or paperboard
+→ Found chapter start on page 1875: CHAPTER 47
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 47 (page 1875)
+
+Processing Chapter 48 - Paper and paperboard; articles of paper pulp, of paper or of paperboard
+→ Found chapter start on page 1878: CHAPTER 48
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 48 (page 1878)
+
+Processing Chapter 49 - Printed books, newspapers, pictures and other products of the printing industry; manuscripts, typescripts and plans
+→ Found chapter start on page 1904: CHAPTER 49
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 49 (page 1904)
+
+Processing Chapter 5 - Products of animal origin, not elsewhere specified or included
+→ Found chapter start on page 1050: CHAPTER 5
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 5 (page 1050)
+
+Processing Chapter 50 - Silk
+→ Found chapter start on page 1917: CHAPTER 50
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'UNIT', 'ARTICLE DESCRIPTION', 'STAT'}, stopping chapter
+✅ Inserted chapter 50 (page 1917)
+
+Processing Chapter 51 - Wool, fine or coarse animal hair; horsehair yarn and woven fabric
+→ Found chapter start on page 1921: CHAPTER 51
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 51 (page 1921)
+
+Processing Chapter 52 - Cotton
+→ Found chapter start on page 851: Chapter 52
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 52 (page 851)
+
+Processing Chapter 53 - Other vegetable textile fibers; paper yarn and woven fabric of paper yarn
+→ Found chapter start on page 1998: CHAPTER 53
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'UNIT', 'ARTICLE DESCRIPTION', 'STAT'}, stopping chapter
+✅ Inserted chapter 53 (page 1998)
+
+Processing Chapter 54 - Man-made filaments
+→ Found chapter start on page 2005: CHAPTER 54
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 54 (page 2005)
+
+Processing Chapter 55 - Man-made staple fibers
+→ Found chapter start on page 2037: CHAPTER 55
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 55 (page 2037)
+
+Processing Chapter 56 - Wadding, felt and nonwovens; special yarns, twine, cordage, ropes and cables and articles thereof
+→ Found chapter start on page 2074: CHAPTER 56
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 56 (page 2074)
+
+Processing Chapter 57 - Carpets and other textile floor coverings
+→ Found chapter start on page 2085: CHAPTER 57
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'UNIT', 'ARTICLE DESCRIPTION', 'STAT'}, stopping chapter
+✅ Inserted chapter 57 (page 2085)
+
+Processing Chapter 58 - Special woven fabrics; tufted textile fabrics; lace, tapestries; trimmings; embroidery
+→ Found chapter start on page 2096: CHAPTER 58
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL'}, stopping chapter
+✅ Inserted chapter 58 (page 2096)
+
+Processing Chapter 59 - Impregnated, coated, covered or laminated textile fabrics; textile articles of a kind suitable for industrial use
+→ Found chapter start on page 2110: CHAPTER 59
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'FIX', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 59 (page 2110)
+
+Processing Chapter 6 - Live trees and other plants; bulbs, roots and the like; cut flowers and ornamental foliage
+→ Found chapter start on page 1058: CHAPTER 6
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 6 (page 1058)
+
+Processing Chapter 60 - Knitted or crocheted fabrics
+→ Found chapter start on page 2121: CHAPTER 60
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 60 (page 2121)
+
+Processing Chapter 61 - Articles of apparel and clothing accessories, knitted or crocheted
+→ Found chapter start on page 2133: CHAPTER 61
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 61 (page 2133)
+
+Processing Chapter 62 - Articles of apparel and clothing accessories, not knitted or crocheted
+→ Found chapter start on page 2227: CHAPTER 62
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 62 (page 2227)
+
+Processing Chapter 63 - Other made up textile articles; sets; worn clothing and worn textile articles; rags
+→ Found chapter start on page 2376: CHAPTER 63
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 63 (page 2376)
+
+Processing Chapter 64 - Footwear, gaiters and the like; parts of such articles
+→ Found chapter start on page 2405: CHAPTER 64
+→ Table detected with signals {'HEADING', 'FIX', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 64 (page 2405)
+
+Processing Chapter 65 - Headgear and parts thereof
+→ Found chapter start on page 2449: CHAPTER 65
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 65 (page 2449)
+
+Processing Chapter 66 - Umbrellas, sun umbrellas, walking sticks, seatsticks, whips, riding-crops and parts thereof
+→ Found chapter start on page 2459: CHAPTER 66
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 66 (page 2459)
+
+Processing Chapter 67 - Prepared feathers and down and articles made of feathers or of down; artificial flowers; articles of human hair
+→ Found chapter start on page 2462: CHAPTER 67
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 67 (page 2462)
+
+Processing Chapter 68 - Articles of stone, plaster, cement, asbestos, mica or similar materials
+→ Found chapter start on page 2467: CHAPTER 68
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 68 (page 2467)
+
+Processing Chapter 69 - Ceramic products
+→ Found chapter start on page 2478: CHAPTER 69
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 69 (page 2478)
+
+Processing Chapter 7 - Edible vegetables and certain roots and tubers
+→ Found chapter start on page 1065: CHAPTER 7
+→ Table detected with signals {'QUANTITY', 'HEADING', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 7 (page 1065)
+
+Processing Chapter 70 - Glass and glassware
+→ Found chapter start on page 2496: CHAPTER 70
+→ Table detected with signals {'HEADING', 'FIX', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 70 (page 2496)
+
+Processing Chapter 71 - Natural or cultured pearls, precious or semi-precious stones,precious metals, metals clad with precious metal and articles thereof; imitation jewelry; coin
+→ Found chapter start on page 2540: CHAPTER 71
+→ Table detected with signals {'HEADING', 'FIX', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 71 (page 2540)
+
+Processing Chapter 72 - Iron and steel
+→ Found chapter start on page 2562: CHAPTER 72
+→ Table detected with signals {'QUANTITY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 72 (page 2562)
+
+Processing Chapter 73 - Articles of iron or steel
+→ Found chapter start on page 2608: CHAPTER 73
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 73 (page 2608)
+
+Processing Chapter 74 - Copper and articles thereof
+→ Found chapter start on page 2653: CHAPTER 74
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 74 (page 2653)
+
+Processing Chapter 75 - Nickel and articles thereof
+→ Found chapter start on page 2670: CHAPTER 75
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 75 (page 2670)
+
+Processing Chapter 76 - Aluminum and articles thereof
+→ Found chapter start on page 2676: CHAPTER 76
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 76 (page 2676)
+
+Processing Chapter 77 - (Reserved for possible future use)
+No content found for chapter 77
+
+Processing Chapter 78 - Lead and articles thereof
+→ Found chapter start on page 2693: CHAPTER 78
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 78 (page 2693)
+
+Processing Chapter 79 - Zinc and articles thereof
+→ Found chapter start on page 2697: CHAPTER 79
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'QUANTITY', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 79 (page 2697)
+
+Processing Chapter 8 - Edible fruit and nuts; peel of citrus fruit or melons
+→ Found chapter start on page 1101: CHAPTER 8
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 8 (page 1101)
+
+Processing Chapter 80 - Tin and articles thereof
+→ Found chapter start on page 2701: CHAPTER 80
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 80 (page 2701)
+
+Processing Chapter 81 - Other base metals; cermets; articles thereof
+→ Found chapter start on page 2704: CHAPTER 81
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 81 (page 2704)
+
+Processing Chapter 82 - Tools, implements, cutlery, spoons and forks, of base metal; parts thereof of base metal
+→ Found chapter start on page 2713: CHAPTER 82
+→ Table detected with signals {'HEADING', 'FIX', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 82 (page 2713)
+
+Processing Chapter 83 - Miscellaneous articles of base metal
+→ Found chapter start on page 2735: CHAPTER 83
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 83 (page 2735)
+
+Processing Chapter 84 - Nuclear reactors, boilers, machinery and mechanical appliances; parts thereof
+→ Found chapter start on page 2750: CHAPTER 84
+→ Table detected with signals {'HEADING', 'FIX', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 84 (page 2750)
+
+Processing Chapter 85 - Electrical machinery and equipment and parts thereof; sound recorders and reproducers, television image and sound recorders and reproducers, and parts and accessories of such articles
+→ Found chapter start on page 2879: CHAPTER 85
+→ Table detected with signals {'HEADING', 'FIX', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 85 (page 2879)
+
+Processing Chapter 86 - Railway or tramway locomotives, rolling-stock and parts thereof; railway or tramway track fixtures and fittings and parts thereof; mechanical (including electro-mechanical) traffic signalling equipment of all kinds
+→ Found chapter start on page 2969: CHAPTER 86
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'FIX', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 86 (page 2969)
+
+Processing Chapter 87 - Vehicles other than railway or tramway rolling stock, and parts and accessories thereof
+→ Found chapter start on page 2975: CHAPTER 87
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 87 (page 2975)
+
+Processing Chapter 88 - Aircraft, spacecraft, and parts thereof
+→ Found chapter start on page 3010: CHAPTER 88
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'UNIT', 'SUBHEADING', 'STAT'}, stopping chapter
+✅ Inserted chapter 88 (page 3010)
+
+Processing Chapter 89 - Ships, boats and floating structures
+→ Found chapter start on page 3016: CHAPTER 89
+→ Table detected with signals {'RATES OF DUTY', 'QUANTITY', 'HEADING', 'UNIT', 'STAT'}, stopping chapter
+✅ Inserted chapter 89 (page 3016)
+
+Processing Chapter 9 - Coffee, tea, maté and spices
+→ Found chapter start on page 1122: CHAPTER 9
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 9 (page 1122)
+
+Processing Chapter 90 - Optical, photographic, cinematographic, measuring, checking, precision, medical or surgical instruments and apparatus; parts and accessories thereof
+→ Found chapter start on page 3025: CHAPTER 90
+→ Table detected with signals {'HEADING', 'UNIT', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 90 (page 3025)
+
+Processing Chapter 91 - Clocks and watches and parts thereof
+→ Found chapter start on page 3063: CHAPTER 91
+→ Table detected with signals {'HEADING', 'UNIT', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 91 (page 3063)
+
+Processing Chapter 92 - Musical instruments; parts and accessories of such articles
+→ Found chapter start on page 3098: CHAPTER 92
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 92 (page 3098)
+
+Processing Chapter 93 - Arms and ammunition; parts and accessories thereof
+→ Found chapter start on page 3108: CHAPTER 93
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 93 (page 3108)
+
+Processing Chapter 94 - Furniture; bedding, mattresses, mattress supports, cushions and similar stuffed furnishings; lamps and lighting fittings, not elsewhere specified or included; illuminated sign illuminated nameplates and the like; prefabricated buildings
+→ Found chapter start on page 3117: CHAPTER 94
+→ Table detected with signals {'HEADING', 'FIX', 'UNIT', 'GENERAL', 'SPECIAL'}, stopping chapter
+✅ Inserted chapter 94 (page 3117)
+
+Processing Chapter 95 - Toys, games and sports requisites; parts and accessories thereof
+→ Found chapter start on page 3139: CHAPTER 95
+→ Table detected with signals {'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 95 (page 3139)
+
+Processing Chapter 96 - Miscellaneous manufactured articles
+→ Found chapter start on page 3152: CHAPTER 96
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'SPECIAL'}, stopping chapter
+✅ Inserted chapter 96 (page 3152)
+
+Processing Chapter 97 - Works of art, collectors' pieces and antiques
+→ Found chapter start on page 3173: CHAPTER 97
+→ Table detected with signals {'RATES OF DUTY', 'HEADING', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 97 (page 3173)
+
+Processing Chapter 98 - Special classification provisions
+→ Found chapter start on page 3179: CHAPTER 98
+→ Table detected with signals {'HEADING', 'UNIT', 'GENERAL', 'SPECIAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 98 (page 3179)
+
+Processing Chapter 99 - Temporary legislation; temporary modifications proclaimed pursuant to trade agreements legislation; additional import restrictions proclaimed pursuant to section 22 of the Agricultural Adjustment Act, as amended
+→ Found chapter start on page 3320: CHAPTER 99
+→ Table detected with signals {'HEADING', 'UNIT', 'SUBHEADING', 'GENERAL', 'STAT'}, stopping chapter
+✅ Inserted chapter 99 (page 3320)
+
+All chapters processed

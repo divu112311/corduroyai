@@ -1,0 +1,243 @@
+from app.services.cbp_rulings import fetch_cbp_rulings_for_rules
+from app.services.cbp_rulings import search_cbp_rulings
+from app.services.llm_call import call_llm
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from google.cloud import storage
+import json
+import os
+import re
+
+METADATA_LOOKUP = {}
+
+def load_metadata_lookup():
+    global METADATA_LOOKUP
+    if METADATA_LOOKUP:
+        return METADATA_LOOKUP
+    
+    try:
+        # Try local file first
+        if os.path.exists("hts_metadata_lookup.json"):
+            with open("hts_metadata_lookup.json", "r") as f:
+                METADATA_LOOKUP = json.load(f)
+        else:
+            # Load from GCS
+            client = storage.Client()
+            bucket = client.bucket("corduroyai")
+            blob = bucket.blob("hts_metadata_lookup.json")
+            content = blob.download_as_text()
+            METADATA_LOOKUP = json.loads(content)
+        print(f"Loaded metadata for {len(METADATA_LOOKUP)} HTS codes")
+    except Exception as e:
+        print(f"Failed to load metadata lookup: {e}")
+    
+    return METADATA_LOOKUP
+
+
+def generate_rationale(product: str, attributes: dict, matched_rules: list) -> list:
+    """
+    Use LLM to select top 3 HTS codes and provide rationales.
+    """
+    if not matched_rules:
+        return matched_rules
+    
+    # Build context for LLM
+    rules_summary = []
+    for i, rule in enumerate(matched_rules):
+        rules_summary.append(f"{i+1}. HTS {rule.get('hts')} - {rule.get('description')} (Score: {rule.get('score', 0):.2f})")
+    
+    prompt = f"""You are a trade compliance expert.
+
+Product: {product}
+Attributes: {json.dumps(attributes)}
+
+Top HTS code matches:
+{chr(10).join(rules_summary)}
+
+Select the BEST 3 HTS codes from the list and explain in 1-2 sentences:
+1. Why it matches the product
+2. What makes the top result the best match
+3. Provide a confidence adjustment (0.00 to 0.15) for each match.
+   This adjustment will be added to the Pinecone score (never decrease it).
+
+IMPORTANT:
+- Use the HTS codes EXACTLY as provided below.
+- Do NOT shorten, truncate, normalize, reformat, change the HTS codes.
+- Preserve all dots and digits.
+- The HTS value in your response MUST exactly match one of the HTS codes listed.
+
+
+Respond in this JSON format as the example provided:
+{{
+    "top_matches": [
+        {{"hts": "0102.31.00.10", "rationale": "explanation for why this matches", "confidence_adjustment": 0.08}},
+        {{"hts": "0102.29.40.54", "rationale": "explanation for why this matches", "confidence_adjustment": 0.05}},
+        {{"hts": "0102.11.00.00", "rationale": "explanation for why this matches", "confidence_adjustment": 0.03}}
+    ],
+    "best_match_reason": "why the top result is the best match"
+}}
+
+Respond ONLY with JSON.
+"""
+    
+    try:
+        result = call_llm(
+            provider="openai",
+            model="gpt-4o",
+            prompt=prompt,
+            temperature=0,
+        )
+        
+        print("Result from LLM:", result)
+        text = result['text']
+
+        # Remove ```json ... ``` or ``` ... ``` markers
+        cleaned_text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.DOTALL).strip()
+        parsed = json.loads(cleaned_text)
+        
+        #parsed = result
+        
+        
+        top_matches = parsed.get("top_matches", [])
+        rationales = {
+            r.get("hts"): r.get("rationale")
+            for r in top_matches
+            if r.get("hts")
+        }
+        adjustments = {
+            r.get("hts"): r.get("confidence_adjustment", 0)
+            for r in top_matches
+            if r.get("hts")
+        }
+
+        print("Rationales:", rationales)
+
+        # Keep only the top 3 matches in the order returned by the LLM
+        order = {r.get("hts"): i for i, r in enumerate(top_matches)}
+        filtered = [r for r in matched_rules if r.get("hts") in order]
+        filtered.sort(key=lambda r: order.get(r.get("hts"), 999))
+
+        for rule in filtered:
+            hts = rule.get("hts")
+            rule["rationale"] = rationales.get(
+                hts, "Matched via vector similarity"
+            )
+
+        # set once, outside loop
+        if filtered:
+            filtered[0]["best_match_reason"] = parsed.get("best_match_reason", "")
+        # Adjust confidence for each match; never reduce Pinecone score
+        for rule in filtered:
+            adj = adjustments.get(rule.get("hts"), 0)
+            try:
+                adj = float(adj)
+            except Exception:
+                adj = 0
+            adj = max(0.0, min(0.15, adj))
+            pinecone_conf = float(rule.get("score", 0))
+            rule["confidence"] = min(1.0, max(pinecone_conf, pinecone_conf + adj))
+
+        return filtered[:3]
+    
+    except Exception as e:
+        print(f"Rationale generation error: {e}")
+        for rule in matched_rules[:3]:
+            rule["rationale"] = "Matched via vector similarity (Pinecone)"
+    
+    return matched_rules[:3]
+
+
+
+
+def generate_ruling(data: dict) -> dict:
+    matched_rules = data.get("matched_rules", [])
+    product = data.get("product")
+    attributes = data.get("attributes", {})
+
+    if not matched_rules:
+        return {
+            "type": "clarify",
+            "clarifications": [
+                "What is the material of the product?",
+                "What is the intended use?",
+                "Where was it manufactured?"
+            ],
+        }
+
+    # Load metadata lookup
+    # metadata_lookup = load_metadata_lookup()
+    
+    for rule in matched_rules:
+        # --- Normalize HTS ---
+        hts = rule.get("hts")
+        if hts:
+            hts_str = str(hts)
+            if hts_str.isdigit() and len(hts_str) == 7:
+                hts_str = "0" + hts_str
+            rule["hts"] = hts_str
+        
+        # --- Enrich with full metadata ---
+        # meta = metadata_lookup.get(hts_str, {})
+        # rule["description"] = meta.get("description", rule.get("description", ""))
+        # rule["chapter_code"] = meta.get("chapter_code", "")
+        # rule["chapter_title"] = meta.get("chapter_title", "")
+        # rule["section_code"] = meta.get("section_code", "")
+        # rule["section_title"] = meta.get("section_title", "")
+        # rule["general_rate"] = meta.get("general_rate", "")
+        # rule["special_rate"] = meta.get("special_rate", "")
+        # rule["units"] = meta.get("units", [])
+        # rule["indent"] = meta.get("indent", "")
+
+        rule["confidence"] = float(rule.get("score", 0))
+        rule["rationale"] = "Matched via vector similarity (Pinecone)"
+
+        # CBP rulings are fetched in parallel after normalization
+        rule["cbp_rulings"] = []
+
+    def _fetch_cbp_rulings_for_rule(rule: dict) -> list:
+        try:
+            raw_desc = rule.get("description", "")
+            # Use product name if available; otherwise a very short description (2 words)
+            base_text = (product or "").strip() or raw_desc
+            short_words = base_text.split()[:2]
+            # Add one usage word if available
+            usage_text = (attributes.get("usage", "") if isinstance(attributes, dict) else "").strip()
+            usage_word = usage_text.split()[:1]
+            if usage_word:
+                short_words = short_words + usage_word
+            short_text = " ".join(short_words).strip()
+            clean_short = re.sub(r'[^a-zA-Z0-9\s]', '', short_text)
+
+            rulings = search_cbp_rulings(
+                query=clean_short,
+                max_pages=1,
+                page_size=5
+            )
+            return rulings[:5]
+        except Exception as e:
+            print(f"Failed to fetch CBP rulings for HTS {rule.get('hts')}: {e}")
+            return []
+
+    # 🔹 FETCH RULINGS IN PARALLEL (speed up)
+    if matched_rules:
+        max_workers = min(4, len(matched_rules))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_map = {executor.submit(_fetch_cbp_rulings_for_rule, rule): rule for rule in matched_rules}
+            for future in as_completed(future_map):
+                rule = future_map[future]
+                try:
+                    rule["cbp_rulings"] = future.result()
+                except Exception as e:
+                    print(f"CBP rulings future error for HTS {rule.get('hts')}: {e}")
+                    rule["cbp_rulings"] = []
+
+    matched_rules = generate_rationale(product, attributes, matched_rules)
+    print("FINAL:", json.dumps(matched_rules))
+    # Remove internal-only metadata before returning to frontend
+    for rule in matched_rules:
+        rule.pop("_metadata", None)
+    return {
+        "type": "answer",
+        "product": product,
+        "attributes": attributes,
+        "matched_rules": matched_rules
+    }

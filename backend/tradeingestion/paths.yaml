@@ -1,0 +1,16 @@
+bucket_name: corduroyai
+
+raw_paths:
+  census_imports: tradedataraw/censusimports
+  census_exports: tradedataraw/censusexports
+  cbp_rulings: tradedataraw/cbprulings
+  usitc_hts: tradedataraw/usitchts
+
+canonical_paths:
+  canonical_paths:
+  census_imports: tradedataraw/canonical/census_imports.json
+  census_exports: tradedataraw/canonical/census_exports.json
+  cbp_rulings: tradedataraw/canonical/cbp_rulings.json
+  usitc_hts: tradedataraw/canonical/usitc_hts.json
+  ustr_fta: tradedataraw/canonical/ustr_fta.json
+  un_comtrade: tradedataraw/canonical/un_comtrade.json
