@@ -1,12 +1,46 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Production
+dist/
+build/
+
+# Environment variables
 .env
-.env.*
-**/.env
-**/.env.*
-**/node_modules/
-**/__pycache__/
-**/*.pyc
-**/*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-backend/corduroyai/build_docs_progress*.json
-backend/corduroyai/hts_rich_docs_v2.json
-backend/corduroyai/tariff_database_2025.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Server
+server/dist/
+server/node_modules/
+
+# Supabase
+.supabase/
+SUPABASE_SCHEMA.md
+
+
