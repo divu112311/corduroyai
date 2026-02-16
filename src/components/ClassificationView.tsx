@@ -335,13 +335,10 @@ export function ClassificationView() {
         return;
       }
 
-      // Build product description with clarification response included
-      let productDescriptionText = query;
-      if (productDescription) {
-        productDescriptionText += `. ${productDescription}`;
-      }
-      // Add the clarification response
-      productDescriptionText += `. Clarification: ${response}`;
+      // Use the clarification response as the primary product description.
+      // The user's response IS what they actually want to classify — don't
+      // re-send the original ambiguous query that triggered clarification.
+      let productDescriptionText = response;
       if (originCountry) {
         productDescriptionText += `. Country of origin: ${originCountry}`;
       }
