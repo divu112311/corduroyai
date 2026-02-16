@@ -767,7 +767,7 @@ export function ClassificationView() {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    💡 Many HTS codes depend on material composition (e.g., textiles, metals). Adding percentages improves classification accuracy.
+                    Many HTS codes depend on material composition (e.g., textiles, metals). Adding percentages improves classification accuracy.
                   </p>
                 </div>
               </div>

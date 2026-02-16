@@ -291,7 +291,7 @@ def generate_ruling(data: dict) -> dict:
             print(f"Failed to fetch CBP rulings for HTS {rule.get('hts')}: {e}")
             return []
 
-    # 🔹 FETCH RULINGS IN PARALLEL (speed up)
+    # Fetch CBP rulings in parallel
     if matched_rules:
         max_workers = min(4, len(matched_rules))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:

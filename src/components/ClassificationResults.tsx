@@ -278,21 +278,13 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
               </p>
             )}
 
-            {/* Confidence Breakdown */}
+            {/* Rule Confidence */}
             {result.rule_confidence !== undefined && (
               <div className="mt-3 pt-3 border-t border-indigo-200">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-indigo-700 font-medium flex items-center gap-1">
-                    <Activity className="w-3.5 h-3.5" /> Rule Confidence
-                  </span>
+                  <span className="text-indigo-700 font-medium">Rule Confidence</span>
                   <span className="text-indigo-900 font-semibold">{Math.round(result.rule_confidence * 100)}%</span>
                 </div>
-                {result.similarity_score !== undefined && (
-                  <div className="flex items-center justify-between text-sm mt-1">
-                    <span className="text-indigo-600">Similarity Score</span>
-                    <span className="text-indigo-800">{Math.round(result.similarity_score * 100)}%</span>
-                  </div>
-                )}
               </div>
             )}
           </div>
