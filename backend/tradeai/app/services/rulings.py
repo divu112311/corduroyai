@@ -212,14 +212,45 @@ def generate_ruling(data: dict) -> dict:
         # CBP rulings are fetched in parallel after normalization
         rule["cbp_rulings"] = []
 
-    # ── Rule Engine Verification (enrichment only, never blocks) ──
+    # ── Rule Engine Verification ──
+    # Enriches candidates with GRI analysis. Can also trigger clarification
+    # when candidates span genuinely different categories (e.g., "cow" maps
+    # to live animal, beef, and cowhide — different chapters). This is
+    # different from preprocess clarification which catches bad/nonsensical input.
     classification_trace = ""
     try:
         rule_engine = RuleEngine(supabase_client)
         verification = rule_engine.verify_candidates(attributes, matched_rules)
         classification_trace = verification.get("trace", "")
 
-        # Merge rule verification data into matched_rules
+        # Check if candidates span multiple chapters — this means the product
+        # is clear but the HTS classification is genuinely ambiguous
+        chapters_seen = set()
+        for r in matched_rules[:5]:
+            hts = str(r.get("hts", ""))
+            if len(hts) >= 2:
+                chapters_seen.add(hts[:2].replace(".", ""))
+        candidates_span_chapters = len(chapters_seen) >= 2
+
+        # Only ask for clarification when:
+        # 1. The rule engine flagged it as not confident, AND
+        # 2. The top candidates span 2+ different chapters
+        # This means the product itself is ambiguous in classification terms
+        # (e.g., "cow" could be chapter 01, 02, or 41)
+        if (not verification.get("confident")
+                and candidates_span_chapters
+                and verification.get("questions")):
+            return {
+                "type": "clarify",
+                "clarifications": verification.get("questions"),
+                "partial_matches": [
+                    {"hts": r.get("hts"), "description": r.get("description"), "score": r.get("score", 0)}
+                    for r in matched_rules[:5]
+                ],
+                "classification_trace": classification_trace,
+            }
+
+        # Merge rule verification data into matched_rules (always happens)
         verified_map = {
             v.get("hts"): v for v in verification.get("verified_candidates", [])
         }
@@ -238,7 +269,7 @@ def generate_ruling(data: dict) -> dict:
                 }
                 rule["rule_confidence"] = verification.get("rule_confidence", 0)
 
-        # Remove candidates that are explicitly excluded by chapter notes
+        # Remove candidates explicitly excluded by chapter notes
         matched_rules = [
             r for r in matched_rules
             if verified_map.get(r.get("hts"), {}).get("status") != "excluded"
