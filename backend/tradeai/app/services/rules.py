@@ -11,10 +11,20 @@ def apply_rules(parsed: dict) -> dict:
     #   print(f"{key}: {value}")
     # Step 1: normalized description
     
-    embedding_input = parsed.get("product", "") + " " + " ".join(
-    f"{k}: {v}" for k, v in parsed.get("attributes", {}).items() if v
-    )
-    print("Apply Rules",embedding_input)
+    # Build a clean embedding input — only include trade-relevant attributes
+    product = parsed.get("product", "")
+    attrs = parsed.get("attributes", {})
+    relevant_keys = ["material", "usage", "gender", "breed", "age", "form", "processing"]
+    attr_parts = []
+    for k in relevant_keys:
+        v = attrs.get(k, "")
+        if v and str(v).strip() and str(v).strip().lower() not in ("", "empty", "n/a", "none", "not mentioned", "not applicable"):
+            attr_parts.append(str(v).strip())
+
+    embedding_input = product
+    if attr_parts:
+        embedding_input += " " + " ".join(attr_parts)
+    print("Apply Rules — embedding input:", embedding_input)
     
     vector = embed_query(embedding_input)
 

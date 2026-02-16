@@ -39,6 +39,24 @@ def classify(req: ClassifyRequest):
     )
 )
     print("PREPROCESS OUTPUT:", preprocessed)
+
+    # If preprocess detects ambiguity, return clarification immediately
+    if preprocessed.get("needs_clarification"):
+        return {
+            "type": "clarify",
+            "clarifications": preprocessed.get("clarification_questions", [
+                "Could you describe the product in more detail?"
+            ]),
+            "partial_matches": [],
+            "classification_trace": f"Preprocess flagged input as ambiguous. Corrections: {preprocessed.get('corrections_made', 'none')}",
+            "normalized": preprocessed.get("cleaned_text", ""),
+            "attributes": {
+                "product_name": preprocessed.get("product_name", ""),
+                "material": preprocessed.get("material", ""),
+                "usage": preprocessed.get("usage", ""),
+            },
+        }
+
     parsed = parse(preprocessed)
     print("PARSE OUTPUT:", parsed)
     rules_out = apply_rules(parsed)

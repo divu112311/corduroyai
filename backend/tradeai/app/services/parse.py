@@ -9,6 +9,8 @@ def parse(data: dict) -> dict:
     breed = data.get("breed", "")
     age = data.get("age", "")
     usage = data.get("usage", "")
+    form = data.get("form", "")
+    processing = data.get("processing", "")
     user_id = data.get("user_id", "")
 
     # Use product_name if available, else cleaned_text
@@ -23,6 +25,8 @@ def parse(data: dict) -> dict:
         "breed": breed,
         "age": age,
         "usage": usage,
+        "form": form,
+        "processing": processing,
         "contains_digits": any(char.isdigit() for char in cleaned_text)
     }
 
