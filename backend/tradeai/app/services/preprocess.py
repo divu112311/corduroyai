@@ -10,25 +10,27 @@ def preprocess(data: PreprocessRequest) -> PreprocessResponse:
 
 Given this raw product input, you must:
 1. Understand the user's INTENT — what physical product are they trying to classify?
-2. Fix spelling errors, typos, shorthand, and slang (e.g., "cow" → "cover", "spkr" → "speaker", "tshrt" → "t-shirt")
+2. Only fix OBVIOUS abbreviations and shorthand (e.g., "tshrt" → "t-shirt", "spkr" → "speaker", "alum" → "aluminum")
 3. Handle multiple languages — translate non-English product names to English
-4. Detect AMBIGUITY — if the input could refer to multiple very different products, flag it
+4. Detect AMBIGUITY — if the input is unclear, doesn't make sense as a product, or could mean multiple things, ASK the user
 5. Extract structured attributes
 
 CRITICAL RULES:
-- Think like a customs broker. "cow" by itself could be a live cow (Chapter 01) or a misspelling of "cover".
-  "cow for speakers" almost certainly means "cover for speakers", NOT a bovine animal near audio equipment.
-- If the input is clearly a product, normalize it. Don't just pass through gibberish.
-- If the input is genuinely ambiguous (could be 2+ VERY different products), set "ambiguous" to true
-  and provide clarification questions.
-- If the input is nonsensical or too vague to classify (e.g., "thing", "stuff", "abc"), set "too_vague" to true.
+- NEVER guess or auto-correct a real word into a different word. If someone types "cow", that IS a cow.
+  Do NOT change it to "cover" or anything else. Only correct obvious non-word typos and abbreviations.
+- If the combination of words doesn't make clear sense as a single product (e.g., "cow for speakers"
+  is confusing — a cow is an animal, speakers are electronics), set "ambiguous" to true and ASK what they mean.
+- If a single word could refer to multiple product categories, set "ambiguous" to true.
+  Example: "horses" could be live horses, horse meat, horsehair — ask which one.
+- If the input is nonsensical or too vague (e.g., "thing", "stuff", "abc"), set "too_vague" to true.
+- When in doubt, ASK. Never assume.
 
 Raw input: "{text}"
 
 Respond in this exact JSON format:
 {{
-    "product_name": "the corrected/normalized product name",
-    "product_description": "cleaned, trade-classification-ready description of the physical product",
+    "product_name": "the product name as the user gave it (only fix obvious abbreviations)",
+    "product_description": "cleaned description of the physical product, or the raw input if unclear",
     "gender": "male/female/unisex or empty if not applicable",
     "material": "material type or empty if not mentioned",
     "breed": "breed type or empty if not applicable",
@@ -38,14 +40,15 @@ Respond in this exact JSON format:
     "processing": "level of processing (raw/processed/assembled/etc.) or empty",
     "ambiguous": false,
     "too_vague": false,
-    "corrections_made": "what you corrected and why, or empty if input was clear",
+    "corrections_made": "what you corrected and why, or empty if nothing was changed",
     "clarification_questions": []
 }}
 
 Examples:
-- "cow for speakers" → product_name: "cover for speakers", corrections_made: "corrected 'cow' to 'cover' (likely typo)"
-- "horses" → ambiguous: true, clarification_questions: ["Are you classifying live horses, horse meat, horsehair, or horse-related products?"]
-- "cotton tshrt mens" → product_name: "men's cotton t-shirt", corrections_made: "expanded abbreviations"
+- "cow for speakers" → ambiguous: true, clarification_questions: ["Your input 'cow for speakers' is unclear. Did you mean a cover/case for speakers, or something else? Please describe the product you want to classify."]
+- "horses" → ambiguous: true, clarification_questions: ["Are you classifying live horses, horse meat, horsehair, or horse-related products like saddles?"]
+- "cotton tshrt mens" → product_name: "men's cotton t-shirt", corrections_made: "expanded 'tshrt' to 't-shirt'"
+- "bluetooth speaker" → product_name: "bluetooth speaker", ambiguous: false
 - "xyz123" → too_vague: true, clarification_questions: ["Could you describe the physical product you want to classify?"]
 
 Respond ONLY with JSON.
