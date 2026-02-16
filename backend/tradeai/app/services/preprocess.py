@@ -3,6 +3,104 @@ from app.services.llm_call import call_llm
 import json
 import re
 
+
+def preprocess_clarification(original_query: str, clarification_response: str, user_id: str = "") -> dict:
+    """
+    Preprocess a clarification follow-up. The user originally typed something
+    ambiguous, was asked a question, and responded. We need BOTH pieces to
+    understand what they want.
+
+    Examples:
+      original="cow for speakers", clarification="cow for meat"
+        → user corrected entirely, product is "cow for meat" (bovine for meat)
+      original="cow for speakers", clarification="meat"
+        → user answered the question, product is "cow for meat" (bovine for meat)
+      original="horses", clarification="live horses for racing"
+        → user specified, product is "live horses for racing"
+    """
+    prompt = f"""You are a trade compliance assistant. A user is clarifying what product they want to classify.
+
+ORIGINAL INPUT (was flagged as ambiguous):
+"{original_query}"
+
+USER'S CLARIFICATION RESPONSE:
+"{clarification_response}"
+
+Your job: combine these two pieces to understand what single physical product the user wants to classify.
+
+Rules:
+- The clarification REFINES or CORRECTS the original. Trust the clarification over the original.
+- If the clarification is a full product description, use it (the user corrected themselves).
+- If the clarification is a short answer (like "meat" or "live"), combine it with context from the original to build the full product description.
+- Extract all attributes you can from BOTH inputs combined.
+- Do NOT set ambiguous to true. The user already clarified. Just do your best to extract the product.
+- Only set too_vague to true if even after combining both inputs you truly cannot determine any product.
+
+Respond in this exact JSON format:
+{{
+    "product_name": "the resolved product name",
+    "product_description": "clear description combining original context + clarification",
+    "gender": "male/female/unisex or empty",
+    "material": "material type or empty",
+    "breed": "breed type or empty",
+    "age": "age or age group or empty",
+    "usage": "intended usage or empty",
+    "form": "physical form or empty",
+    "processing": "level of processing or empty",
+    "ambiguous": false,
+    "too_vague": false,
+    "corrections_made": "how you combined the original + clarification",
+    "clarification_questions": []
+}}
+
+Respond ONLY with JSON.
+"""
+    try:
+        result = call_llm(
+            provider="openai",
+            model="gpt-4o",
+            prompt=prompt,
+            temperature=0,
+        )
+        llm_text = result.get("text", "")
+        print("Clarification preprocess output:", llm_text)
+
+        match = re.search(r'\{.*\}', llm_text, re.DOTALL)
+        if match:
+            parsed = json.loads(match.group())
+            return {
+                "cleaned_text": parsed.get("product_description", clarification_response.strip()),
+                "product_name": parsed.get("product_name", ""),
+                "gender": parsed.get("gender", ""),
+                "material": parsed.get("material", ""),
+                "breed": parsed.get("breed", ""),
+                "age": parsed.get("age", ""),
+                "usage": parsed.get("usage", ""),
+                "form": parsed.get("form", ""),
+                "processing": parsed.get("processing", ""),
+                "user_id": user_id,
+                "needs_clarification": False,
+                "corrections_made": parsed.get("corrections_made", ""),
+            }
+    except Exception as e:
+        print(f"Clarification preprocess error: {e}")
+
+    # Fallback: just use the clarification response
+    return {
+        "cleaned_text": clarification_response.strip(),
+        "product_name": clarification_response.strip(),
+        "gender": "",
+        "material": "",
+        "breed": "",
+        "age": "",
+        "usage": "",
+        "form": "",
+        "processing": "",
+        "user_id": user_id,
+        "needs_clarification": False,
+    }
+
+
 def preprocess(data: PreprocessRequest) -> PreprocessResponse:
     text = data.product_description
     

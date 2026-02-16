@@ -6,7 +6,7 @@ from typing import Optional
 from dotenv import load_dotenv
 import os
 
-from app.services.preprocess import preprocess
+from app.services.preprocess import preprocess, preprocess_clarification
 from app.services.parse import parse
 from app.services.rules import apply_rules
 from app.services.rulings import generate_ruling
@@ -29,21 +29,31 @@ class ClassifyRequest(BaseModel):
     user_id: str
     confidence_threshold: float = 0.8
     is_clarification: bool = False
+    original_query: Optional[str] = None
+    clarification_response: Optional[str] = None
 
 
 @app.post("/classify")
 def classify(req: ClassifyRequest):
-    preprocessed = preprocess(
-    PreprocessRequest(
-        product_description=req.product_description,
-        user_id=req.user_id,
-    )
-)
+    # When this is a clarification follow-up, send both original + answer
+    # to a special preprocess that merges them intelligently
+    if req.is_clarification and req.original_query and req.clarification_response:
+        preprocessed = preprocess_clarification(
+            original_query=req.original_query,
+            clarification_response=req.clarification_response,
+            user_id=req.user_id,
+        )
+    else:
+        preprocessed = preprocess(
+            PreprocessRequest(
+                product_description=req.product_description,
+                user_id=req.user_id,
+            )
+        )
     print("PREPROCESS OUTPUT:", preprocessed)
 
-    # If preprocess detects ambiguity, return clarification — BUT skip this
-    # when the user is answering a clarification question (is_clarification=True).
-    # They already clarified; don't ask again.
+    # If preprocess detects ambiguity, return clarification.
+    # Skip this when user is already answering a clarification.
     if preprocessed.get("needs_clarification") and not req.is_clarification:
         return {
             "type": "clarify",

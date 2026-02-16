@@ -9,7 +9,10 @@ export async function classifyProduct(
   productDescription: string,
   userId: string,
   confidenceThreshold?: number,
-  isClarification?: boolean
+  clarificationContext?: {
+    originalQuery: string;
+    clarificationResponse: string;
+  }
 ): Promise<{
   normalized?: string;
   attributes?: {
@@ -65,8 +68,10 @@ export async function classifyProduct(
       user_id: userId,
       confidence_threshold: threshold,
     };
-    if (isClarification) {
+    if (clarificationContext) {
       requestBody.is_clarification = true;
+      requestBody.original_query = clarificationContext.originalQuery;
+      requestBody.clarification_response = clarificationContext.clarificationResponse;
     }
 
     const { data: response, error } = await supabase.functions.invoke('python-proxy', {

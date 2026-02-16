@@ -335,30 +335,29 @@ export function ClassificationView() {
         return;
       }
 
-      // Use the clarification response as the primary product description.
-      // The user's response IS what they actually want to classify — don't
-      // re-send the original ambiguous query that triggered clarification.
-      let productDescriptionText = response;
+      // Build the original query (what the user typed before clarification)
+      let originalQuery = query;
+      if (productDescription) {
+        originalQuery += `. ${productDescription}`;
+      }
       if (originCountry) {
-        productDescriptionText += `. Country of origin: ${originCountry}`;
+        originalQuery += `. Country of origin: ${originCountry}`;
       }
       if (materials.length > 0) {
         const materialsText = materials.map(m => `${m.material} (${m.percentage}%)`).join(', ');
-        productDescriptionText += `. Materials: ${materialsText}`;
-      }
-      if (unitCost) {
-        productDescriptionText += `. Unit cost: ${unitCost}`;
-      }
-      if (vendor) {
-        productDescriptionText += `. Vendor: ${vendor}`;
-      }
-      if (sku) {
-        productDescriptionText += `. SKU: ${sku}`;
+        originalQuery += `. Materials: ${materialsText}`;
       }
 
-      // Call classification with is_clarification=true so backend skips ambiguity gate
-      console.log('Calling classifyProduct (clarification) with:', { productDescriptionText, userId: user.id, isClarification: true });
-      const classificationResponse = await classifyProduct(productDescriptionText, user.id, undefined, true);
+      // Send BOTH original query + clarification response as separate fields.
+      // The backend will combine them intelligently:
+      //   - "cow for speakers" + "cow for meat" → understands user corrected to "cow for meat"
+      //   - "cow for speakers" + "meat" → combines: "cow for meat"
+      const productDescriptionText = `${originalQuery}. Clarification: ${response}`;
+      console.log('Calling classifyProduct (clarification) with:', { originalQuery, clarificationResponse: response, userId: user.id });
+      const classificationResponse = await classifyProduct(productDescriptionText, user.id, undefined, {
+        originalQuery,
+        clarificationResponse: response,
+      });
       console.log('classifyProduct (clarification) response:', classificationResponse);
       
       if (!classificationResponse) {
