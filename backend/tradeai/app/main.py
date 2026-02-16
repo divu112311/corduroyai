@@ -28,6 +28,7 @@ class ClassifyRequest(BaseModel):
     product_description: str
     user_id: str
     confidence_threshold: float = 0.8
+    is_clarification: bool = False
 
 
 @app.post("/classify")
@@ -40,8 +41,10 @@ def classify(req: ClassifyRequest):
 )
     print("PREPROCESS OUTPUT:", preprocessed)
 
-    # If preprocess detects ambiguity, return clarification immediately
-    if preprocessed.get("needs_clarification"):
+    # If preprocess detects ambiguity, return clarification — BUT skip this
+    # when the user is answering a clarification question (is_clarification=True).
+    # They already clarified; don't ask again.
+    if preprocessed.get("needs_clarification") and not req.is_clarification:
         return {
             "type": "clarify",
             "clarifications": preprocessed.get("clarification_questions", [

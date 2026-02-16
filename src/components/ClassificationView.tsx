@@ -356,9 +356,9 @@ export function ClassificationView() {
         productDescriptionText += `. SKU: ${sku}`;
       }
 
-      // Call unified classification function with updated description
-      console.log('Calling classifyProduct (clarification) with:', { productDescriptionText, userId: user.id });
-      const classificationResponse = await classifyProduct(productDescriptionText, user.id);
+      // Call classification with is_clarification=true so backend skips ambiguity gate
+      console.log('Calling classifyProduct (clarification) with:', { productDescriptionText, userId: user.id, isClarification: true });
+      const classificationResponse = await classifyProduct(productDescriptionText, user.id, undefined, true);
       console.log('classifyProduct (clarification) response:', classificationResponse);
       
       if (!classificationResponse) {

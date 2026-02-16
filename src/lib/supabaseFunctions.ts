@@ -8,7 +8,8 @@ import { getUserMetadata } from './userService';
 export async function classifyProduct(
   productDescription: string,
   userId: string,
-  confidenceThreshold?: number
+  confidenceThreshold?: number,
+  isClarification?: boolean
 ): Promise<{
   normalized?: string;
   attributes?: {
@@ -59,12 +60,17 @@ export async function classifyProduct(
       confidence_threshold: threshold,
     });
 
+    const requestBody: Record<string, any> = {
+      product_description: productDescription,
+      user_id: userId,
+      confidence_threshold: threshold,
+    };
+    if (isClarification) {
+      requestBody.is_clarification = true;
+    }
+
     const { data: response, error } = await supabase.functions.invoke('python-proxy', {
-      body: {
-        product_description: productDescription,
-        user_id: userId,
-        confidence_threshold: threshold,
-      },
+      body: requestBody,
     });
 
     console.log('Edge function response:', { data: response, error });
