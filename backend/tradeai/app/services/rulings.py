@@ -212,25 +212,12 @@ def generate_ruling(data: dict) -> dict:
         # CBP rulings are fetched in parallel after normalization
         rule["cbp_rulings"] = []
 
-    # ── Rule Engine Verification ──
+    # ── Rule Engine Verification (enrichment only, never blocks) ──
     classification_trace = ""
     try:
         rule_engine = RuleEngine(supabase_client)
         verification = rule_engine.verify_candidates(attributes, matched_rules)
         classification_trace = verification.get("trace", "")
-
-        if not verification.get("confident"):
-            return {
-                "type": "clarify",
-                "clarifications": verification.get("questions", [
-                    "Could you provide more details about the product?"
-                ]),
-                "partial_matches": [
-                    {"hts": r.get("hts"), "description": r.get("description"), "score": r.get("score", 0)}
-                    for r in (verification.get("partial_matches") or matched_rules[:5])
-                ],
-                "classification_trace": classification_trace,
-            }
 
         # Merge rule verification data into matched_rules
         verified_map = {
@@ -251,17 +238,11 @@ def generate_ruling(data: dict) -> dict:
                 }
                 rule["rule_confidence"] = verification.get("rule_confidence", 0)
 
-        # Remove excluded candidates
+        # Remove candidates that are explicitly excluded by chapter notes
         matched_rules = [
             r for r in matched_rules
             if verified_map.get(r.get("hts"), {}).get("status") != "excluded"
         ]
-
-        # Sort by rule confidence (if available), then by score
-        matched_rules.sort(
-            key=lambda r: r.get("rule_confidence", r.get("score", 0)),
-            reverse=True,
-        )
 
     except Exception as e:
         print(f"Rule engine error (non-fatal): {e}")
