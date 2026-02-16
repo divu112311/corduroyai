@@ -142,12 +142,19 @@ Respond in this exact JSON format:
     "clarification_questions": []
 }}
 
+IMPORTANT: When ambiguous or too_vague is true, provide ONE clarification question with selectable options.
+Format each question as an object: {{"question": "...", "options": ["option A", "option B", ...]}}
+- The question should be simple and in plain English
+- Options should be 2-4 concrete product categories the user can pick from
+- Only ask about the PHYSICAL PRODUCT — never about HTS codes, chapter notes, or tariff details
+
 Examples:
-- "cow for speakers" → ambiguous: true, clarification_questions: ["Your input 'cow for speakers' is unclear. Did you mean a cover/case for speakers, or something else? Please describe the product you want to classify."]
-- "horses" → ambiguous: true, clarification_questions: ["Are you classifying live horses, horse meat, horsehair, or horse-related products like saddles?"]
+- "cow for speakers" → ambiguous: true, clarification_questions: [{{"question": "Your input is unclear. What product are you classifying?", "options": ["Speaker cover/case", "Cowhide speaker cover", "Something else"]}}]
+- "horses" → ambiguous: true, clarification_questions: [{{"question": "What type of horse product are you classifying?", "options": ["Live horses", "Horse meat", "Horsehair", "Horse-related equipment (saddles, etc.)"]}}]
 - "cotton tshrt mens" → product_name: "men's cotton t-shirt", corrections_made: "expanded 'tshrt' to 't-shirt'"
 - "bluetooth speaker" → product_name: "bluetooth speaker", ambiguous: false
-- "xyz123" → too_vague: true, clarification_questions: ["Could you describe the physical product you want to classify?"]
+- "xyz123" → too_vague: true, clarification_questions: [{{"question": "Could you describe the physical product you want to classify?", "options": []}}]
+- "cow" → ambiguous: true, clarification_questions: [{{"question": "What type of cow product are you classifying?", "options": ["Live cow", "Beef/meat", "Cowhide/leather"]}}]
 
 Respond ONLY with JSON.
 """

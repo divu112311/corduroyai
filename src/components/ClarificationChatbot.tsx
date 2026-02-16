@@ -104,6 +104,26 @@ export function ClarificationChatbot({ messages, onSendMessage, isLoading = fals
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{message.content}</div>
+                  {/* Render clickable option buttons if available */}
+                  {message.type === 'question' && message.metadata?.options && message.metadata.options.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {message.metadata.options.map((option: string, optIdx: number) => (
+                        <button
+                          key={optIdx}
+                          onClick={() => {
+                            if (!isLoading) {
+                              setInput('');
+                              onSendMessage(option);
+                            }
+                          }}
+                          disabled={isLoading}
+                          className="px-3 py-1.5 bg-white border border-amber-300 text-amber-800 rounded-full text-xs font-medium hover:bg-amber-100 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className={`text-xs text-slate-500 mt-1 ${message.type === 'user_response' ? 'text-right' : ''}`}>
                   {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

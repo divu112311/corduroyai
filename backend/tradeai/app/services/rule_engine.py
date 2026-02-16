@@ -237,7 +237,13 @@ TASK:
 3. For EACH candidate, determine:
    - Does it pass GRI 1 (terms of the heading)?
    - Are there any chapter note exclusions?
-   - Is additional information needed to classify?
+4. CRITICAL — QUESTION RULES:
+   - You have the chapter notes, section notes, and GRI rules above. USE THEM to resolve sub-heading details yourself (e.g., fresh vs frozen, boneless vs bone-in, contains cereals — figure it out from the product attributes and rules).
+   - NEVER ask about HTS technicalities (U.S. notes, chapter notes, GRI rule numbers, tariff references). The user doesn't know these. YOU know them — they are in the context above.
+   - Only generate a question if the product itself is fundamentally ambiguous — i.e., it could be in DIFFERENT CHAPTERS entirely (e.g., "cow" could be live animal ch01, meat ch02, or leather ch41).
+   - If you do ask, provide 2-4 concrete options the user can pick from.
+   - Maximum ONE question. Resolve everything else yourself.
+   - If unsure between sub-headings within the same chapter, pick the most likely one and explain your reasoning in the candidate's reasoning field. Do NOT ask the user.
 
 Respond ONLY with JSON:
 {{
@@ -253,7 +259,12 @@ Respond ONLY with JSON:
       "reasoning": "1-2 sentence explanation"
     }}
   ],
-  "questions": ["clarifying questions if info is ambiguous"],
+  "questions": [
+    {{
+      "question": "A single plain-English question about the physical product that only the user can answer. Omit this entirely if you can resolve the classification yourself.",
+      "options": ["option A", "option B", "option C"]
+    }}
+  ],
   "overall_gri": "which GRI rule primarily determined the classification",
   "confidence_factors": {{
     "deterministic_resolution": 0.0-1.0,
@@ -379,7 +390,7 @@ Respond ONLY with JSON:
         trace_parts.append(f"LLM verification complete. Method: {llm_result.get('method')}")
 
         verified = llm_result.get("verified_candidates", [])
-        questions = llm_result.get("questions", [])
+        raw_questions = llm_result.get("questions", [])
         confidence_factors = llm_result.get("confidence_factors", {
             "deterministic_resolution": 0.5,
             "decision_margin": 0.5,
@@ -387,17 +398,25 @@ Respond ONLY with JSON:
             "information_completeness": 0.5,
         })
 
+        # Normalize questions — LLM may return strings or structured objects
+        questions = []
+        for q in raw_questions:
+            if isinstance(q, dict) and q.get("question"):
+                questions.append(q)
+            elif isinstance(q, str) and q.strip():
+                questions.append({"question": q.strip(), "options": []})
+
         rule_confidence = self._calculate_confidence(confidence_factors)
         trace_parts.append(f"Rule confidence: {rule_confidence}")
 
         has_verified = any(v.get("status") == "verified" for v in verified)
-        has_too_many_questions = len(questions) >= 2
+        has_questions = len(questions) > 0
         low_confidence = rule_confidence < 0.45
 
-        confident = has_verified and not has_too_many_questions and not low_confidence
+        confident = has_verified and not has_questions and not low_confidence
 
         if not confident and not questions:
-            questions = ["Could you provide more details about the product's intended use and material composition?"]
+            questions = [{"question": "Could you describe the product in more detail — what is it made of and what is it used for?", "options": []}]
 
         return {
             "confident": confident,

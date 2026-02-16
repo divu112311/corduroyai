@@ -234,15 +234,26 @@ def generate_ruling(data: dict) -> dict:
 
         # Only ask for clarification when:
         # 1. The rule engine flagged it as not confident, AND
-        # 2. The top candidates span 2+ different chapters
+        # 2. The top candidates span 2+ different chapters, AND
+        # 3. The user hasn't already clarified (no double-asking)
         # This means the product itself is ambiguous in classification terms
         # (e.g., "cow" could be chapter 01, 02, or 41)
+        is_clarification = data.get("is_clarification", False)
+        rule_questions = verification.get("questions", [])
         if (not verification.get("confident")
                 and candidates_span_chapters
-                and verification.get("questions")):
+                and rule_questions
+                and not is_clarification):
+            # Normalize questions for frontend — extract question text
+            clarification_list = []
+            for q in rule_questions:
+                if isinstance(q, dict):
+                    clarification_list.append(q)
+                elif isinstance(q, str):
+                    clarification_list.append({"question": q, "options": []})
             return {
                 "type": "clarify",
-                "clarifications": verification.get("questions"),
+                "clarifications": clarification_list,
                 "partial_matches": [
                     {"hts": r.get("hts"), "description": r.get("description"), "score": r.get("score", 0)}
                     for r in matched_rules[:5]

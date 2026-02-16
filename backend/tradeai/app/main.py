@@ -58,7 +58,7 @@ def classify(req: ClassifyRequest):
         return {
             "type": "clarify",
             "clarifications": preprocessed.get("clarification_questions", [
-                "Could you describe the product in more detail?"
+                {"question": "Could you describe the product in more detail?", "options": []}
             ]),
             "partial_matches": [],
             "classification_trace": f"Preprocess flagged input as ambiguous. Corrections: {preprocessed.get('corrections_made', 'none')}",
@@ -85,6 +85,7 @@ def classify(req: ClassifyRequest):
         "product": parsed.get("product"),
         "attributes": parsed.get("attributes"),
         "matched_rules": rules_out.get("matched_rules", []),
+        "is_clarification": req.is_clarification,
     })
     
     print(json.dumps(ruling, separators=(",", ":"), ensure_ascii=False))

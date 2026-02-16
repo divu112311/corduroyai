@@ -175,19 +175,24 @@ export function ClassificationView() {
         : response.questions || response.clarifications;
       
       if (clarificationQuestions && clarificationQuestions.length > 0) {
-        const clarificationMsgs: ClarificationMessage[] = clarificationQuestions.map((q: string) => ({
-          step: 'preprocess',
-          type: 'question',
-          content: q,
-          timestamp: new Date().toISOString(),
-        }));
+        // Normalize: questions can be strings or {question, options} objects
+        const clarificationMsgs: ClarificationMessage[] = clarificationQuestions.map((q: any) => {
+          const isStructured = typeof q === 'object' && q.question;
+          return {
+            step: 'preprocess' as const,
+            type: 'question' as const,
+            content: isStructured ? q.question : String(q),
+            timestamp: new Date().toISOString(),
+            metadata: isStructured && q.options?.length ? { options: q.options } : undefined,
+          };
+        });
 
         setClarificationMessages(clarificationMsgs);
         setNeedsClarification(true);
         setCurrentStep('preprocess');
         setParsedData({ normalized: response.normalized, attributes: response.attributes });
         setPartialMatches(response.partial_matches || []);
-        
+
         for (const msg of clarificationMsgs) {
           await addClarificationMessage(runId, msg);
         }
@@ -373,17 +378,22 @@ export function ClassificationView() {
         : classificationResponse.questions || classificationResponse.clarifications;
       
       if (clarificationQuestions && clarificationQuestions.length > 0) {
-        const clarificationMsgs: ClarificationMessage[] = clarificationQuestions.map((q: string) => ({
-          step: currentStep,
-          type: 'question',
-          content: q,
-          timestamp: new Date().toISOString(),
-        }));
+        // Normalize: questions can be strings or {question, options} objects
+        const clarificationMsgs: ClarificationMessage[] = clarificationQuestions.map((q: any) => {
+          const isStructured = typeof q === 'object' && q.question;
+          return {
+            step: currentStep!,
+            type: 'question' as const,
+            content: isStructured ? q.question : String(q),
+            timestamp: new Date().toISOString(),
+            metadata: isStructured && q.options?.length ? { options: q.options } : undefined,
+          };
+        });
 
         setClarificationMessages(prev => [...prev, ...clarificationMsgs]);
         setParsedData({ normalized: classificationResponse.normalized, attributes: classificationResponse.attributes });
         setPartialMatches(classificationResponse.partial_matches || []);
-        
+
         for (const msg of clarificationMsgs) {
           await addClarificationMessage(classificationRunId, msg);
         }
