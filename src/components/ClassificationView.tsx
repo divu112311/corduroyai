@@ -57,11 +57,13 @@ export function ClassificationView() {
   const [parsedData, setParsedData] = useState<any>(null);
   const [isProcessingClarification, setIsProcessingClarification] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
+  const [partialMatches, setPartialMatches] = useState<Array<{hts: string; description: string; score: number}>>([]);
 
   const loadingSteps = [
     'Preprocessing the input...',
     'Recognizing usage...',
     'Getting top HTS match...',
+    'Verifying against GRI rules & chapter notes...',
     'Calculating confidence and fetching CBP rulings...'
   ];
 
@@ -184,6 +186,7 @@ export function ClassificationView() {
         setNeedsClarification(true);
         setCurrentStep('preprocess');
         setParsedData({ normalized: response.normalized, attributes: response.attributes });
+        setPartialMatches(response.partial_matches || []);
         
         for (const msg of clarificationMsgs) {
           await addClarificationMessage(runId, msg);
@@ -241,6 +244,10 @@ export function ClassificationView() {
           section_title: (primaryCandidate as any).section_title,
           reasoning: primaryCandidate.rationale || `Based on normalized input: ${response.normalized || query}. Attributes: ${JSON.stringify(response.attributes || {})}`,
           cbp_rulings: primaryCandidate.cbp_rulings || undefined,
+          rule_verification: (primaryCandidate as any).rule_verification || undefined,
+          rule_confidence: (primaryCandidate as any).rule_confidence || undefined,
+          similarity_score: (primaryCandidate as any).similarity_score || undefined,
+          classification_trace: response.classification_trace || (response.matches && response.matches.classification_trace) || undefined,
           parsed_data: {
             product_name: query,
             product_description: productDescription || undefined,
@@ -258,14 +265,16 @@ export function ClassificationView() {
             description: alt.description || '',
             confidence: Math.round((alt.confidence || alt.score || 0) * 100),
             cbp_rulings: alt.cbp_rulings || undefined,
+            rationale: (alt as any).rationale || undefined,
+            rule_verification: (alt as any).rule_verification || undefined,
           }));
-          // Keep backward compatibility with alternate_classification
           classificationResult.alternate_classification = alternateCandidates[0].hts;
         }
 
         setResult(classificationResult);
         setNeedsClarification(false);
         setCurrentStep(null);
+        setPartialMatches([]);
         setParsedData({ normalized: response.normalized, attributes: response.attributes });
 
         // Save product and result to database
@@ -377,6 +386,7 @@ export function ClassificationView() {
 
         setClarificationMessages(prev => [...prev, ...clarificationMsgs]);
         setParsedData({ normalized: classificationResponse.normalized, attributes: classificationResponse.attributes });
+        setPartialMatches(classificationResponse.partial_matches || []);
         
         for (const msg of clarificationMsgs) {
           await addClarificationMessage(classificationRunId, msg);
@@ -434,6 +444,10 @@ export function ClassificationView() {
           section_title: (primaryCandidate as any).section_title,
           reasoning: primaryCandidate.rationale || `Based on normalized input: ${classificationResponse.normalized || query}. Attributes: ${JSON.stringify(classificationResponse.attributes || {})}`,
           cbp_rulings: primaryCandidate.cbp_rulings || undefined,
+          rule_verification: (primaryCandidate as any).rule_verification || undefined,
+          rule_confidence: (primaryCandidate as any).rule_confidence || undefined,
+          similarity_score: (primaryCandidate as any).similarity_score || undefined,
+          classification_trace: classificationResponse.classification_trace || (classificationResponse.matches && classificationResponse.matches.classification_trace) || undefined,
           parsed_data: {
             product_name: query,
             product_description: productDescription || undefined,
@@ -451,14 +465,16 @@ export function ClassificationView() {
             description: alt.description || '',
             confidence: Math.round((alt.confidence || alt.score || 0) * 100),
             cbp_rulings: alt.cbp_rulings || undefined,
+            rationale: (alt as any).rationale || undefined,
+            rule_verification: (alt as any).rule_verification || undefined,
           }));
-          // Keep backward compatibility with alternate_classification
           classificationResult.alternate_classification = alternateCandidates[0].hts;
         }
 
         setResult(classificationResult);
         setNeedsClarification(false);
         setCurrentStep(null);
+        setPartialMatches([]);
         setParsedData({ normalized: classificationResponse.normalized, attributes: classificationResponse.attributes });
 
         // Save to database
@@ -793,6 +809,7 @@ export function ClassificationView() {
                 messages={clarificationMessages}
                 onSendMessage={handleClarificationResponse}
                 isLoading={isProcessingClarification}
+                partialMatches={partialMatches}
               />
             ) : result ? (
               <div className="space-y-6">

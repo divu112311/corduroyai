@@ -2,13 +2,20 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { ClarificationMessage } from '../lib/classificationService';
 
+interface PartialMatch {
+  hts: string;
+  description: string;
+  score: number;
+}
+
 interface ClarificationChatbotProps {
   messages: ClarificationMessage[];
   onSendMessage: (message: string) => Promise<void>;
   isLoading?: boolean;
+  partialMatches?: PartialMatch[];
 }
 
-export function ClarificationChatbot({ messages, onSendMessage, isLoading = false }: ClarificationChatbotProps) {
+export function ClarificationChatbot({ messages, onSendMessage, isLoading = false, partialMatches = [] }: ClarificationChatbotProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +52,23 @@ export function ClarificationChatbot({ messages, onSendMessage, isLoading = fals
           </div>
         </div>
       </div>
+
+      {/* Partial Matches */}
+      {partialMatches.length > 0 && (
+        <div className="px-6 py-3 bg-slate-50 border-b border-slate-200">
+          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Considering these HTS codes:</p>
+          <div className="flex flex-wrap gap-2">
+            {partialMatches.map((match, idx) => (
+              <div key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs">
+                <span className="font-mono font-semibold text-blue-700">{match.hts}</span>
+                <span className="text-slate-400">|</span>
+                <span className="text-slate-600 max-w-[200px] truncate">{match.description}</span>
+                <span className="text-slate-400 text-[10px]">({Math.round(match.score * 100)}%)</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="p-6 space-y-4 max-h-[400px] overflow-y-auto">

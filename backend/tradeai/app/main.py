@@ -62,6 +62,8 @@ def classify(req: ClassifyRequest):
         return {
             "type": "clarify",
             "clarifications": ruling.get("clarifications", []),
+            "partial_matches": ruling.get("partial_matches", []),
+            "classification_trace": ruling.get("classification_trace", ""),
         }
 
     if ruling.get("type") == "answer":
@@ -81,8 +83,9 @@ def classify(req: ClassifyRequest):
         
         return {
             "type": "answer",
-            "matches": ruling,        # front end can just loop over this
+            "matches": ruling,
             "max_confidence": max_confidence,
+            "classification_trace": ruling.get("classification_trace", ""),
         }
     return {
         "type": "error",

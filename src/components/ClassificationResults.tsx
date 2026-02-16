@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Activity } from 'lucide-react';
 
 export interface CbpRuling {
   ruling_number: string;
@@ -7,6 +7,16 @@ export interface CbpRuling {
   subject: string;
   url: string;
   hs_codes?: string[];
+}
+
+export interface RuleVerification {
+  status: string;
+  checks_passed: string[];
+  checks_failed: string[];
+  missing_info: string[];
+  reasoning: string;
+  gri_applied: string[];
+  applicable_notes: string[];
 }
 
 export interface ClassificationResultData {
@@ -21,6 +31,10 @@ export interface ClassificationResultData {
   chapter_title?: string;
   section_code?: string;
   section_title?: string;
+  rule_verification?: RuleVerification;
+  rule_confidence?: number;
+  similarity_score?: number;
+  classification_trace?: string;
   alternate_classifications?: Array<{
     hts: string;
     description: string;
@@ -30,6 +44,8 @@ export interface ClassificationResultData {
     chapter_title?: string;
     section_code?: string;
     section_title?: string;
+    rationale?: string;
+    rule_verification?: RuleVerification;
   }>;
   cbp_rulings?: CbpRuling[];
   reasoning?: string;
@@ -53,6 +69,7 @@ interface ClassificationResultsProps {
 export function ClassificationResults({ result, onApprove, onReviewLater }: ClassificationResultsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [expandedAlternates, setExpandedAlternates] = useState<Set<number>>(new Set());
+  const [showTrace, setShowTrace] = useState(false);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -189,6 +206,124 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
             </div>
           )}
         </div>
+
+        {/* Rule Verification */}
+        {result.rule_verification && (
+          <div className="border border-indigo-200 bg-indigo-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="w-5 h-5 text-indigo-600" />
+              <h4 className="text-indigo-900 font-semibold">Rule Verification</h4>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                result.rule_verification.status === 'verified' 
+                  ? 'bg-green-100 text-green-700'
+                  : result.rule_verification.status === 'excluded'
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {result.rule_verification.status}
+              </span>
+            </div>
+
+            {/* GRI Badges */}
+            {result.rule_verification.gri_applied && result.rule_verification.gri_applied.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {result.rule_verification.gri_applied.map((gri, idx) => (
+                  <span key={idx} className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-lg border border-indigo-200">
+                    {gri}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Checks Passed */}
+            {result.rule_verification.checks_passed && result.rule_verification.checks_passed.length > 0 && (
+              <div className="mb-2">
+                {result.rule_verification.checks_passed.map((check, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm text-green-700 mb-1">
+                    <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{check}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Checks Failed */}
+            {result.rule_verification.checks_failed && result.rule_verification.checks_failed.length > 0 && (
+              <div className="mb-2">
+                {result.rule_verification.checks_failed.map((check, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm text-red-700 mb-1">
+                    <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{check}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Missing Info */}
+            {result.rule_verification.missing_info && result.rule_verification.missing_info.length > 0 && (
+              <div className="mb-2">
+                {result.rule_verification.missing_info.map((info, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm text-amber-700 mb-1">
+                    <Info className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{info}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Reasoning */}
+            {result.rule_verification.reasoning && (
+              <p className="text-indigo-800 text-sm mt-2 pt-2 border-t border-indigo-200">
+                {result.rule_verification.reasoning}
+              </p>
+            )}
+
+            {/* Confidence Breakdown */}
+            {result.rule_confidence !== undefined && (
+              <div className="mt-3 pt-3 border-t border-indigo-200">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-indigo-700 font-medium flex items-center gap-1">
+                    <Activity className="w-3.5 h-3.5" /> Rule Confidence
+                  </span>
+                  <span className="text-indigo-900 font-semibold">{Math.round(result.rule_confidence * 100)}%</span>
+                </div>
+                {result.similarity_score !== undefined && (
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="text-indigo-600">Similarity Score</span>
+                    <span className="text-indigo-800">{Math.round(result.similarity_score * 100)}%</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Classification Trace */}
+        {result.classification_trace && (
+          <div className="border border-slate-200 rounded-lg">
+            <button
+              onClick={() => setShowTrace(!showTrace)}
+              className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
+            >
+              <h4 className="text-slate-900 font-semibold text-sm flex items-center gap-2">
+                <Activity className="w-4 h-4 text-slate-500" />
+                Classification Trace
+              </h4>
+              {showTrace ? (
+                <ChevronUp className="w-5 h-5 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-400" />
+              )}
+            </button>
+            {showTrace && (
+              <div className="px-4 pb-4">
+                <pre className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
+                  {result.classification_trace}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Parsed Data */}
         {result.parsed_data && (

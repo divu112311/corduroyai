@@ -1,6 +1,8 @@
 from app.services.cbp_rulings import fetch_cbp_rulings_for_rules
 from app.services.cbp_rulings import search_cbp_rulings
 from app.services.llm_call import call_llm
+from app.services.rule_engine import RuleEngine
+from app.services.supabase import supabase as supabase_client
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from google.cloud import storage
 import json
@@ -43,7 +45,19 @@ def generate_rationale(product: str, attributes: dict, matched_rules: list) -> l
     # Build context for LLM
     rules_summary = []
     for i, rule in enumerate(matched_rules):
-        rules_summary.append(f"{i+1}. HTS {rule.get('hts')} - {rule.get('description')} (Score: {rule.get('score', 0):.2f})")
+        line = f"{i+1}. HTS {rule.get('hts')} - {rule.get('description')} (Score: {rule.get('score', 0):.2f})"
+        rv = rule.get("rule_verification")
+        if rv:
+            line += f"\n   Rule Status: {rv.get('status', 'unknown')}"
+            if rv.get("checks_passed"):
+                line += f" | Passed: {', '.join(rv['checks_passed'][:3])}"
+            if rv.get("checks_failed"):
+                line += f" | Failed: {', '.join(rv['checks_failed'][:3])}"
+            if rv.get("gri_applied"):
+                line += f" | GRI: {', '.join(rv['gri_applied'])}"
+            if rv.get("reasoning"):
+                line += f"\n   Rule Reasoning: {rv['reasoning']}"
+        rules_summary.append(line)
     
     prompt = f"""You are a trade compliance expert.
 
@@ -125,16 +139,21 @@ Respond ONLY with JSON.
         # set once, outside loop
         if filtered:
             filtered[0]["best_match_reason"] = parsed.get("best_match_reason", "")
-        # Adjust confidence for each match; never reduce Pinecone score
+        # Adjust confidence: prefer rule_confidence if available, else use Pinecone + adjustment
         for rule in filtered:
-            adj = adjustments.get(rule.get("hts"), 0)
-            try:
-                adj = float(adj)
-            except Exception:
-                adj = 0
-            adj = max(0.0, min(0.15, adj))
-            pinecone_conf = float(rule.get("score", 0))
-            rule["confidence"] = min(1.0, max(pinecone_conf, pinecone_conf + adj))
+            if rule.get("rule_confidence") and rule["rule_confidence"] > 0:
+                rule["confidence"] = float(rule["rule_confidence"])
+                rule["similarity_score"] = float(rule.get("score", 0))
+            else:
+                adj = adjustments.get(rule.get("hts"), 0)
+                try:
+                    adj = float(adj)
+                except Exception:
+                    adj = 0
+                adj = max(0.0, min(0.15, adj))
+                pinecone_conf = float(rule.get("score", 0))
+                rule["confidence"] = min(1.0, max(pinecone_conf, pinecone_conf + adj))
+                rule["similarity_score"] = pinecone_conf
 
         return filtered[:3]
     
@@ -193,6 +212,61 @@ def generate_ruling(data: dict) -> dict:
         # CBP rulings are fetched in parallel after normalization
         rule["cbp_rulings"] = []
 
+    # ── Rule Engine Verification ──
+    classification_trace = ""
+    try:
+        rule_engine = RuleEngine(supabase_client)
+        verification = rule_engine.verify_candidates(attributes, matched_rules)
+        classification_trace = verification.get("trace", "")
+
+        if not verification.get("confident"):
+            return {
+                "type": "clarify",
+                "clarifications": verification.get("questions", [
+                    "Could you provide more details about the product?"
+                ]),
+                "partial_matches": [
+                    {"hts": r.get("hts"), "description": r.get("description"), "score": r.get("score", 0)}
+                    for r in (verification.get("partial_matches") or matched_rules[:5])
+                ],
+                "classification_trace": classification_trace,
+            }
+
+        # Merge rule verification data into matched_rules
+        verified_map = {
+            v.get("hts"): v for v in verification.get("verified_candidates", [])
+        }
+        for rule in matched_rules:
+            hts = rule.get("hts")
+            if hts in verified_map:
+                v = verified_map[hts]
+                rule["rule_verification"] = {
+                    "status": v.get("status", "unknown"),
+                    "checks_passed": v.get("checks_passed", []),
+                    "checks_failed": v.get("checks_failed", []),
+                    "missing_info": v.get("missing_info", []),
+                    "reasoning": v.get("reasoning", ""),
+                    "gri_applied": v.get("gri_applied", []),
+                    "applicable_notes": v.get("applicable_notes", []),
+                }
+                rule["rule_confidence"] = verification.get("rule_confidence", 0)
+
+        # Remove excluded candidates
+        matched_rules = [
+            r for r in matched_rules
+            if verified_map.get(r.get("hts"), {}).get("status") != "excluded"
+        ]
+
+        # Sort by rule confidence (if available), then by score
+        matched_rules.sort(
+            key=lambda r: r.get("rule_confidence", r.get("score", 0)),
+            reverse=True,
+        )
+
+    except Exception as e:
+        print(f"Rule engine error (non-fatal): {e}")
+        classification_trace = f"Rule verification unavailable: {e}"
+
     def _fetch_cbp_rulings_for_rule(rule: dict) -> list:
         try:
             raw_desc = rule.get("description", "")
@@ -239,5 +313,6 @@ def generate_ruling(data: dict) -> dict:
         "type": "answer",
         "product": product,
         "attributes": attributes,
-        "matched_rules": matched_rules
+        "matched_rules": matched_rules,
+        "classification_trace": classification_trace,
     }
