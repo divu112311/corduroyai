@@ -58,7 +58,35 @@ def apply_rules(parsed: dict) -> dict:
 
     # Step 3: query Pinecone
     matches = query_pinecone(vector)
-    
+
+    # Step 3b: If product is apparel but Pinecone only returned fabric chapters,
+    # do a second query focused on "garments articles of apparel" to get ch.61/62 candidates.
+    # This ensures the LLM has both fabric and apparel candidates to choose from.
+    if is_apparel and matches:
+        fabric_chapters = {"50", "51", "52", "53", "54", "55", "56", "60"}
+        result_chapters = set()
+        for m in matches[:5]:
+            hts = str(m.get("id", ""))
+            if len(hts) >= 2:
+                result_chapters.add(hts[:2].replace(".", ""))
+        apparel_chapters = {"61", "62", "63"}
+        has_apparel_results = bool(result_chapters & apparel_chapters)
+
+        if not has_apparel_results:
+            print("APPLY_RULES: Apparel product but no apparel chapters in results — doing supplemental query")
+            apparel_query = f"articles of apparel clothing garments {product}"
+            apparel_vector = embed_query(apparel_query)
+            apparel_matches = query_pinecone(apparel_vector)
+            # Merge: keep original matches but append any new apparel chapter results
+            seen_ids = {m.get("id") for m in matches}
+            for am in apparel_matches:
+                hts = str(am.get("id", ""))
+                ch = hts[:2].replace(".", "") if len(hts) >= 2 else ""
+                if am.get("id") not in seen_ids and ch in apparel_chapters:
+                    matches.append(am)
+                    seen_ids.add(am.get("id"))
+            print(f"APPLY_RULES: After supplemental query, total matches: {len(matches)}")
+
     # Debug: print Pinecone matches
     print(f"APPLY_RULES: number of matches returned from Pinecone -> {len(matches)}")
     for i, m in enumerate(matches):
