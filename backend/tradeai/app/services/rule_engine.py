@@ -241,9 +241,12 @@ TASK:
    - You have the chapter notes, section notes, and GRI rules above. USE THEM to resolve sub-heading details yourself (e.g., fresh vs frozen, boneless vs bone-in, contains cereals — figure it out from the product attributes and rules).
    - NEVER ask about HTS technicalities (U.S. notes, chapter notes, GRI rule numbers, tariff references). The user doesn't know these. YOU know them — they are in the context above.
    - Only generate a question if the product itself is fundamentally ambiguous — i.e., it could be in DIFFERENT CHAPTERS entirely (e.g., "cow" could be live animal ch01, meat ch02, or leather ch41).
+   - NEVER ask "is this a finished garment or raw fabric?" — if the product name contains clothing words (jeans, shirt, socks, dress, etc.), it is ALWAYS a finished garment. Classify under the apparel chapter (ch.61 for knitted, ch.62 for woven), NOT the fabric chapter.
+   - NEVER ask about material composition percentages, fiber content, or weight — resolve these from the rules context or make a reasonable assumption.
    - If you do ask, provide 2-4 concrete options the user can pick from.
    - Maximum ONE question. Resolve everything else yourself.
    - If unsure between sub-headings within the same chapter, pick the most likely one and explain your reasoning in the candidate's reasoning field. Do NOT ask the user.
+   - If ALL candidates are in the same product category but different sub-headings, do NOT ask — pick the best one.
 
 Respond ONLY with JSON:
 {{
@@ -313,6 +316,52 @@ Respond ONLY with JSON:
 
         confidence = (drs * 0.35) + (dm * 0.30) + (a_s * 0.20) + (ic * 0.15)
         return round(min(1.0, max(0.0, confidence)), 3)
+
+    # ── Textile Chapter Heuristic ──
+
+    def _apply_textile_heuristic(self, attributes: dict, verified: list) -> list:
+        """
+        Apply GRI Rule 1 heuristic for textile products.
+        When product is apparel but top candidates are fabric chapters, prefer
+        apparel chapter candidates if present. GRI Rule 1: headings for finished
+        articles (apparel) are more specific than raw material headings (fabrics).
+
+        Fabric chapters: 50-55 (raw fibers/woven fabrics), 60 (knitted fabrics)
+        Apparel chapters: 61 (knitted apparel), 62 (woven apparel)
+        """
+        form = str(attributes.get("form", "")).strip().lower()
+        if not verified:
+            return verified
+
+        top_hts = str(verified[0].get("hts", ""))
+        top_chapter = top_hts[:2] if len(top_hts) >= 2 else ""
+        fabric_chapters = {"50", "51", "52", "53", "54", "55", "56", "60"}
+
+        # Only apply if top candidate is a fabric chapter
+        if top_chapter not in fabric_chapters:
+            return verified
+
+        # Determine which apparel chapter to prefer
+        if form in ("knitted", "crocheted", "knit"):
+            target_chapter = "61"
+        elif form == "woven":
+            target_chapter = "62"
+        elif top_chapter == "60":
+            target_chapter = "61"  # knitted fabric → knitted apparel
+        else:
+            target_chapter = "62"  # woven fabric → woven apparel
+
+        # Reorder: apparel candidates first, then fabrics, then others
+        apparel = [v for v in verified if str(v.get("hts", ""))[:2] == target_chapter]
+        fabric = [v for v in verified if str(v.get("hts", ""))[:2] in fabric_chapters]
+        other = [v for v in verified if str(v.get("hts", ""))[:2] not in fabric_chapters and str(v.get("hts", ""))[:2] != target_chapter]
+
+        if apparel:
+            for c in apparel:
+                c["reasoning"] = c.get("reasoning", "") + f" [Textile heuristic: GRI Rule 1 — ch.{target_chapter} apparel is more specific than ch.{top_chapter} fabrics for finished garments.]"
+            return apparel + fabric + other
+
+        return verified
 
     # ── Main Verify Entry Point ──
 
@@ -390,6 +439,8 @@ Respond ONLY with JSON:
         trace_parts.append(f"LLM verification complete. Method: {llm_result.get('method')}")
 
         verified = llm_result.get("verified_candidates", [])
+        verified = self._apply_textile_heuristic(attributes, verified)
+        trace_parts.append(f"Textile heuristic applied. Top candidate: {verified[0].get('hts') if verified else 'none'}")
         raw_questions = llm_result.get("questions", [])
         confidence_factors = llm_result.get("confidence_factors", {
             "deterministic_resolution": 0.5,
@@ -413,7 +464,18 @@ Respond ONLY with JSON:
         has_questions = len(questions) > 0
         low_confidence = rule_confidence < 0.45
 
-        confident = has_verified and not has_questions and not low_confidence
+        # If rule confidence is high enough (≥ 0.6), trust the classification even if
+        # the LLM generated a question. The question is likely about sub-heading details
+        # that don't change the fundamental classification. Drop the questions.
+        if has_questions and rule_confidence >= 0.6:
+            trace_parts.append(f"Dropping {len(questions)} question(s) — rule confidence {rule_confidence} is high enough to proceed without asking.")
+            questions = []
+            has_questions = False
+
+        # When rule confidence is high enough, treat as confident even without verified status
+        # This prevents unnecessary clarification for clear products
+        high_confidence = rule_confidence >= 0.6
+        confident = (has_verified and not has_questions and not low_confidence) or high_confidence
 
         if not confident and not questions:
             questions = [{"question": "Could you describe the product in more detail — what is it made of and what is it used for?", "options": []}]

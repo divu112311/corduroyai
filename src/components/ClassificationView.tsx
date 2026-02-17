@@ -367,8 +367,14 @@ export function ClassificationView() {
       
       if (!classificationResponse) {
         console.warn('No response from classifyProduct (clarification)');
+        const errorMsg: ClarificationMessage = {
+          step: currentStep!,
+          type: 'system' as const,
+          content: 'Classification failed. Please try again or rephrase your answer.',
+          timestamp: new Date().toISOString(),
+        };
+        setClarificationMessages(prev => [...prev, errorMsg]);
         setIsProcessingClarification(false);
-        setCurrentStep(null);
         return;
       }
 
@@ -508,7 +514,13 @@ export function ClassificationView() {
       setIsProcessingClarification(false);
     } catch (error: any) {
       console.error('Clarification response error:', error);
-      // Silently handle error - don't show alert
+      const errorMsg: ClarificationMessage = {
+        step: currentStep || 'preprocess',
+        type: 'system' as const,
+        content: 'Something went wrong. Please try again.',
+        timestamp: new Date().toISOString(),
+      };
+      setClarificationMessages(prev => [...prev, errorMsg]);
       setIsProcessingClarification(false);
     }
   };

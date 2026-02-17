@@ -14,14 +14,39 @@ def apply_rules(parsed: dict) -> dict:
     # Build a clean embedding input — only include trade-relevant attributes
     product = parsed.get("product", "")
     attrs = parsed.get("attributes", {})
-    relevant_keys = ["material", "usage", "gender", "breed", "age", "form", "processing"]
+    # Note: "usage" is excluded — it rarely affects HTS chapter (e.g., "office" pulls furniture
+    # for LED bulbs). Usage-based ambiguity is handled earlier by preprocess.
+    relevant_keys = ["material", "gender", "breed", "age", "form", "processing"]
     attr_parts = []
     for k in relevant_keys:
         v = attrs.get(k, "")
         if v and str(v).strip() and str(v).strip().lower() not in ("", "empty", "n/a", "none", "not mentioned", "not applicable"):
             attr_parts.append(str(v).strip())
 
-    embedding_input = product
+    # For textile/apparel products, add key context to the embedding:
+    # - "apparel" or "clothing" to distinguish finished garments (ch.61/62) from raw fabrics (ch.52/55/60)
+    # - form (knitted/woven) to distinguish ch.61 (knitted apparel) from ch.62 (woven apparel)
+    form = attrs.get("form", "").strip().lower()
+    product_lower = product.lower()
+
+    # Detect if product is clearly apparel/clothing (not raw fabric)
+    apparel_keywords = ["shirt", "blouse", "jeans", "pants", "trousers", "dress", "skirt",
+                        "jacket", "coat", "sweater", "hoodie", "suit", "blazer", "vest",
+                        "shorts", "socks", "stockings", "tights", "onesie", "romper",
+                        "bodysuit", "underwear", "bra", "pajama", "robe", "scarf",
+                        "glove", "hat", "cap", "uniform", "jersey", "leggings"]
+    is_apparel = any(kw in product_lower for kw in apparel_keywords)
+
+    if form in ("knitted", "woven", "crocheted", "knit"):
+        if is_apparel:
+            embedding_input = f"{form} clothing apparel {product}"
+        else:
+            embedding_input = f"{form} {product}"
+    elif is_apparel:
+        embedding_input = f"clothing apparel {product}"
+    else:
+        embedding_input = product
+
     if attr_parts:
         embedding_input += " " + " ".join(attr_parts)
     print("Apply Rules — embedding input:", embedding_input)
@@ -68,9 +93,9 @@ def apply_rules(parsed: dict) -> dict:
               "score": float(m.get("score", 0)),
             })
     # --- DEBUG: print refs before returning ---
-        print("DEBUG: refs / matched_rules to return:")
-        for i, r in enumerate(refs):
-             print(f"  Match {i+1}: {r}")
+    print("DEBUG: refs / matched_rules to return:")
+    for i, r in enumerate(refs):
+        print(f"  Match {i+1}: {r}")
 
     return {
         "normalized":embedding_input ,

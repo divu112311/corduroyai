@@ -118,11 +118,23 @@ CRITICAL RULES:
   Do NOT change it to "cover" or anything else. Only correct obvious non-word typos and abbreviations.
 - If the combination of words doesn't make clear sense as a single product (e.g., "cow for speakers"
   is confusing — a cow is an animal, speakers are electronics), set "ambiguous" to true and ASK what they mean.
-- If a SINGLE word with NO context could refer to multiple product categories, set "ambiguous" to true.
-  Example: "horses" alone could be live horses, horse meat, horsehair — ask which one.
-- BUT if the user provides context that makes it clear, it is NOT ambiguous. Do NOT ask.
-  Example: "cow for meat" = bovine meat (NOT ambiguous). "horse hair" = horsehair (NOT ambiguous).
-  "live cow" = live bovine animal (NOT ambiguous). "cow leather" = cowhide/leather (NOT ambiguous).
+- A SINGLE word is ONLY ambiguous if it could refer to genuinely DIFFERENT HTS chapters:
+  "cow" → could be live cattle (ch.01), beef (ch.02), or cowhide (ch.41) — different chapters, so ASK.
+  "horses" → could be live (ch.01), meat (ch.02), or horsehair (ch.05) — different chapters, so ASK.
+  "apple" → could be fresh fruit (ch.08), apple chips (ch.20), or Apple electronics (ch.84/85) — ASK.
+- A SINGLE word that always maps to ONE product type is NOT ambiguous, even if sub-variants exist:
+  "vodka" → always a distilled spirit (ch.22), whether flavored or unflavored — NOT ambiguous.
+  "beer" → always a fermented beverage (ch.22) — NOT ambiguous.
+  "cement" → always a building material (ch.25) — NOT ambiguous.
+  "sugar" → always a sweetener (ch.17) — NOT ambiguous.
+  "shrimp" → always seafood (ch.03 or ch.16) — NOT ambiguous, classify with best guess.
+- MULTIPLE WORDS that together describe a specific product are almost NEVER ambiguous:
+  "men's denim jeans" → specific apparel (gender + material + item) — NOT ambiguous.
+  "frozen shrimp" → seafood + processing state — NOT ambiguous.
+  "LED bulb for office" → specific lighting product — NOT ambiguous.
+  "baby cotton onesie" → specific baby apparel — NOT ambiguous.
+- If the user provides context that makes it clear, it is NOT ambiguous. Do NOT ask.
+  "cow for meat" = bovine meat. "horse hair" = horsehair. "live cow" = live bovine. "cow leather" = cowhide.
 - If the input is nonsensical or too vague (e.g., "thing", "stuff", "abc"), set "too_vague" to true.
 - When in doubt, ASK. But if the user gave you enough context to determine the product category, just classify it.
 
@@ -137,7 +149,7 @@ Respond in this exact JSON format:
     "breed": "breed type or empty if not applicable",
     "age": "age or age group or empty if not mentioned",
     "usage": "intended usage or empty if not mentioned",
-    "form": "physical form (liquid/solid/powder/woven/knitted/etc.) or empty",
+    "form": "physical form (liquid/solid/powder/woven/knitted/crocheted/etc.) or empty. IMPORTANT for textiles: baby/infant apparel (onesies, rompers, bodysuits), socks, stockings, tights, t-shirts, sweaters, sweatshirts, and hosiery are typically KNITTED. Jeans, dress shirts, suits, blazers, trousers are typically WOVEN.",
     "processing": "level of processing (raw/processed/assembled/etc.) or empty",
     "ambiguous": false,
     "too_vague": false,
@@ -151,16 +163,32 @@ Format each question as an object: {{"question": "...", "options": ["option A", 
 - Options should be 2-4 concrete product categories the user can pick from
 - Only ask about the PHYSICAL PRODUCT — never about HTS codes, chapter notes, or tariff details
 
-Examples:
-- "cow for speakers" → ambiguous: true, clarification_questions: [{{"question": "Your input is unclear. What product are you classifying?", "options": ["Speaker cover/case", "Cowhide speaker cover", "Something else"]}}]
-- "horses" → ambiguous: true, clarification_questions: [{{"question": "What type of horse product are you classifying?", "options": ["Live horses", "Horse meat", "Horsehair", "Horse-related equipment (saddles, etc.)"]}}]
+Examples of when TO flag as ambiguous (spans different chapters):
+- "cow for speakers" → ambiguous: true (confusing combination — cow is animal, speakers are electronics)
+- "horses" → ambiguous: true (live ch.01 vs meat ch.02 vs horsehair ch.05)
+- "cow" → ambiguous: true (live ch.01 vs beef ch.02 vs leather ch.41)
+- "apple" → ambiguous: true (fruit ch.08 vs apple chips ch.20 vs Apple electronics ch.84/85)
+
+Examples of when NOT to flag as ambiguous:
+- "men's denim jeans" → NOT ambiguous (multi-word: gender + material + item = specific apparel)
+- "frozen shrimp" → NOT ambiguous (product + processing = clearly seafood)
+- "vodka" → NOT ambiguous (always distilled spirit ch.22)
+- "beer" → NOT ambiguous (always fermented beverage ch.22)
+- "cement" → NOT ambiguous (always building material ch.25)
+- "LED bulb for office" → NOT ambiguous (specific lighting product)
+- "baby cotton onesie" → NOT ambiguous (specific baby apparel)
+- "bluetooth speaker" → NOT ambiguous (specific electronics)
+- "cow for meat" → NOT ambiguous (user specified "for meat")
+- "live horses for racing" → NOT ambiguous (user specified "live" and "for racing")
+- "horse meat" → NOT ambiguous (clearly horse meat)
+
+Corrections example:
 - "cotton tshrt mens" → product_name: "men's cotton t-shirt", corrections_made: "expanded 'tshrt' to 't-shirt'"
-- "bluetooth speaker" → product_name: "bluetooth speaker", ambiguous: false
-- "xyz123" → too_vague: true, clarification_questions: [{{"question": "Could you describe the physical product you want to classify?", "options": []}}]
-- "cow" → ambiguous: true, clarification_questions: [{{"question": "What type of cow product are you classifying?", "options": ["Live cow", "Beef/meat", "Cowhide/leather"]}}]
-- "cow for meat" → ambiguous: false (user specified "for meat" — this is clearly bovine meat)
-- "live horses for racing" → ambiguous: false (user specified "live" and "for racing")
-- "horse meat" → ambiguous: false (clearly horse meat, not live horses or horsehair)
+
+Too vague:
+- "xyz123" → too_vague: true
+- "thing" → too_vague: true
+- "stuff for home" → too_vague: true
 
 Respond ONLY with JSON.
 """

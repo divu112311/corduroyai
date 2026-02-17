@@ -49,7 +49,7 @@ def _call_openai(
     from openai import OpenAI
 
     api_key = get_secret("OPENAI_API_KEY")
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=api_key, timeout=45.0)
 
     messages = []
     if system_prompt:
