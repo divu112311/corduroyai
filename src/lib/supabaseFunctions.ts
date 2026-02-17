@@ -74,7 +74,7 @@ export async function classifyProduct(
       requestBody.clarification_response = clarificationContext.clarificationResponse;
     }
 
-    const { data: response, error } = await supabase.functions.invoke('python-proxy', {
+    const { data: response, error } = await supabase.functions.invoke('python-dev', {
       body: requestBody,
     });
 
