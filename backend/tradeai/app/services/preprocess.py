@@ -118,10 +118,13 @@ CRITICAL RULES:
   Do NOT change it to "cover" or anything else. Only correct obvious non-word typos and abbreviations.
 - If the combination of words doesn't make clear sense as a single product (e.g., "cow for speakers"
   is confusing — a cow is an animal, speakers are electronics), set "ambiguous" to true and ASK what they mean.
-- If a single word could refer to multiple product categories, set "ambiguous" to true.
-  Example: "horses" could be live horses, horse meat, horsehair — ask which one.
+- If a SINGLE word with NO context could refer to multiple product categories, set "ambiguous" to true.
+  Example: "horses" alone could be live horses, horse meat, horsehair — ask which one.
+- BUT if the user provides context that makes it clear, it is NOT ambiguous. Do NOT ask.
+  Example: "cow for meat" = bovine meat (NOT ambiguous). "horse hair" = horsehair (NOT ambiguous).
+  "live cow" = live bovine animal (NOT ambiguous). "cow leather" = cowhide/leather (NOT ambiguous).
 - If the input is nonsensical or too vague (e.g., "thing", "stuff", "abc"), set "too_vague" to true.
-- When in doubt, ASK. Never assume.
+- When in doubt, ASK. But if the user gave you enough context to determine the product category, just classify it.
 
 Raw input: "{text}"
 
@@ -155,6 +158,9 @@ Examples:
 - "bluetooth speaker" → product_name: "bluetooth speaker", ambiguous: false
 - "xyz123" → too_vague: true, clarification_questions: [{{"question": "Could you describe the physical product you want to classify?", "options": []}}]
 - "cow" → ambiguous: true, clarification_questions: [{{"question": "What type of cow product are you classifying?", "options": ["Live cow", "Beef/meat", "Cowhide/leather"]}}]
+- "cow for meat" → ambiguous: false (user specified "for meat" — this is clearly bovine meat)
+- "live horses for racing" → ambiguous: false (user specified "live" and "for racing")
+- "horse meat" → ambiguous: false (clearly horse meat, not live horses or horsehair)
 
 Respond ONLY with JSON.
 """
