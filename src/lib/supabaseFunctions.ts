@@ -149,3 +149,149 @@ export async function applyRules(data: any): Promise<any> {
 }
 
 
+// ============================================================================
+// Bulk Classification Functions
+// ============================================================================
+
+export interface BulkClassificationItem {
+  id: string;
+  row_number: number;
+  extracted_data: {
+    product_name?: string;
+    description?: string;
+    materials?: string;
+    country_of_origin?: string;
+    quantity?: string;
+    unit_value?: string;
+    [key: string]: any;
+  };
+  status: 'pending' | 'processing' | 'completed' | 'exception' | 'error';
+  classification_result: any | null;
+  error: string | null;
+  clarification_questions: Array<{ question: string; options: string[] }> | null;
+  clarification_answers: Record<string, string> | null;
+}
+
+export interface BulkClassificationRun {
+  run_id: string;
+  user_id: string;
+  file_name: string;
+  file_type: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  total_items: number;
+  progress_current: number;
+  progress_total: number;
+  results_summary: {
+    completed: number;
+    exceptions: number;
+    errors: number;
+  };
+  items: BulkClassificationItem[];
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+/**
+ * Start a bulk classification run by uploading a file.
+ * Returns the run_id for polling progress.
+ */
+export async function startBulkClassification(
+  file: File,
+  userId: string,
+  confidenceThreshold: number = 0.70,
+): Promise<{ run_id: string; status: string; total_items: number } | null> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('user_id', userId);
+    formData.append('confidence_threshold', confidenceThreshold.toString());
+
+    const { data, error } = await supabase.functions.invoke('python-dev-bulk', {
+      body: formData,
+    });
+
+    if (error) {
+      console.error('Bulk classification start error:', error);
+      return null;
+    }
+
+    return typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (error) {
+    console.error('Error starting bulk classification:', error);
+    return null;
+  }
+}
+
+/**
+ * Poll the status of a bulk classification run.
+ */
+export async function getBulkClassificationStatus(
+  runId: string,
+): Promise<BulkClassificationRun | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev-bulk-status', {
+      body: { run_id: runId },
+    });
+
+    if (error) {
+      console.error('Bulk status poll error:', error);
+      return null;
+    }
+
+    return typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (error) {
+    console.error('Error polling bulk status:', error);
+    return null;
+  }
+}
+
+/**
+ * Submit clarification answers for a bulk classification exception item.
+ */
+export async function clarifyBulkItem(
+  runId: string,
+  itemId: string,
+  answers: Record<string, string>,
+): Promise<any | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev-bulk-clarify', {
+      body: { run_id: runId, item_id: itemId, answers },
+    });
+
+    if (error) {
+      console.error('Bulk clarify error:', error);
+      return null;
+    }
+
+    return typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (error) {
+    console.error('Error clarifying bulk item:', error);
+    return null;
+  }
+}
+
+/**
+ * Cancel a running bulk classification.
+ */
+export async function cancelBulkClassification(
+  runId: string,
+): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev-bulk-cancel', {
+      body: { run_id: runId },
+    });
+
+    if (error) {
+      console.error('Bulk cancel error:', error);
+      return false;
+    }
+
+    const result = typeof data === 'string' ? JSON.parse(data) : data;
+    return result?.success === true;
+  } catch (error) {
+    console.error('Error cancelling bulk classification:', error);
+    return false;
+  }
+}

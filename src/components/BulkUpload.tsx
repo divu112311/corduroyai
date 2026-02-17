@@ -1,11 +1,17 @@
-import { useState } from 'react';
-import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Filter, ArrowUpDown, Plus, X, FileText, File, Sparkles } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Filter, ArrowUpDown, Plus, X, FileText, File, Sparkles, StopCircle, Loader2 } from 'lucide-react';
 import { BulkItemDetail } from './BulkItemDetail';
 import { ExceptionReview } from './ExceptionReview';
+import {
+  startBulkClassification,
+  getBulkClassificationStatus,
+  cancelBulkClassification,
+  type BulkClassificationItem,
+} from '../lib/supabaseFunctions';
 import React from 'react';
 
 interface BulkItem {
-  id: number;
+  id: number | string;
   productName: string;
   description: string;
   status: 'pending' | 'complete' | 'exception';
@@ -15,6 +21,8 @@ interface BulkItem {
   origin?: string;
   materials?: string;
   cost?: string;
+  bulkItemId?: string;
+  clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
 }
 
 type SortField = 'name' | 'confidence' | 'status';
@@ -24,6 +32,34 @@ interface BulkUploadProps {
   initialFile?: File | null;
   initialSupportingFiles?: File[];
   autoStart?: boolean;
+}
+
+function mapBulkItemToUI(item: BulkClassificationItem): BulkItem {
+  const result = item.classification_result;
+  const matchedRules = result?.matched_rules || [];
+  const topRule = matchedRules[0];
+  const maxConf = matchedRules.length > 0
+    ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
+    : 0;
+
+  let status: 'pending' | 'complete' | 'exception' = 'pending';
+  if (item.status === 'completed') status = 'complete';
+  else if (item.status === 'exception' || item.status === 'error') status = 'exception';
+
+  return {
+    id: item.row_number,
+    productName: item.extracted_data.product_name || item.extracted_data.description || 'Unknown',
+    description: item.extracted_data.description || '',
+    status,
+    hts: topRule?.hts || '',
+    confidence: maxConf,
+    tariff: topRule?.tariff_rate ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+    origin: item.extracted_data.country_of_origin || '',
+    materials: item.extracted_data.materials || '',
+    cost: item.extracted_data.unit_value || '',
+    bulkItemId: item.id,
+    clarificationQuestions: item.clarification_questions,
+  };
 }
 
 export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false }: BulkUploadProps = {}) {
@@ -39,6 +75,40 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [supportingFiles, setSupportingFiles] = useState<File[]>(initialSupportingFiles);
   const [uploadedMainFile, setUploadedMainFile] = useState<File | null>(initialFile);
   const [aiChatOpen, setAiChatOpen] = useState(true);
+  const [progressCurrent, setProgressCurrent] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [bulkRunId, setBulkRunId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Polling logic with backoff
+  const pollStatus = useCallback(async (runId: string, attempt: number = 0) => {
+    const data = await getBulkClassificationStatus(runId);
+    if (!data) {
+      setErrorMessage('Failed to get classification status');
+      setProcessing(false);
+      return;
+    }
+
+    setProgressCurrent(data.progress_current);
+    setProgressTotal(data.progress_total);
+
+    if (data.items && data.items.length > 0) {
+      setItems(data.items.map(mapBulkItemToUI));
+    }
+
+    if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
+      setProcessing(false);
+      if (data.status === 'failed') {
+        setErrorMessage(data.error_message || 'Classification failed');
+      }
+      return;
+    }
+
+    // Continue polling with backoff: 1s, 1.5s, 2s, ... max 5s
+    const delay = Math.min(1000 + attempt * 500, 5000);
+    pollingRef.current = setTimeout(() => pollStatus(runId, attempt + 1), delay);
+  }, []);
 
   // Auto-start classification if initial file is provided
   React.useEffect(() => {
@@ -46,6 +116,13 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       startClassification();
     }
   }, [initialFile, autoStart]);
+
+  // Cleanup polling on unmount
+  React.useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+    };
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -61,7 +138,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
@@ -75,27 +152,43 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
   const handleFile = (file: File) => {
     setUploadedMainFile(file);
+    setErrorMessage(null);
   };
 
-  const startClassification = () => {
+  const startClassification = async () => {
+    const fileToUpload = uploadedMainFile || initialFile;
+    if (!fileToUpload) return;
+
     setProcessing(true);
-    
-    // Simulate file processing
-    setTimeout(() => {
-      const mockItems: BulkItem[] = [
-        { id: 1, productName: 'Wireless Bluetooth Speaker', description: 'Portable speaker with rechargeable battery', status: 'complete', hts: '8517.62.0050', confidence: 96, tariff: '0%', origin: 'China', materials: 'ABS Plastic', cost: '$12.50' },
-        { id: 2, productName: 'Organic Cotton T-Shirt', description: '100% organic cotton, crew neck', status: 'complete', hts: '6109.10.0012', confidence: 97, tariff: '16.5%', origin: 'India', materials: '100% Cotton', cost: '$4.25' },
-        { id: 3, productName: 'Smart Watch with Health Monitor', description: 'Fitness tracking, heart rate, GPS', status: 'exception', hts: '9102.11.0000', confidence: 67, tariff: '9.8%', origin: 'China', materials: 'Electronics', cost: '$32.00' },
-        { id: 4, productName: 'LED Desk Lamp', description: 'Adjustable brightness, USB charging', status: 'complete', hts: '9405.20.6000', confidence: 98, tariff: '3.9%', origin: 'Vietnam', materials: 'Aluminum', cost: '$8.75' },
-        { id: 5, productName: 'Stainless Steel Water Bottle', description: 'Insulated, 32oz capacity', status: 'complete', hts: '7323.93.0000', confidence: 99, tariff: '0%', origin: 'South Korea', materials: 'Stainless Steel', cost: '$6.30' },
-        { id: 6, productName: 'Cotton-Polyester Blend Fabric', description: '60% cotton, 40% polyester', status: 'exception', hts: '5515.11.0000', confidence: 72, tariff: '12%', origin: 'China', materials: 'Textile', cost: '$2.15' },
-        { id: 7, productName: 'Ceramic Coffee Mug', description: 'Dishwasher safe, 12oz', status: 'complete', hts: '6912.00.4810', confidence: 95, tariff: '4.5%', origin: 'Mexico', materials: 'Ceramic', cost: '$1.80' },
-        { id: 8, productName: 'Bamboo Cutting Board', description: 'Large size, with juice groove', status: 'complete', hts: '4419.90.9040', confidence: 94, tariff: '3.2%', origin: 'Vietnam', materials: 'Bamboo', cost: '$5.50' },
-      ];
-      
-      setItems(mockItems);
+    setErrorMessage(null);
+    setItems([]);
+    setProgressCurrent(0);
+    setProgressTotal(0);
+
+    // TODO: Replace with actual user_id from auth context
+    const userId = 'anonymous';
+
+    const result = await startBulkClassification(fileToUpload, userId);
+
+    if (!result) {
+      setErrorMessage('Failed to start bulk classification. Please try again.');
       setProcessing(false);
-    }, 2000);
+      return;
+    }
+
+    setBulkRunId(result.run_id);
+    setProgressTotal(result.total_items);
+
+    // Start polling
+    pollStatus(result.run_id);
+  };
+
+  const handleCancelClassification = async () => {
+    if (bulkRunId) {
+      await cancelBulkClassification(bulkRunId);
+      if (pollingRef.current) clearTimeout(pollingRef.current);
+      setProcessing(false);
+    }
   };
 
   const handleSort = (field: SortField) => {
@@ -372,19 +465,57 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
         )}
 
         {/* Processing State */}
-        {processing && items.length === 0 && (
+        {processing && (
           <div className="bg-white rounded-xl p-12 border border-slate-200">
             <div className="text-center">
               <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full" />
               </div>
-              <h3 className="text-slate-900 mb-2">Processing File...</h3>
-              <p className="text-slate-600">AI is classifying your products</p>
-              {supportingFiles.length > 0 && (
-                <p className="text-slate-500 text-sm mt-2">
-                  Using {supportingFiles.length} supporting document{supportingFiles.length > 1 ? 's' : ''} for enhanced accuracy
-                </p>
+              <h3 className="text-slate-900 mb-2">Classifying Products...</h3>
+              <p className="text-slate-600">
+                {progressTotal > 0
+                  ? `Processing ${progressCurrent} of ${progressTotal} products`
+                  : 'Parsing file and extracting products...'}
+              </p>
+              {progressTotal > 0 && (
+                <div className="mt-4 max-w-md mx-auto">
+                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      style={{ width: `${(progressCurrent / progressTotal) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-slate-500 text-sm mt-2">
+                    {Math.round((progressCurrent / progressTotal) * 100)}% complete
+                  </p>
+                </div>
               )}
+              <button
+                onClick={handleCancelClassification}
+                className="mt-4 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <StopCircle className="w-4 h-4" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && !processing && (
+          <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+              <div>
+                <h4 className="text-red-900">Classification Error</h4>
+                <p className="text-red-700 text-sm">{errorMessage}</p>
+              </div>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="ml-auto text-red-600 hover:text-red-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
         )}

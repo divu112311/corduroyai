@@ -1,7 +1,8 @@
 import json
-from fastapi import FastAPI
+import threading
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict
 
 from dotenv import load_dotenv
 import os
@@ -12,6 +13,13 @@ from app.services.rules import apply_rules
 from app.services.rulings import generate_ruling
 from app.services.cbp_rulings import fetch_cbp_rulings_for_rules
 from app.services.cbp_rulings import search_cbp_rulings
+from app.services.bulk_orchestrator import (
+    create_bulk_run,
+    process_bulk_run,
+    get_bulk_run,
+    clarify_item,
+    cancel_bulk_run,
+)
 from app.models import PreprocessRequest
 load_dotenv()
 
@@ -123,3 +131,88 @@ def classify(req: ClassifyRequest):
         "type": "error",
         "message": "Unhandled classification state",
     }
+
+
+# ============================================================================
+# Bulk Classification Endpoints
+# ============================================================================
+
+@app.post("/bulk-classify")
+async def bulk_classify(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    confidence_threshold: float = Form(0.70),
+):
+    """
+    Upload a CSV/Excel/PDF file and start bulk HTS classification.
+    Returns a run_id for polling progress.
+    """
+    # Validate file type
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
+    if ext not in ("csv", "xlsx", "xls", "pdf"):
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: .{ext}")
+
+    file_content = await file.read()
+    if not file_content:
+        raise HTTPException(status_code=400, detail="Empty file")
+
+    try:
+        run_meta = create_bulk_run(
+            user_id=user_id,
+            file_name=file.filename or "upload",
+            file_type=ext,
+            file_content=file_content,
+            confidence_threshold=confidence_threshold,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Start processing in background thread
+    thread = threading.Thread(
+        target=process_bulk_run,
+        args=(run_meta["run_id"],),
+        daemon=True,
+    )
+    thread.start()
+
+    return run_meta
+
+
+@app.get("/bulk-classify/{run_id}")
+def get_bulk_run_status(run_id: str):
+    """
+    Poll the status of a bulk classification run.
+    Returns progress, items, and results.
+    """
+    run = get_bulk_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="Bulk run not found")
+    return run
+
+
+class ClarifyRequest(BaseModel):
+    item_id: str
+    answers: Dict[str, str]
+
+
+@app.post("/bulk-classify/{run_id}/clarify")
+def clarify_bulk_item(run_id: str, req: ClarifyRequest):
+    """
+    Submit clarification answers for an exception item.
+    Re-classifies only the specific item with enhanced context.
+    """
+    result = clarify_item(run_id, req.item_id, req.answers)
+    if not result:
+        raise HTTPException(status_code=404, detail="Run or item not found")
+    return result
+
+
+@app.delete("/bulk-classify/{run_id}")
+def delete_bulk_run(run_id: str):
+    """Cancel a running bulk classification."""
+    success = cancel_bulk_run(run_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Run not found or already completed")
+    return {"success": True}
