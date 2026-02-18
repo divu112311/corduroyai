@@ -151,6 +151,8 @@ def generate_markdown_report(results: list, stats: dict):
     lines.append(f"**Passed:** {stats['passed']} ({stats['pass_rate']:.1f}%)")
     lines.append(f"**Failed:** {stats['failed']}")
     lines.append(f"**Errors:** {stats['errors']}")
+    if stats.get("avg_time"):
+        lines.append(f"**Timing:** avg={stats['avg_time']}s, min={stats['min_time']}s, max={stats['max_time']}s, total={stats['total_time']}s")
 
     # Summary by category
     lines.append("\n## Results by Category\n")
@@ -249,21 +251,63 @@ def main():
 
     # Print summary
     stats["pass_rate"] = (stats["passed"] / stats["total"] * 100) if stats["total"] > 0 else 0
+
+    # Calculate timing stats
+    elapsed_times = [r["elapsed_seconds"] for r in results if r.get("elapsed_seconds")]
+    if elapsed_times:
+        stats["avg_time"] = round(sum(elapsed_times) / len(elapsed_times), 1)
+        stats["min_time"] = round(min(elapsed_times), 1)
+        stats["max_time"] = round(max(elapsed_times), 1)
+        stats["total_time"] = round(sum(elapsed_times), 1)
+
     print(f"\n{'='*60}")
     print(f"RESULTS: {stats['passed']}/{stats['total']} passed ({stats['pass_rate']:.1f}%)")
     print(f"Failed: {stats['failed']}, Errors: {stats['errors']}")
+    if elapsed_times:
+        print(f"Timing: avg={stats['avg_time']}s, min={stats['min_time']}s, max={stats['max_time']}s, total={stats['total_time']}s")
     print(f"{'='*60}")
 
-    # Save JSON report
-    with open(REPORT_FILE, "w") as f:
-        json.dump({"stats": stats, "results": results}, f, indent=2)
-    print(f"\nJSON report saved to: {REPORT_FILE}")
+    # Save JSON report locally
+    try:
+        with open(REPORT_FILE, "w") as f:
+            json.dump({"stats": stats, "results": results}, f, indent=2)
+        print(f"\nJSON report saved to: {REPORT_FILE}")
+    except Exception as e:
+        print(f"Could not save JSON locally: {e}")
 
-    # Save markdown report
+    # Save markdown report locally
     md_report = generate_markdown_report(results, stats)
-    with open(REPORT_MD_FILE, "w") as f:
-        f.write(md_report)
-    print(f"Markdown report saved to: {REPORT_MD_FILE}")
+    try:
+        with open(REPORT_MD_FILE, "w") as f:
+            f.write(md_report)
+        print(f"Markdown report saved to: {REPORT_MD_FILE}")
+    except Exception as e:
+        print(f"Could not save markdown locally: {e}")
+
+    # Always print full markdown report to stdout (for Cloud Run logs)
+    print("\n" + "=" * 80)
+    print("FULL MARKDOWN REPORT")
+    print("=" * 80)
+    print(md_report)
+
+    # Upload to GCS if bucket is configured
+    gcs_bucket = os.environ.get("GCS_BUCKET", "")
+    if gcs_bucket:
+        try:
+            from google.cloud import storage
+            client = storage.Client()
+            bucket = client.bucket(gcs_bucket)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            blob_json = bucket.blob(f"test-reports/test_report_{ts}.json")
+            blob_json.upload_from_string(json.dumps({"stats": stats, "results": results}, indent=2))
+            print(f"\nJSON report uploaded to: gs://{gcs_bucket}/test-reports/test_report_{ts}.json")
+
+            blob_md = bucket.blob(f"test-reports/test_report_{ts}.md")
+            blob_md.upload_from_string(md_report)
+            print(f"Markdown report uploaded to: gs://{gcs_bucket}/test-reports/test_report_{ts}.md")
+        except Exception as e:
+            print(f"GCS upload failed (non-fatal): {e}")
 
 
 if __name__ == "__main__":

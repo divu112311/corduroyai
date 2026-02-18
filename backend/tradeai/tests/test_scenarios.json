@@ -136,5 +136,31 @@
 
   {"id": 118, "query": "camiseta de algodon para hombre", "expected_chapter": "61", "expected_heading": "6109", "category": "Multi-Language Spanish", "should_clarify": false},
   {"id": 119, "query": "chaussures en cuir", "expected_chapter": "64", "expected_heading": "6403", "category": "Multi-Language French", "should_clarify": false},
-  {"id": 120, "query": "Baumwoll T-Shirt Herren", "expected_chapter": "61", "expected_heading": "6109", "category": "Multi-Language German", "should_clarify": false}
+  {"id": 120, "query": "Baumwoll T-Shirt Herren", "expected_chapter": "61", "expected_heading": "6109", "category": "Multi-Language German", "should_clarify": false},
+
+  {"id": 121, "query": "leather wallet", "expected_chapter": "42", "expected_heading": "4202", "category": "Leather Goods", "should_clarify": false},
+  {"id": 122, "query": "leather belt for men", "expected_chapter": "42", "expected_heading": "4203", "category": "Leather Goods", "should_clarify": false},
+  {"id": 123, "query": "leather briefcase", "expected_chapter": "42", "expected_heading": "4202", "category": "Leather Goods", "should_clarify": false},
+  {"id": 124, "query": "leather suitcase luggage", "expected_chapter": "42", "expected_heading": "4202", "category": "Leather Goods", "should_clarify": false},
+  {"id": 125, "query": "leather coin purse", "expected_chapter": "42", "expected_heading": "4202", "category": "Leather Goods", "should_clarify": false},
+
+  {"id": 126, "query": "chapstick lip gloss", "expected_chapter": "33", "expected_heading": "3304", "category": "Cosmetics - Lip Care", "should_clarify": false},
+  {"id": 127, "query": "lip balm", "expected_chapter": "33", "expected_heading": "3304", "category": "Cosmetics - Lip Care", "should_clarify": false},
+  {"id": 128, "query": "sunscreen SPF 50 lotion", "expected_chapter": "33", "expected_heading": "3304", "category": "Cosmetics - Skincare", "should_clarify": false},
+  {"id": 129, "query": "nail polish red", "expected_chapter": "33", "expected_heading": "3304", "category": "Cosmetics - Nails", "should_clarify": false},
+  {"id": 130, "query": "deodorant spray", "expected_chapter": "33", "expected_heading": "3307", "category": "Cosmetics - Personal Care", "should_clarify": false},
+
+  {"id": 131, "query": "steel kitchen knife", "expected_chapter": "82", "expected_heading": "8211", "category": "Metal Articles - Cutlery", "should_clarify": false},
+  {"id": 132, "query": "wooden picture frame", "expected_chapter": "44", "expected_heading": "4414", "category": "Wood Articles", "should_clarify": false},
+  {"id": 133, "query": "Nike running shoes", "expected_chapter": "64", "expected_heading": "6404", "category": "Footwear - Brand", "should_clarify": false},
+  {"id": 134, "query": "Band-Aid adhesive bandages", "expected_chapter": "30", "expected_heading": "3005", "category": "Medical Supplies - Brand", "should_clarify": false},
+  {"id": 135, "query": "Kleenex facial tissue", "expected_chapter": "48", "expected_heading": "4818", "category": "Paper - Brand", "should_clarify": false},
+
+  {"id": 136, "query": "leather wallet with metal clasp", "expected_chapter": "42", "expected_heading": "4202", "category": "Leather Goods - Composite", "should_clarify": false},
+  {"id": 137, "query": "gloves for winter knitted", "expected_chapter": "61", "expected_heading": "6116", "category": "Textiles - Knitted", "should_clarify": false},
+  {"id": 138, "query": "belt for men leather", "expected_chapter": "42", "expected_heading": "4203", "category": "Leather Goods", "should_clarify": false},
+
+  {"id": 139, "query": "crane", "expected_chapter": null, "expected_heading": null, "category": "Ambiguous", "should_clarify": true},
+  {"id": 140, "query": "bat", "expected_chapter": null, "expected_heading": null, "category": "Ambiguous", "should_clarify": true},
+  {"id": 141, "query": "mouse", "expected_chapter": null, "expected_heading": null, "category": "Ambiguous", "should_clarify": true}
 ]

@@ -11,6 +11,7 @@ def parse(data: dict) -> dict:
     usage = data.get("usage", "")
     form = data.get("form", "")
     processing = data.get("processing", "")
+    product_type = data.get("product_type", "")
     user_id = data.get("user_id", "")
 
     # Use product_name if available, else cleaned_text
@@ -27,6 +28,7 @@ def parse(data: dict) -> dict:
         "usage": usage,
         "form": form,
         "processing": processing,
+        "product_type": product_type,
         "contains_digits": any(char.isdigit() for char in cleaned_text)
     }
 
