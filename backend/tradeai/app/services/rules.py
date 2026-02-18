@@ -90,6 +90,12 @@ def apply_rules(parsed: dict) -> dict:
     if attr_parts:
         embedding_input += " " + " ".join(attr_parts)
 
+    # If product_type provides category context not already in the product name,
+    # append it to help Pinecone find the right chapter
+    # e.g., "yoga mat" + "sports equipment" → pulls ch.95 instead of ch.40 rubber
+    if product_type and product_type not in product_lower:
+        embedding_input += f" {product_type}"
+
     print(f"Apply Rules — embedding input: {embedding_input}")
     print(f"  is_finished_product={is_finished_product}, is_raw={is_raw}, product_type='{product_type}'")
 

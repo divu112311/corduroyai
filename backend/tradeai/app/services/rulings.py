@@ -99,6 +99,7 @@ Respond ONLY with JSON.
             model="gpt-4o",
             prompt=prompt,
             temperature=0,
+            max_tokens=1500,
         )
         
         print("Result from LLM:", result)
@@ -161,7 +162,11 @@ Respond ONLY with JSON.
         print(f"Rationale generation error: {e}")
         for rule in matched_rules[:3]:
             rule["rationale"] = "Matched via vector similarity (Pinecone)"
-    
+            # If rule_confidence was set by the rule engine, use it instead of raw Pinecone score
+            if rule.get("rule_confidence") and rule["rule_confidence"] > 0:
+                rule["confidence"] = float(rule["rule_confidence"])
+                rule["similarity_score"] = float(rule.get("score", 0))
+
     return matched_rules[:3]
 
 
