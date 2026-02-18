@@ -542,10 +542,16 @@ export function ClassificationView() {
       status: 'needs_review'
     };
 
-    // Store in localStorage for persistence (in real app, this would go to a backend)
-    const existingReviews = JSON.parse(localStorage.getItem('priorityReviews') || '[]');
-    existingReviews.push(reviewItem);
-    localStorage.setItem('priorityReviews', JSON.stringify(existingReviews));
+    // Store in localStorage scoped to user for persistence (Fix #6)
+    const getStorageKey = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user ? `priorityReviews_${user.id}` : 'priorityReviews';
+    };
+    getStorageKey().then(key => {
+      const existingReviews = JSON.parse(localStorage.getItem(key) || '[]');
+      existingReviews.push(reviewItem);
+      localStorage.setItem(key, JSON.stringify(existingReviews));
+    });
 
     // Show confirmation
     setShowReviewLaterConfirmation(true);
