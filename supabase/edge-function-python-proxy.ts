@@ -17,7 +17,7 @@
 // // @ts-nocheck
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
-type Action = "preprocess" | "parse" | "rules" | "rulings";
+type Action = "preprocess" | "parse" | "rules" | "rulings" | "classify" | "bulk-classify" | "bulk-classify-status" | "bulk-classify-clarify" | "bulk-classify-cancel";
 
 const PY_BASE_URL = Deno.env.get("PY_BASE_URL") || "";
 const PY_BACKEND_TOKEN = Deno.env.get("PY_BACKEND_TOKEN") || "";
@@ -30,21 +30,36 @@ const allowHeaders =
 const corsHeaders = {
   "Access-Control-Allow-Origin": allowOrigin,
   "Access-Control-Allow-Headers": allowHeaders,
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, GET, DELETE, OPTIONS",
 };
 
-function mapActionToPath(action: Action): string {
+interface ActionMapping {
+  path: string;
+  method: string;
+}
+
+function mapActionToRoute(action: Action, body?: any): ActionMapping {
   switch (action) {
     case "preprocess":
-      return "/preprocess";
+      return { path: "/preprocess", method: "POST" };
     case "parse":
-      return "/parse";
+      return { path: "/parse", method: "POST" };
     case "rules":
-      return "/apply_rules";
+      return { path: "/apply_rules", method: "POST" };
     case "rulings":
-      return "/generate_ruling";
+      return { path: "/generate_ruling", method: "POST" };
+    case "classify":
+      return { path: "/classify", method: "POST" };
+    case "bulk-classify":
+      return { path: "/bulk-classify", method: "POST" };
+    case "bulk-classify-status":
+      return { path: `/bulk-classify/${body?.run_id || ""}`, method: "GET" };
+    case "bulk-classify-clarify":
+      return { path: `/bulk-classify/${body?.run_id || ""}/clarify`, method: "POST" };
+    case "bulk-classify-cancel":
+      return { path: `/bulk-classify/${body?.run_id || ""}`, method: "DELETE" };
     default:
-      return "";
+      return { path: "", method: "POST" };
   }
 }
 
@@ -72,11 +87,40 @@ serve(async (req: Request) => {
     return corsResponse("Method not allowed", 405);
   }
 
+  // Determine content type to handle both JSON and multipart/form-data
+  const contentType = req.headers.get("content-type") || "";
   let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return corsResponse("Invalid JSON", 400);
+  let isMultipart = false;
+  let rawBody: BodyInit | null = null;
+
+  if (contentType.includes("multipart/form-data")) {
+    // For file uploads (bulk-classify), forward the raw request body
+    isMultipart = true;
+    try {
+      // Read the form data to extract the action, then rebuild for forwarding
+      const formData = await req.formData();
+      const action = formData.get("action") as string;
+      if (!action) {
+        return corsResponse("Missing action in form data", 400);
+      }
+      body = { action };
+      // Rebuild FormData without the action field for the upstream
+      const forwardFormData = new FormData();
+      for (const [key, value] of formData.entries()) {
+        if (key !== "action") {
+          forwardFormData.append(key, value);
+        }
+      }
+      rawBody = forwardFormData;
+    } catch {
+      return corsResponse("Invalid form data", 400);
+    }
+  } else {
+    try {
+      body = await req.json();
+    } catch {
+      return corsResponse("Invalid JSON", 400);
+    }
   }
 
   const action = body?.action as Action;
@@ -84,8 +128,8 @@ serve(async (req: Request) => {
     return corsResponse("Missing action", 400);
   }
 
-  const path = mapActionToPath(action);
-  if (!path) {
+  const route = mapActionToRoute(action, body);
+  if (!route.path) {
     return corsResponse("Unknown action", 400);
   }
 
@@ -93,31 +137,39 @@ serve(async (req: Request) => {
     return corsResponse("PY_BASE_URL not set", 500);
   }
 
-  const forwardBody = { ...body };
-  delete forwardBody.action;
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
 
   if (PY_BACKEND_TOKEN) {
     headers["Authorization"] = `Bearer ${PY_BACKEND_TOKEN}`;
   }
 
+  let upstreamBody: BodyInit | null = null;
+
+  if (isMultipart) {
+    // Forward the FormData directly — don't set Content-Type, let fetch set it with boundary
+    upstreamBody = rawBody;
+  } else if (route.method !== "GET" && route.method !== "DELETE") {
+    headers["Content-Type"] = "application/json";
+    const forwardBody = { ...body };
+    delete forwardBody.action;
+    delete forwardBody.run_id;  // run_id is in the URL path, not the body
+    upstreamBody = JSON.stringify(forwardBody);
+  }
+
   try {
-    const upstreamResp = await fetch(`${PY_BASE_URL}${path}`, {
-      method: "POST",
+    const upstreamResp = await fetch(`${PY_BASE_URL}${route.path}`, {
+      method: route.method,
       headers,
-      body: JSON.stringify(forwardBody),
+      ...(upstreamBody ? { body: upstreamBody } : {}),
     });
 
     const text = await upstreamResp.text();
-    const contentType = upstreamResp.headers.get("content-type") || "";
+    const respContentType = upstreamResp.headers.get("content-type") || "";
 
     return corsResponse(
       text,
       upstreamResp.status,
-      contentType.includes("application/json")
+      respContentType.includes("application/json")
         ? { "Content-Type": "application/json" }
         : {}
     );

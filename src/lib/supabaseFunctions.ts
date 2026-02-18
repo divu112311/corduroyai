@@ -195,7 +195,8 @@ export interface BulkClassificationRun {
 
 /**
  * Start a bulk classification run by uploading a file.
- * Returns the run_id for polling progress.
+ * Routes through the python-dev edge function which proxies to
+ * Cloud Run: POST /bulk-classify
  */
 export async function startBulkClassification(
   file: File,
@@ -204,11 +205,12 @@ export async function startBulkClassification(
 ): Promise<{ run_id: string; status: string; total_items: number } | null> {
   try {
     const formData = new FormData();
+    formData.append('action', 'bulk-classify');
     formData.append('file', file);
     formData.append('user_id', userId);
     formData.append('confidence_threshold', confidenceThreshold.toString());
 
-    const { data, error } = await supabase.functions.invoke('python-dev-bulk', {
+    const { data, error } = await supabase.functions.invoke('python-dev', {
       body: formData,
     });
 
@@ -226,13 +228,15 @@ export async function startBulkClassification(
 
 /**
  * Poll the status of a bulk classification run.
+ * Routes through the python-dev edge function which proxies to
+ * Cloud Run: GET /bulk-classify/{run_id}
  */
 export async function getBulkClassificationStatus(
   runId: string,
 ): Promise<BulkClassificationRun | null> {
   try {
-    const { data, error } = await supabase.functions.invoke('python-dev-bulk-status', {
-      body: { run_id: runId },
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: { action: 'bulk-classify-status', run_id: runId },
     });
 
     if (error) {
@@ -249,6 +253,8 @@ export async function getBulkClassificationStatus(
 
 /**
  * Submit clarification answers for a bulk classification exception item.
+ * Routes through the python-dev edge function which proxies to
+ * Cloud Run: POST /bulk-classify/{run_id}/clarify
  */
 export async function clarifyBulkItem(
   runId: string,
@@ -256,8 +262,8 @@ export async function clarifyBulkItem(
   answers: Record<string, string>,
 ): Promise<any | null> {
   try {
-    const { data, error } = await supabase.functions.invoke('python-dev-bulk-clarify', {
-      body: { run_id: runId, item_id: itemId, answers },
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: { action: 'bulk-classify-clarify', run_id: runId, item_id: itemId, answers },
     });
 
     if (error) {
@@ -274,13 +280,15 @@ export async function clarifyBulkItem(
 
 /**
  * Cancel a running bulk classification.
+ * Routes through the python-dev edge function which proxies to
+ * Cloud Run: DELETE /bulk-classify/{run_id}
  */
 export async function cancelBulkClassification(
   runId: string,
 ): Promise<boolean> {
   try {
-    const { data, error } = await supabase.functions.invoke('python-dev-bulk-cancel', {
-      body: { run_id: runId },
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: { action: 'bulk-classify-cancel', run_id: runId },
     });
 
     if (error) {

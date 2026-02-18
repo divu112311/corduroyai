@@ -11,7 +11,7 @@ interface AlternativeClassification {
 
 interface BulkItemDetailProps {
   item: {
-    id: number;
+    id: number | string;
     productName: string;
     description: string;
     status: 'pending' | 'complete' | 'exception';
@@ -21,6 +21,8 @@ interface BulkItemDetailProps {
     origin?: string;
     materials?: string;
     cost?: string;
+    bulkItemId?: string;
+    clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
   };
   onClose: () => void;
   onSave: (item: any) => void;

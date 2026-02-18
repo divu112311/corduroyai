@@ -860,11 +860,24 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             origin: exceptionItem.origin || 'China',
             reason: 'Low confidence score - Multiple possible classifications detected'
           }}
+          bulkRunId={bulkRunId || undefined}
+          bulkItemId={exceptionItem.bulkItemId || undefined}
+          clarificationQuestions={exceptionItem.clarificationQuestions}
           onClose={() => setExceptionItem(null)}
-          onApprove={() => {
-            setItems(items.map(i => 
-              i.id === exceptionItem.id ? { ...i, status: 'complete' as const } : i
-            ));
+          onApprove={(updatedProduct?: any) => {
+            setItems(items.map(i => {
+              if (i.id !== exceptionItem.id) return i;
+              if (updatedProduct) {
+                return {
+                  ...i,
+                  status: 'complete' as const,
+                  hts: updatedProduct.hts || i.hts,
+                  confidence: updatedProduct.confidence || i.confidence,
+                  tariff: updatedProduct.tariff || i.tariff,
+                };
+              }
+              return { ...i, status: 'complete' as const };
+            }));
             setExceptionItem(null);
           }}
           onReject={() => {

@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus } from 'lucide-react';
+import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2 } from 'lucide-react';
+import { clarifyBulkItem } from '../lib/supabaseFunctions';
 
 interface ExceptionReviewProps {
   product: {
-    id: number;
+    id: number | string;
     productName: string;
     description: string;
     hts: string;
@@ -12,8 +13,11 @@ interface ExceptionReviewProps {
     origin: string;
     reason: string;
   };
+  bulkRunId?: string;
+  bulkItemId?: string;
+  clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
   onClose: () => void;
-  onApprove: () => void;
+  onApprove: (updatedProduct?: any) => void;
   onReject: () => void;
 }
 
@@ -23,7 +27,7 @@ interface ChatMessage {
   timestamp?: string;
 }
 
-export function ExceptionReview({ product, onClose, onApprove, onReject }: ExceptionReviewProps) {
+export function ExceptionReview({ product, bulkRunId, bulkItemId, clarificationQuestions, onClose, onApprove, onReject }: ExceptionReviewProps) {
   const [selectedHts, setSelectedHts] = useState(product.hts);
   const [notes, setNotes] = useState('');
   const [currentConfidence, setCurrentConfidence] = useState(product.confidence);
@@ -32,21 +36,42 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
   const [primaryUseProvided, setPrimaryUseProvided] = useState(false);
   const [certificationProvided, setCertificationProvided] = useState(false);
   const [resolvedIssues, setResolvedIssues] = useState<string[]>([]);
-  // Using available data: product.productName, product.confidence, product.hts from database
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
-      timestamp: 'Just now'
-    },
-    {
-      role: 'assistant',
-      // HARDCODED: Chat message content - Should be dynamic based on product.reason or fetched from database
-      // TODO: Make message content dynamic based on actual exception reason
-      text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
-      timestamp: 'Just now'
+  const [isClarifying, setIsClarifying] = useState(false);
+
+  // Build initial messages — include backend clarification questions if available
+  const buildInitialMessages = (): ChatMessage[] => {
+    const msgs: ChatMessage[] = [
+      {
+        role: 'assistant',
+        text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
+        timestamp: 'Just now'
+      },
+    ];
+
+    if (clarificationQuestions && clarificationQuestions.length > 0) {
+      // Use actual clarification questions from the backend
+      const questionLines = clarificationQuestions.map((q, i) => {
+        const optionsText = q.options && q.options.length > 0
+          ? `\n   Options: ${q.options.join(', ')}`
+          : '';
+        return `${i + 1}. ${q.question}${optionsText}`;
+      }).join('\n');
+      msgs.push({
+        role: 'assistant',
+        text: `To improve the classification, I need some additional information:\n\n${questionLines}\n\nPlease answer these questions in the chat, or upload supporting documents.`,
+        timestamp: 'Just now'
+      });
+    } else {
+      msgs.push({
+        role: 'assistant',
+        text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
+        timestamp: 'Just now'
+      });
     }
-  ]);
+    return msgs;
+  };
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(buildInitialMessages());
   const [chatInput, setChatInput] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -151,7 +176,7 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     }
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!chatInput.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -161,39 +186,41 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const currentInput = chatInput;
+    setChatInput('');
 
     // Analyze user input for information provided
-    const lowerInput = chatInput.toLowerCase();
+    const lowerInput = currentInput.toLowerCase();
     const newIssuesResolved: string[] = [];
-    
+
     // Detect primary use information
-    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) && 
+    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) &&
         (lowerInput.includes('primary') || lowerInput.includes('main') || lowerInput.includes('marketed'))) {
       if (!primaryUseProvided) {
         setPrimaryUseProvided(true);
         newIssuesResolved.push('primary_use');
       }
     }
-    
+
     // Detect material information - simplified logic
-    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') || 
+    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') ||
                                 lowerInput.includes('composition') || lowerInput.includes('fabric');
-    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') || 
-                           lowerInput.includes('wool') || lowerInput.includes('nylon') || 
+    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') ||
+                           lowerInput.includes('wool') || lowerInput.includes('nylon') ||
                            lowerInput.includes('leather') || lowerInput.includes('rubber') ||
-                           lowerInput.includes('aluminum') || lowerInput.includes('steel') || 
-                           lowerInput.includes('plastic') || lowerInput.includes('silicone') || 
+                           lowerInput.includes('aluminum') || lowerInput.includes('steel') ||
+                           lowerInput.includes('plastic') || lowerInput.includes('silicone') ||
                            lowerInput.includes('metal');
     const hasPercentage = lowerInput.match(/\d+\s*%/);
-    
+
     // Trigger if has material keyword + type, OR has percentage (material composition)
     if (!materialsProvided && ((hasMaterialKeyword && hasMaterialType) || hasPercentage)) {
       setMaterialsProvided(true);
       newIssuesResolved.push('materials');
     }
-    
+
     // Detect certification information
-    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') || 
+    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') ||
         lowerInput.includes('class ii') || lowerInput.includes('medical device')) {
       if (!certificationProvided) {
         setCertificationProvided(true);
@@ -206,11 +233,86 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       updateConfidenceScore(newIssuesResolved);
     }
 
-    // HARDCODED: AI response templates - Should use actual AI service or be dynamic based on product context
-    // TODO: Integrate with AI service or make responses dynamic based on product data
+    // If this is a bulk classification item with a backend run, call the clarification endpoint
+    if (bulkRunId && bulkItemId) {
+      setIsClarifying(true);
+
+      // Build answers object from user input mapped to clarification questions
+      const answers: Record<string, string> = {};
+      if (clarificationQuestions && clarificationQuestions.length > 0) {
+        // Map the user's response to the first unanswered question
+        clarificationQuestions.forEach((q, idx) => {
+          answers[`q${idx}`] = currentInput;
+        });
+      } else {
+        answers['clarification'] = currentInput;
+      }
+
+      try {
+        const result = await clarifyBulkItem(bulkRunId, bulkItemId, answers);
+
+        if (result && result.status === 'completed') {
+          // Extract updated classification from the result
+          const matchedRules = result.classification_result?.matched_rules || [];
+          const topRule = matchedRules[0];
+          const newConfidence = matchedRules.length > 0
+            ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
+            : currentConfidence;
+
+          setPreviousConfidence(currentConfidence);
+          setCurrentConfidence(newConfidence);
+
+          if (topRule?.hts) {
+            setSelectedHts(topRule.hts);
+          }
+
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: `Thanks for the clarification! I've re-classified this product with the additional context you provided.\n\n${topRule ? `📋 Updated HTS: ${topRule.hts}\n📊 Confidence: ${newConfidence}%\n💰 Tariff: ${topRule.tariff_rate ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : 'N/A'}` : ''}${newConfidence >= 85 ? '\n\n✅ This classification is now high confidence and ready for approval!' : '\n\nYou can provide more details to further improve the confidence score.'}`,
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else if (result && result.status === 'exception') {
+          // Still needs more clarification
+          const newQuestions = result.clarification_questions || [];
+          const questionText = newQuestions.length > 0
+            ? newQuestions.map((q: any, i: number) => `${i + 1}. ${q.question}`).join('\n')
+            : 'Could you provide more specific details about this product?';
+
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: `Thank you for that information. I still need a bit more to finalize the classification:\n\n${questionText}`,
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else {
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: 'I received your input but had trouble processing the re-classification. You can try providing more specific details or upload a supporting document.',
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        }
+      } catch (err) {
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          text: 'Sorry, there was an error processing your clarification. Please try again.',
+          timestamp: 'Just now'
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } finally {
+        setIsClarifying(false);
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+      return;
+    }
+
+    // Fallback: local AI response templates for non-bulk review or when no backend is available
     setTimeout(() => {
       let aiResponse = '';
-      
+
       if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
         aiResponse = "Perfect question! The 'essential character' or primary function is the key to getting this right. If the product is marketed mainly as a fitness/health tracker that happens to tell time, we'd classify it under measuring instruments (9031.80.8000) at 1.7% duty. If it's sold as a watch with health features, it stays under 9102.11.0000 at 9.8% duty. What does your marketing say?";
       } else if (lowerInput.includes('material') || lowerInput.includes('made of') || hasPercentage) {
@@ -218,8 +320,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
         aiResponse = "This is a game-changer! Medical certification shifts the classification significantly. If you have FDA registration or CE medical device certification, it strengthens the case for 9031.80.8000 (measuring instruments) at 1.7% instead of 9.8%. Some medical devices even qualify for duty-free treatment. Do you have certification documents you can share?";
       } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
-        // HARDCODED: Tariff comparison - Should use actual tariff rates from database or alternatives data
-        // TODO: Use actual tariff rates from product.tariff and alternatives data
         aiResponse = `Let me break down the financial impact for you:\n\n📊 HTS 9102.11.0000 (Watches): 9.8% duty\n📊 HTS 9031.80.8000 (Instruments): 1.7% duty\n📊 HTS 8517.62.0050 (Comm devices): 0% duty\n\nIf your shipment value is $11,250, that's a difference of $920 vs $191 vs $0 in duties. Getting this classification right really matters for your bottom line!`;
       } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
         aiResponse = "I'm here to help! Here's what would help me increase the confidence score:\n\n1. Product specs or data sheet\n2. How it's marketed (watch vs health device)\n3. Material composition details\n4. Any certifications (FDA, CE, etc.)\n\nYou can either type the details or upload documents using the button below. What works best for you?";
@@ -238,8 +338,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
         chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     }, 800);
-
-    setChatInput('');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -339,7 +437,12 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
 
   const handleApprove = () => {
     console.log('Approved:', selectedHts, notes);
-    onApprove();
+    onApprove({
+      hts: selectedHts,
+      confidence: currentConfidence,
+      tariff: product.tariff,
+      notes,
+    });
   };
 
   return (
@@ -898,16 +1001,16 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  onKeyPress={(e) => e.key === 'Enter' && !isClarifying && handleSendMessage()}
                   placeholder="Ask about materials, primary function, certifications..."
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={!chatInput.trim()}
+                  disabled={!chatInput.trim() || isClarifying}
                   className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-5 h-5" />
+                  {isClarifying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
 
