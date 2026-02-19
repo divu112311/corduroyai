@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, Building2, Lock, Sliders, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, Building2, Lock, Sliders, Eye, EyeOff, AlertCircle, CheckCircle, Monitor } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getUserMetadata, updateUserMetadata } from '../lib/userService';
+import { logActivity } from '../lib/activityLogger';
+import { ActiveSessions } from './ActiveSessions';
 
 export function Settings() {
   // Account Settings
@@ -133,6 +135,7 @@ export function Settings() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      logActivity(user.id, 'password_changed');
 
       // Clear message after 3 seconds
       setTimeout(() => setPasswordMessage(null), 3000);
@@ -176,6 +179,7 @@ export function Settings() {
         setOriginalCompanyName(companyName.trim());
         setCompanyMessage({ type: 'success', text: 'Company details saved successfully' });
         setIsEditingCompany(false);
+        logActivity(user.id, 'settings_updated', { field: 'company_name', value: companyName.trim() });
         setTimeout(() => setCompanyMessage(null), 3000);
       } else {
         setCompanyMessage({ type: 'error', text: 'Failed to save company details' });
@@ -225,6 +229,7 @@ export function Settings() {
         setOriginalThreshold(autoApprovalThreshold);
         setAutomationMessage({ type: 'success', text: 'Automation settings saved successfully' });
         setIsEditingAutomation(false);
+        logActivity(user.id, 'settings_updated', { field: 'confidence_threshold', value: autoApprovalThreshold });
         setTimeout(() => setAutomationMessage(null), 3000);
       } else {
         setAutomationMessage({ type: 'error', text: 'Failed to save automation settings' });
@@ -488,8 +493,8 @@ export function Settings() {
             <form onSubmit={handleAutomationSave} className="p-6">
               {automationMessage && (
                 <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-                  automationMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-800 border border-green-200' 
+                  automationMessage.type === 'success'
+                    ? 'bg-green-50 text-green-800 border border-green-200'
                     : 'bg-red-50 text-red-800 border border-red-200'
                 }`}>
                   {automationMessage.type === 'success' ? (
@@ -583,6 +588,25 @@ export function Settings() {
                 )}
               </div>
             </form>
+          </div>
+
+          {/* Active Sessions */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Monitor className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-slate-900">Active Sessions</h2>
+                  <p className="text-slate-600 text-sm">Manage your logged-in devices and sessions</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <ActiveSessions />
+            </div>
           </div>
         </div>
       </div>

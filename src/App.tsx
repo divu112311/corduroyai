@@ -10,10 +10,15 @@ import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
+import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
 import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
 import { getUserMetadata, updateLastLogin, createOrUpdateUserMetadata } from './lib/userService';
+import { recordLogin, upsertSession, heartbeat, removeCurrentSession } from './lib/sessionService';
+import { logActivity } from './lib/activityLogger';
+import { setSentryUser } from './lib/sentry';
+import { useIdleTimeout } from './hooks/useIdleTimeout';
 
 type View = 'dashboard' | 'classify' | 'profile' | 'settings' | 'activity';
 type AuthView = 'login' | 'signup' | 'reset-password' | 'new-password';
@@ -43,8 +48,25 @@ export default function App() {
   // Refs to avoid stale closures in onAuthStateChange callback (Fix #1)
   const isAuthenticatedRef = useRef(isAuthenticated);
   const authViewRef = useRef(authView);
+  const userRef = useRef(user);
   useEffect(() => { isAuthenticatedRef.current = isAuthenticated; }, [isAuthenticated]);
   useEffect(() => { authViewRef.current = authView; }, [authView]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // Idle timeout — auto-logout after 15 min inactivity, 2 min warning
+  const { showWarning: showIdleWarning, remainingSeconds, stayLoggedIn } = useIdleTimeout({
+    idleTimeout: 15 * 60 * 1000,
+    warningDuration: 2 * 60 * 1000,
+    onTimeout: () => handleLogout(),
+    enabled: isAuthenticated,
+  });
+
+  // Session heartbeat — ping every 2 minutes while authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    const interval = setInterval(() => heartbeat(user.id), 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user?.id]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -173,6 +195,13 @@ export default function App() {
       console.log('Setting user data:', userData);
       setUser(userData);
       setIsAuthenticated(true);
+
+      // Track login: record history, register session, identify in Sentry
+      const authMethod = supabaseUser.app_metadata?.provider === 'google' ? 'google' : 'email';
+      setSentryUser({ id: userData.id, email: userData.email });
+      recordLogin(supabaseUser.id, authMethod as 'email' | 'google');
+      upsertSession(supabaseUser.id);
+      logActivity(supabaseUser.id, 'login', { auth_method: authMethod });
     } catch (error: any) {
       console.error('Error loading user data:', error);
       console.error('Error details:', {
@@ -252,6 +281,7 @@ export default function App() {
       );
 
       await loadUserData(supabaseUser);
+      logActivity(supabaseUser.id, 'signup', { email: data.email, company: data.company });
       setShowWelcome(true);
     } catch (error) {
       console.error('Error during signup:', error);
@@ -280,6 +310,14 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      // Log activity and clean up session before signing out
+      const currentUser = userRef.current;
+      if (currentUser?.id) {
+        await logActivity(currentUser.id, 'logout');
+      }
+      await removeCurrentSession();
+      setSentryUser(null);
+
       // Set flag to skip auto-login after logout
       sessionStorage.setItem('skipAutoLogin', 'true');
       await supabase.auth.signOut();
@@ -383,6 +421,14 @@ export default function App() {
 
   // Authenticated app
   return (
+    <>
+    {showIdleWarning && (
+      <IdleTimeoutWarning
+        remainingSeconds={remainingSeconds}
+        onStayLoggedIn={stayLoggedIn}
+        onLogout={handleLogout}
+      />
+    )}
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
@@ -498,5 +544,6 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
     </div>
+    </>
   );
 }
