@@ -73,6 +73,9 @@ export default function App() {
       setAuthView('new-password');
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
+    } else if (hashParams.get('access_token') || hashParams.get('code')) {
+      // OAuth redirect (e.g. Google login) — let onAuthStateChange handle it
+      // Don't call checkSession() to avoid flashing the login screen
     } else {
       checkSession();
     }
@@ -83,7 +86,9 @@ export default function App() {
         // Auto-login unless already authenticated or explicitly skipping (after logout)
         const skipAutoLogin = sessionStorage.getItem('skipAutoLogin') === 'true';
         if (!isAuthenticatedRef.current && !skipAutoLogin) {
-          loadUserData(session.user);
+          loadUserData(session.user).finally(() => setIsLoading(false));
+        } else {
+          setIsLoading(false);
         }
       } else if (_event === 'TOKEN_REFRESHED') {
         if (!session) {
