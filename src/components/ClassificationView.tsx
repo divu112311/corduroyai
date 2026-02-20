@@ -3,7 +3,7 @@ import { Search, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, M
 import { LLMAssistant } from './LLMAssistant';
 import { ClarificationChatbot } from './ClarificationChatbot';
 import { ClassificationResults, ClassificationResultData } from './ClassificationResults';
-import { classifyProduct, generateRuling } from '../lib/supabaseFunctions';
+import { classifyProduct } from '../lib/supabaseFunctions';
 import {
   createClassificationRun,
   addClarificationMessage,

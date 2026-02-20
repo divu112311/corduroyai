@@ -11,7 +11,7 @@ import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
 import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
-import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
+import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon, Clock } from 'lucide-react';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
 import { getUserMetadata, updateLastLogin, createOrUpdateUserMetadata } from './lib/userService';
@@ -472,7 +472,19 @@ export default function App() {
             <FileText className="w-5 h-5" />
             <span>Product Profiles</span>
           </button>
-          
+
+          <button
+            onClick={() => setCurrentView('activity')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              currentView === 'activity'
+                ? 'bg-blue-50 text-blue-600'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Clock className="w-5 h-5" />
+            <span>Activity</span>
+          </button>
+
           <button
             onClick={() => setCurrentView('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${

@@ -117,7 +117,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         .eq('approved', true),
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, unit_cost')
+        .select('id, product_name, product_description, country_of_origin, unit_cost, sku')
         .in('id', productIds)
     ]);
 
@@ -191,7 +191,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         return {
           id: result.id,
           product: product.product_name || 'Unnamed Product',
-          sku: `PROD-${product.id}`,
+          sku: product.sku || `PROD-${product.id}`,
           reason,
           hts: result.hts_classification || 'N/A',
           status: priority === 'high' ? 'urgent' : 'review',
@@ -268,7 +268,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
     const [productsResponse, historyResponse] = await Promise.all([
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin')
+        .select('id, product_name, product_description, country_of_origin, sku')
         .in('id', productIds)
         .eq('user_id', userId),
       supabase
@@ -506,7 +506,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
     const [userProductsResponse, approvedHistoryResponse] = await Promise.all([
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, updated_at')
+        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, sku, updated_at')
         .eq('user_id', userId),
       supabase
         .from('user_product_classification_history')
@@ -622,7 +622,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
           productId: product.id,
           name: product.product_name || 'Unnamed Product',
           description: product.product_description || (result.description as string) || '',
-          sku: `PROD-${product.id}`,
+          sku: product.sku || `PROD-${product.id}`,
           hts: hts || 'N/A',
           materials: materialsStr,
           origin: product.country_of_origin || 'Unknown',

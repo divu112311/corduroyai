@@ -570,7 +570,8 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
             </div>
             )}
 
-            {/* AI Confidence Analysis */}
+            {/* AI Confidence Analysis - hidden for approved items */}
+            {!readOnly && (
             <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
                 <div className="flex items-center gap-2">
@@ -578,15 +579,15 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                   <h3 className="text-slate-900">AI Analysis</h3>
                 </div>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div>
                   <h4 className="text-slate-900 text-sm mb-2">Primary Issues Detected:</h4>
                   <div className="space-y-2">
                     {confidenceAnalysis.primaryIssues.map((item, idx) => (
                       <div key={idx} className={`p-3 rounded-lg border transition-all ${
-                        item.resolved 
-                          ? 'bg-green-50 border-green-200' 
+                        item.resolved
+                          ? 'bg-green-50 border-green-200'
                           : 'bg-slate-50 border-slate-200'
                       }`}>
                         <div className="flex items-start gap-2 mb-1">
@@ -600,8 +601,8 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className={`text-sm ${
-                                item.resolved 
-                                  ? 'text-green-900 line-through' 
+                                item.resolved
+                                  ? 'text-green-900 line-through'
                                   : 'text-slate-900'
                               }`}>
                                 {item.issue}
@@ -612,8 +613,8 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                                 </span>
                               ) : (
                                 <span className={`px-1.5 py-0.5 rounded text-xs ${
-                                  item.impact === 'high' 
-                                    ? 'bg-red-100 text-red-700' 
+                                  item.impact === 'high'
+                                    ? 'bg-red-100 text-red-700'
                                     : 'bg-amber-100 text-amber-700'
                                 }`}>
                                   {item.impact}
@@ -623,8 +624,8 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                             <p className={`text-xs mt-1 ${
                               item.resolved ? 'text-green-700' : 'text-slate-600'
                             }`}>
-                              {item.resolved 
-                                ? '✓ Information provided - issue resolved' 
+                              {item.resolved
+                                ? '✓ Information provided - issue resolved'
                                 : item.explanation
                               }
                             </p>
@@ -648,6 +649,7 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                 </div>
               </div>
             </div>
+            )}
 
             {/* Product Information */}
             <div className="bg-white border border-slate-200 rounded-lg p-4">
