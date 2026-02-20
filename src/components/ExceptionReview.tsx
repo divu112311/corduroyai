@@ -537,7 +537,7 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
         {/* Main Content - Split View */}
         <div className="flex-1 overflow-hidden flex">
           {/* Left Panel - Product Info & Classifications */}
-          <div className="w-1/2 border-r border-slate-200 overflow-y-auto p-6 space-y-6">
+          <div className={`${readOnly ? 'w-full' : 'w-1/2 border-r border-slate-200'} overflow-y-auto p-6 space-y-6`}>
             {/* Exception Alert */}
             <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">
@@ -978,19 +978,22 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
             </div>
 
             {/* Notes */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
-              <label className="block text-slate-900 mb-2 text-sm">Classification Notes (Optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Add any notes about this classification decision..."
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-              />
-            </div>
+            {!readOnly && (
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <label className="block text-slate-900 mb-2 text-sm">Classification Notes (Optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  placeholder="Add any notes about this classification decision..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Panel - AI Chat Assistant */}
+          {/* Right Panel - AI Chat Assistant (hidden when readOnly) */}
+          {!readOnly && (
           <div className="w-1/2 flex flex-col bg-gradient-to-br from-slate-50 to-blue-50">
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex-shrink-0">
@@ -1122,6 +1125,7 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Action Buttons */}
