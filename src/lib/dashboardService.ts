@@ -70,7 +70,6 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     }
 
     const threshold = userMetadata.confidence_threshold ?? 0.8;
-    console.log('getExceptions: Using confidence threshold:', threshold);
 
     // OPTIMIZED: Get results with product data in fewer queries
     // First get product IDs for this user
@@ -85,7 +84,6 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       return [];
     }
     if (!userProducts || userProducts.length === 0) {
-      console.log('getExceptions: No products found for user');
       return [];
     }
 
@@ -106,11 +104,8 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       return [];
     }
     if (!allResults || allResults.length === 0) {
-      console.log('getExceptions: No results found below threshold', threshold, 'for', productIds.length, 'products');
       return [];
     }
-
-    console.log('getExceptions: Found', allResults.length, 'results below threshold', threshold);
 
     // Get approval history and products in parallel
     const resultIds = allResults.map(r => r.id);
@@ -134,12 +129,9 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     // Create product map
     const productMap = new Map((productsResponse.data || []).map(p => [p.id, p]));
 
-    console.log('getExceptions: approved count:', approvedIds.size, 'products in map:', productMap.size);
-    const afterApprovalFilter = allResults.filter(r => !approvedIds.has(r.id));
-    console.log('getExceptions: after removing approved:', afterApprovalFilter.length, 'of', allResults.length);
-
     // Filter out approved results and map to ExceptionItem format
-    const exceptions: ExceptionItem[] = afterApprovalFilter
+    const exceptions: ExceptionItem[] = allResults
+      .filter(r => !approvedIds.has(r.id))
       .map((result: any) => {
         const product = productMap.get(result.product_id);
         if (!product) return null;
@@ -229,7 +221,6 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       })
       .filter((e): e is ExceptionItem => e !== null);
 
-    console.log('getExceptions: final exceptions count:', exceptions.length);
     return exceptions;
   } catch (error) {
     console.error('Error fetching exceptions:', error);
