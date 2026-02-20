@@ -298,6 +298,7 @@ export function Activity() {
             alternate_classifications: selectedActivity.alternateClassifications,
             classification_run_id: selectedActivity.classificationRunId,
           }}
+          readOnly={selectedActivity.status === 'approved'}
           onClose={() => setSelectedActivity(null)}
           onApprove={async () => {
             try {

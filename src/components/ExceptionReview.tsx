@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2, ChevronDown } from 'lucide-react';
 import { getClassificationRun, addClarificationMessage, ClarificationMessage } from '../lib/classificationService';
 import { classifyProduct } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
@@ -37,6 +37,7 @@ interface ExceptionReviewProps {
     alternate_classifications?: AlternateClassification[];
     classification_run_id?: number;
   };
+  readOnly?: boolean;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -48,7 +49,7 @@ interface ChatMessage {
   timestamp?: string;
 }
 
-export function ExceptionReview({ product, onClose, onApprove, onReject }: ExceptionReviewProps) {
+export function ExceptionReview({ product, readOnly, onClose, onApprove, onReject }: ExceptionReviewProps) {
   const [selectedHts, setSelectedHts] = useState(product.hts);
   const [notes, setNotes] = useState('');
   const [currentConfidence, setCurrentConfidence] = useState(product.confidence);
@@ -62,6 +63,7 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -512,7 +514,15 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
             <div>
-              <h2 className="text-slate-900">Low Confidence Classification Review</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-slate-900">{readOnly ? 'Classification Details' : 'Low Confidence Classification Review'}</h2>
+                {readOnly && (
+                  <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Approved
+                  </span>
+                )}
+              </div>
               <p className="text-slate-600 text-sm">{product.productName}</p>
             </div>
           </div>
@@ -930,6 +940,25 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   </div>
                 </div>
 
+                {/* Classification Trace */}
+                {product.classification_trace && (
+                  <div>
+                    <button
+                      onClick={() => setShowTrace(!showTrace)}
+                      className="flex items-center gap-2 mb-2 w-full text-left"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">7</div>
+                      <h4 className="text-slate-900 flex-1">Classification Trace</h4>
+                      <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showTrace ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showTrace && (
+                      <div className="ml-8 p-4 bg-slate-50 rounded-lg">
+                        <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono overflow-x-auto">{product.classification_trace}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Compliance Notes */}
                 <div className="border-t border-slate-200 pt-4">
                   <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -1097,26 +1126,43 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
 
         {/* Action Buttons */}
         <div className="flex gap-3 px-6 py-4 bg-white border-t border-slate-200 flex-shrink-0">
-          <button
-            onClick={handleApprove}
-            className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <ThumbsUp className="w-5 h-5" />
-            Approve Classification
-          </button>
-          <button
-            onClick={onReject}
-            className="px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
-          >
-            <ThumbsDown className="w-5 h-5" />
-            Review Later
-          </button>
-          <button
-            onClick={onClose}
-            className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            Cancel
-          </button>
+          {readOnly ? (
+            <>
+              <div className="flex-1 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Classification Approved
+              </div>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleApprove}
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <ThumbsUp className="w-5 h-5" />
+                Approve Classification
+              </button>
+              <button
+                onClick={onReject}
+                className="px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+              >
+                <ThumbsDown className="w-5 h-5" />
+                Review Later
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

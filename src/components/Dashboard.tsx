@@ -370,6 +370,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                             product_id: activity.product_id,
                             classification_result_id: activity.classification_result_id,
                             classification_run_id: activity.classification_run_id,
+                            status: activity.status,
                           });
                         } else {
                           onNavigate('activity');
@@ -426,6 +427,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             alternate_classifications: selectedException.alternate_classifications,
             classification_run_id: selectedException.classification_run_id,
           }}
+          readOnly={selectedException.status === 'approved'}
           onClose={() => setSelectedException(null)}
           onApprove={() => handleResolveException(selectedException)}
           onReject={() => setSelectedException(null)}
