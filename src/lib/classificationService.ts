@@ -214,9 +214,18 @@ export async function saveClassificationResult(
 export async function saveClassificationApproval(
   productId: number,
   classificationResultId: number,
-  approved: boolean
+  approved: boolean,
+  approvalReason?: string
 ): Promise<void> {
   try {
+    const record: Record<string, any> = {
+      approved: approved,
+      approved_at: approved ? new Date().toISOString() : null,
+    };
+    if (approvalReason) {
+      record.approval_reason = approvalReason;
+    }
+
     // Check if approval record already exists
     const { data: existing } = await supabase
       .from('user_product_classification_history')
@@ -226,13 +235,9 @@ export async function saveClassificationApproval(
       .single();
 
     if (existing) {
-      // Update existing record
       const { error } = await supabase
         .from('user_product_classification_history')
-        .update({
-          approved: approved,
-          approved_at: approved ? new Date().toISOString() : null,
-        })
+        .update(record)
         .eq('id', existing.id);
 
       if (error) {
@@ -240,14 +245,12 @@ export async function saveClassificationApproval(
         throw error;
       }
     } else {
-      // Insert new record
       const { error } = await supabase
         .from('user_product_classification_history')
         .insert({
           product_id: productId,
           classification_result_id: classificationResultId,
-          approved: approved,
-          approved_at: approved ? new Date().toISOString() : null,
+          ...record,
         });
 
       if (error) {
