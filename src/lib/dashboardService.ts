@@ -93,7 +93,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     // Use .or() to catch both low-confidence AND null-confidence results
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
+      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, alternate_classifications')
       .in('product_id', productIds)
       .or(`confidence.lt.${threshold},confidence.is.null`)
       .order('classified_at', { ascending: false })
@@ -214,7 +214,6 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
           cbp_rulings: result.cbp_rulings || undefined,
           rule_verification: result.rule_verification || undefined,
           rule_confidence: (result.rule_confidence as number) || undefined,
-          classification_trace: (result.classification_trace as string) || undefined,
           alternate_classifications: result.alternate_classifications || undefined,
           classification_run_id: (result.classification_run_id as number) || undefined,
         };
@@ -252,7 +251,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
     // Get all classification results for these runs in one query (including extended fields)
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, hts_classification, confidence, product_id, classification_run_id, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, alternate_classifications, classification_trace')
+      .select('id, hts_classification, confidence, product_id, classification_run_id, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, alternate_classifications')
       .in('classification_run_id', runIds)
       .order('classified_at', { ascending: false });
 
@@ -337,7 +336,6 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
           cbp_rulings: result.cbp_rulings || undefined,
           rule_verification: result.rule_verification || undefined,
           alternate_classifications: result.alternate_classifications || undefined,
-          classification_trace: (result.classification_trace as string) || undefined,
           confidenceRaw: (result.confidence as number) || 0,
           classification_run_id: (result.classification_run_id as number) || undefined,
         };
