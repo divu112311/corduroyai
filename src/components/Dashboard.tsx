@@ -381,7 +381,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                             cbp_rulings: activity.cbp_rulings,
                             rule_verification: activity.rule_verification,
                             alternate_classifications: activity.alternate_classifications,
-                            classification_trace: activity.classification_trace,
                             product_id: activity.product_id,
                             classification_result_id: activity.classification_result_id,
                             classification_run_id: activity.classification_run_id,
@@ -438,7 +437,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             cbp_rulings: selectedException.cbp_rulings,
             rule_verification: selectedException.rule_verification,
             rule_confidence: selectedException.rule_confidence,
-            classification_trace: selectedException.classification_trace,
             alternate_classifications: selectedException.alternate_classifications,
             classification_run_id: selectedException.classification_run_id,
           }}

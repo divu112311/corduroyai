@@ -35,7 +35,6 @@ interface Product {
   cbpRulings?: any;
   ruleVerification?: any;
   ruleConfidence?: number;
-  classificationTrace?: string;
   alternateClassifications?: any;
 }
 

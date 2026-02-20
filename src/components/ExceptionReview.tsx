@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2, ChevronDown } from 'lucide-react';
+import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2 } from 'lucide-react';
 import { getClassificationRun, addClarificationMessage, ClarificationMessage } from '../lib/classificationService';
 import { classifyProduct } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
@@ -33,7 +33,6 @@ interface ExceptionReviewProps {
     cbp_rulings?: any[];
     rule_verification?: any;
     rule_confidence?: number;
-    classification_trace?: string;
     alternate_classifications?: AlternateClassification[];
     classification_run_id?: number;
   };
@@ -63,7 +62,6 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [showTrace, setShowTrace] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -943,25 +941,6 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                     ))}
                   </div>
                 </div>
-
-                {/* Classification Trace */}
-                {product.classification_trace && (
-                  <div>
-                    <button
-                      onClick={() => setShowTrace(!showTrace)}
-                      className="flex items-center gap-2 mb-2 w-full text-left"
-                    >
-                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">7</div>
-                      <h4 className="text-slate-900 flex-1">Classification Trace</h4>
-                      <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showTrace ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showTrace && (
-                      <div className="ml-8 p-4 bg-slate-50 rounded-lg">
-                        <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono overflow-x-auto">{product.classification_trace}</pre>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Compliance Notes */}
                 <div className="border-t border-slate-200 pt-4">

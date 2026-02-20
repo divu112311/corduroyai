@@ -182,7 +182,6 @@ export async function saveClassificationResult(
     rule_verification?: any;
     rule_confidence?: number;
     similarity_score?: number;
-    classification_trace?: string;
     alternate_classifications?: any;
   }
 ): Promise<number> {

@@ -27,7 +27,6 @@ export interface ExceptionItem {
   cbp_rulings?: any;
   rule_verification?: any;
   rule_confidence?: number;
-  classification_trace?: string;
   alternate_classifications?: any;
   classification_run_id?: number;
 }
@@ -51,7 +50,6 @@ export interface RecentActivity {
   cbp_rulings?: any;
   rule_verification?: any;
   alternate_classifications?: any;
-  classification_trace?: string;
   confidenceRaw?: number;
   classification_run_id?: number;
 }
@@ -490,7 +488,6 @@ export interface ProductProfile {
   cbpRulings?: any;
   ruleVerification?: any;
   ruleConfidence?: number;
-  classificationTrace?: string;
   alternateClassifications?: any;
 }
 
@@ -538,7 +535,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
     // Get classification results for approved items that belong to this user's products
     const { data: results, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, product_id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
+      .select('id, product_id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, alternate_classifications')
       .in('id', approvedResultIds)
       .order('classified_at', { ascending: false })
       .limit(500);
@@ -643,7 +640,6 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
           cbpRulings: result.cbp_rulings || undefined,
           ruleVerification: result.rule_verification || undefined,
           ruleConfidence: (result.rule_confidence as number) || undefined,
-          classificationTrace: (result.classification_trace as string) || undefined,
           alternateClassifications: result.alternate_classifications || undefined,
         };
       })

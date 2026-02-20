@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Activity } from 'lucide-react';
+import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info } from 'lucide-react';
 
 export interface CbpRuling {
   ruling_number: string;
@@ -34,7 +34,6 @@ export interface ClassificationResultData {
   rule_verification?: RuleVerification;
   rule_confidence?: number;
   similarity_score?: number;
-  classification_trace?: string;
   alternate_classifications?: Array<{
     hts: string;
     description: string;
@@ -69,7 +68,6 @@ interface ClassificationResultsProps {
 export function ClassificationResults({ result, onApprove, onReviewLater }: ClassificationResultsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [expandedAlternates, setExpandedAlternates] = useState<Set<number>>(new Set());
-  const [showTrace, setShowTrace] = useState(false);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -285,33 +283,6 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
                   <span className="text-indigo-700 font-medium">Rule Confidence</span>
                   <span className="text-indigo-900 font-semibold">{Math.round(result.rule_confidence * 100)}%</span>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Classification Trace */}
-        {result.classification_trace && (
-          <div className="border border-slate-200 rounded-lg">
-            <button
-              onClick={() => setShowTrace(!showTrace)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
-            >
-              <h4 className="text-slate-900 font-semibold text-sm flex items-center gap-2">
-                <Activity className="w-4 h-4 text-slate-500" />
-                Classification Trace
-              </h4>
-              {showTrace ? (
-                <ChevronUp className="w-5 h-5 text-slate-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-slate-400" />
-              )}
-            </button>
-            {showTrace && (
-              <div className="px-4 pb-4">
-                <pre className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                  {result.classification_trace}
-                </pre>
               </div>
             )}
           </div>

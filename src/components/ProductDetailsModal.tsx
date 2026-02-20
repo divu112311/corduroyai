@@ -20,7 +20,6 @@ interface Document {
 export function ProductDetailsModal({ product, onClose }: ProductDetailsModalProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
-  const [showTrace, setShowTrace] = useState(false);
   const [expandedAlternates, setExpandedAlternates] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -320,25 +319,6 @@ export function ProductDetailsModal({ product, onClose }: ProductDetailsModalPro
             </div>
           )}
 
-          {/* Classification Trace */}
-          {product.classificationTrace && (
-            <div className="mb-6 border border-slate-200 rounded-lg">
-              <button
-                onClick={() => setShowTrace(!showTrace)}
-                className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
-              >
-                <h4 className="text-slate-900 font-semibold text-sm">Classification Trace</h4>
-                {showTrace ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-              </button>
-              {showTrace && (
-                <div className="px-4 pb-4">
-                  <pre className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap font-mono">
-                    {product.classificationTrace}
-                  </pre>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Alternate Classifications */}
           {product.alternateClassifications && product.alternateClassifications.length > 0 && (

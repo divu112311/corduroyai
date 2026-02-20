@@ -256,7 +256,6 @@ export function ClassificationView() {
           rule_verification: (primaryCandidate as any).rule_verification || undefined,
           rule_confidence: (primaryCandidate as any).rule_confidence || undefined,
           similarity_score: (primaryCandidate as any).similarity_score || undefined,
-          classification_trace: response.classification_trace || (response.matches && response.matches.classification_trace) || undefined,
           parsed_data: {
             product_name: query,
             product_description: productDescription || undefined,
@@ -313,7 +312,6 @@ export function ClassificationView() {
           rule_verification: classificationResult.rule_verification || undefined,
           rule_confidence: classificationResult.rule_confidence || undefined,
           similarity_score: classificationResult.similarity_score || undefined,
-          classification_trace: classificationResult.classification_trace || undefined,
           alternate_classifications: classificationResult.alternate_classifications || undefined,
         });
 
@@ -491,7 +489,6 @@ export function ClassificationView() {
           rule_verification: (primaryCandidate as any).rule_verification || undefined,
           rule_confidence: (primaryCandidate as any).rule_confidence || undefined,
           similarity_score: (primaryCandidate as any).similarity_score || undefined,
-          classification_trace: classificationResponse.classification_trace || (classificationResponse.matches && classificationResponse.matches.classification_trace) || undefined,
           parsed_data: {
             product_name: query,
             product_description: productDescription || undefined,
@@ -549,7 +546,6 @@ export function ClassificationView() {
             rule_verification: classificationResult.rule_verification || undefined,
             rule_confidence: classificationResult.rule_confidence || undefined,
             similarity_score: classificationResult.similarity_score || undefined,
-            classification_trace: classificationResult.classification_trace || undefined,
             alternate_classifications: classificationResult.alternate_classifications || undefined,
           });
 
