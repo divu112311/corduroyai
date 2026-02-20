@@ -96,12 +96,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [recentClassifications, setRecentClassifications] = useState<any[]>([]);
   const [isLoadingRecentActivity, setIsLoadingRecentActivity] = useState(true);
 
-  const recentProfiles = [
-    { name: 'Bluetooth Audio Series', products: 12, updated: '1 day ago' },
-    { name: 'Smart Home Devices', products: 8, updated: '2 days ago' },
-    { name: 'Textile Products', products: 24, updated: '3 days ago' },
-  ];
-
   const handleSendMessage = () => {
     if (!aiInput.trim()) return;
     
