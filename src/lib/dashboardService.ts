@@ -17,6 +17,19 @@ export interface ExceptionItem {
   classification_result_id: number;
   confidence: number;
   tariff_rate?: number;
+  // Extended classification data
+  hts_description?: string;
+  reasoning?: string;
+  chapter_code?: string;
+  chapter_title?: string;
+  section_code?: string;
+  section_title?: string;
+  cbp_rulings?: any;
+  rule_verification?: any;
+  rule_confidence?: number;
+  classification_trace?: string;
+  alternate_classifications?: any;
+  classification_run_id?: number;
 }
 
 export interface RecentActivity {
@@ -25,6 +38,22 @@ export interface RecentActivity {
   confidence: string;
   time: string;
   status: string;
+  classification_result_id?: number;
+  product_id?: number;
+  description?: string;
+  origin?: string;
+  tariff_rate?: number;
+  reasoning?: string;
+  chapter_code?: string;
+  chapter_title?: string;
+  section_code?: string;
+  section_title?: string;
+  cbp_rulings?: any;
+  rule_verification?: any;
+  alternate_classifications?: any;
+  classification_trace?: string;
+  confidenceRaw?: number;
+  classification_run_id?: number;
 }
 
 /**
@@ -36,10 +65,11 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     // Get user's confidence threshold
     const userMetadata = await getUserMetadata(userId);
     if (!userMetadata) {
+      console.warn('getExceptions: No user metadata found for user:', userId);
       return [];
     }
 
-    const threshold = userMetadata.confidence_threshold || 0.8;
+    const threshold = userMetadata.confidence_threshold ?? 0.8;
 
     // OPTIMIZED: Get results with product data in fewer queries
     // First get product IDs for this user
@@ -49,22 +79,31 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       .eq('user_id', userId)
       .limit(1000); // Reasonable limit
 
-    if (productsError || !userProducts || userProducts.length === 0) {
+    if (productsError) {
+      console.error('getExceptions: Error fetching user products:', productsError);
+      return [];
+    }
+    if (!userProducts || userProducts.length === 0) {
       return [];
     }
 
     const productIds = userProducts.map(p => p.id);
 
-    // Get classification results for user's products
+    // Get classification results for user's products (including extended fields)
+    // Use .or() to catch both low-confidence AND null-confidence results
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate')
+      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, alternate_classifications')
       .in('product_id', productIds)
-      .lt('confidence', threshold)
+      .or(`confidence.lt.${threshold},confidence.is.null`)
       .order('classified_at', { ascending: false })
       .limit(100); // Limit to 100 most recent exceptions
 
-    if (resultsError || !allResults || allResults.length === 0) {
+    if (resultsError) {
+      console.error('getExceptions: Error fetching classification results:', resultsError);
+      return [];
+    }
+    if (!allResults || allResults.length === 0) {
       return [];
     }
 
@@ -78,7 +117,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         .eq('approved', true),
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, unit_cost')
+        .select('id, product_name, product_description, country_of_origin, unit_cost, sku')
         .in('id', productIds)
     ]);
 
@@ -110,26 +149,73 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         }
 
         // Format value
-        const value = product.unit_cost 
+        const value = product.unit_cost
           ? `$${Number(product.unit_cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : 'N/A';
+
+        // Determine category from actual data instead of hardcoding
+        let category: 'lowConfidence' | 'missingDoc' | 'multipleHTS' | 'materialIssues' = 'lowConfidence';
+        const ruleVerification = result.rule_verification as any;
+        const altClassifications = result.alternate_classifications as any[];
+
+        if (altClassifications && altClassifications.length > 1) {
+          // Multiple alternative HTS codes with close confidence scores
+          const topAltConfidence = altClassifications[0]?.confidence || 0;
+          if (topAltConfidence > 0 && (confidencePercent - topAltConfidence) < 15) {
+            category = 'multipleHTS';
+          }
+        }
+        if (ruleVerification?.missing_info && ruleVerification.missing_info.length > 0) {
+          // Check if missing info relates to materials
+          const missingStr = JSON.stringify(ruleVerification.missing_info).toLowerCase();
+          if (missingStr.includes('material') || missingStr.includes('composition')) {
+            category = 'materialIssues';
+          } else {
+            category = 'missingDoc';
+          }
+        }
+        // If confidence is very low and no other specific category, keep lowConfidence
+
+        // Build a more descriptive reason
+        let reason = `Low confidence (${confidencePercent}%)`;
+        if (ruleVerification?.missing_info && ruleVerification.missing_info.length > 0) {
+          reason = ruleVerification.missing_info[0];
+        } else if (ruleVerification?.checks_failed && ruleVerification.checks_failed.length > 0) {
+          reason = ruleVerification.checks_failed[0];
+        } else if (result.reasoning) {
+          // Truncate reasoning for the summary
+          const reasonText = result.reasoning as string;
+          reason = reasonText.length > 100 ? reasonText.substring(0, 100) + '...' : reasonText;
+        }
 
         return {
           id: result.id,
           product: product.product_name || 'Unnamed Product',
-          sku: `PROD-${product.id}`,
-          reason: `Low confidence (${confidencePercent}%)`,
+          sku: product.sku || `PROD-${product.id}`,
+          reason,
           hts: result.hts_classification || 'N/A',
           status: priority === 'high' ? 'urgent' : 'review',
           origin: product.country_of_origin || 'Unknown',
           value: value,
           description: product.product_description || '',
           priority: priority,
-          category: 'lowConfidence',
+          category,
           product_id: product.id,
           classification_result_id: result.id,
           confidence: result.confidence,
           tariff_rate: result.tariff_rate,
+          // Extended classification data
+          hts_description: (result.description as string) || undefined,
+          reasoning: (result.reasoning as string) || undefined,
+          chapter_code: (result.chapter_code as string) || undefined,
+          chapter_title: (result.chapter_title as string) || undefined,
+          section_code: (result.section_code as string) || undefined,
+          section_title: (result.section_title as string) || undefined,
+          cbp_rulings: result.cbp_rulings || undefined,
+          rule_verification: result.rule_verification || undefined,
+          rule_confidence: (result.rule_confidence as number) || undefined,
+          alternate_classifications: result.alternate_classifications || undefined,
+          classification_run_id: (result.classification_run_id as number) || undefined,
         };
       })
       .filter((e): e is ExceptionItem => e !== null);
@@ -162,10 +248,10 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
 
     const runIds = runs.map(r => r.id);
 
-    // Get all classification results for these runs in one query
+    // Get all classification results for these runs in one query (including extended fields)
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, hts_classification, confidence, product_id, classification_run_id')
+      .select('id, hts_classification, confidence, product_id, classification_run_id, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, alternate_classifications')
       .in('classification_run_id', runIds)
       .order('classified_at', { ascending: false });
 
@@ -173,24 +259,32 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
       return [];
     }
 
-    // Get unique product IDs
+    // Get unique product IDs and result IDs
     const productIds = [...new Set(allResults.map(r => r.product_id).filter(Boolean))] as number[];
+    const resultIds = allResults.map(r => r.id);
 
-    // Get all products in one query
-    const { data: products, error: productsError } = await supabase
-      .from('user_products')
-      .select('id, product_name')
-      .in('id', productIds)
-      .eq('user_id', userId);
+    // Get products and approval history in parallel
+    const [productsResponse, historyResponse] = await Promise.all([
+      supabase
+        .from('user_products')
+        .select('id, product_name, product_description, country_of_origin, sku')
+        .in('id', productIds)
+        .eq('user_id', userId),
+      supabase
+        .from('user_product_classification_history')
+        .select('classification_result_id')
+        .in('classification_result_id', resultIds)
+        .eq('approved', true)
+    ]);
 
-    if (productsError || !products) {
+    if (productsResponse.error || !productsResponse.data) {
       return [];
     }
 
     // Create maps for quick lookup
-    const productMap = new Map(products.map(p => [p.id, p]));
-    const runMap = new Map(runs.map(r => [r.id, r]));
-    
+    const productMap = new Map(productsResponse.data.map(p => [p.id, p]));
+    const approvedIds = new Set((historyResponse.data || []).map(h => h.classification_result_id));
+
     // Group results by run_id and get first result for each run
     const resultsByRun = new Map<number, typeof allResults[0]>();
     for (const result of allResults) {
@@ -212,7 +306,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
         const runDate = new Date(run.created_at);
         const now = new Date();
         const hoursAgo = Math.floor((now.getTime() - runDate.getTime()) / (1000 * 60 * 60));
-        
+
         let timeStr = '';
         if (hoursAgo < 1) {
           timeStr = 'Just now';
@@ -228,7 +322,22 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
           hts: (result.hts_classification as string) || 'N/A',
           confidence: `${confidencePercent}%`,
           time: timeStr,
-          status: 'auto-approved',
+          status: approvedIds.has(result.id) ? 'approved' : 'pending',
+          classification_result_id: result.id,
+          product_id: result.product_id,
+          description: (result.description as string) || product.product_description || '',
+          origin: product.country_of_origin || 'Unknown',
+          tariff_rate: (result.tariff_rate as number) || undefined,
+          reasoning: (result.reasoning as string) || undefined,
+          chapter_code: (result.chapter_code as string) || undefined,
+          chapter_title: (result.chapter_title as string) || undefined,
+          section_code: (result.section_code as string) || undefined,
+          section_title: (result.section_title as string) || undefined,
+          cbp_rulings: result.cbp_rulings || undefined,
+          rule_verification: result.rule_verification || undefined,
+          alternate_classifications: result.alternate_classifications || undefined,
+          confidenceRaw: (result.confidence as number) || 0,
+          classification_run_id: (result.classification_run_id as number) || undefined,
         };
       })
       .filter((a): a is RecentActivity => a !== null);
@@ -267,7 +376,7 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
       // Get classification runs count for last month
       supabase
         .from('classification_runs')
-        .select('id', { count: 'exact', head: false })
+        .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('status', 'completed')
         .gte('created_at', oneMonthAgo.toISOString()),
@@ -284,7 +393,7 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
     ]);
 
     const userMetadata = userMetadataResponse;
-    const threshold = userMetadata?.confidence_threshold || 0.8;
+    const threshold = userMetadata?.confidence_threshold ?? 0.8;
     const classifiedCount = runsResponse.count || 0;
     const userProductIds = new Set((userProductsResponse.data || []).map(p => p.id));
     const approvedResultIds = new Set((approvedHistoryResponse.data || []).map(h => h.classification_result_id));
@@ -299,23 +408,25 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
     }
 
     // Get approved results for user's products only
-    const { data: approvedResults } = await supabase
-      .from('user_product_classification_results')
-      .select('id, confidence, product_id')
-      .in('id', Array.from(approvedResultIds))
-      .in('product_id', Array.from(userProductIds));
-
-    const userApprovedResults = (approvedResults || []).filter(r => userProductIds.has(r.product_id));
+    // Guard against empty arrays which can cause Supabase query issues
+    let userApprovedResults: any[] = [];
+    if (approvedResultIds.size > 0 && userProductIds.size > 0) {
+      const { data: approvedResults } = await supabase
+        .from('user_product_classification_results')
+        .select('id, confidence, product_id')
+        .in('id', Array.from(approvedResultIds))
+        .in('product_id', Array.from(userProductIds));
+      userApprovedResults = (approvedResults || []).filter(r => userProductIds.has(r.product_id));
+    }
     const productProfilesCount = userApprovedResults.length;
     const userApprovedResultIds = new Set(userApprovedResults.map(r => r.id));
 
-    // Get exceptions: results with confidence < threshold and not approved
-    // Fetch and filter in memory (more reliable than complex query)
+    // Get exceptions: results with confidence < threshold (or null) and not approved
     const { data: exceptionResults } = await supabase
       .from('user_product_classification_results')
       .select('id')
       .in('product_id', Array.from(userProductIds))
-      .lt('confidence', threshold)
+      .or(`confidence.lt.${threshold},confidence.is.null`)
       .limit(1000); // Reasonable limit
     
     const exceptionsCount = (exceptionResults || []).filter(r => !userApprovedResultIds.has(r.id)).length;
@@ -369,6 +480,18 @@ export interface ProductProfile {
   totalCost: number | null;
   alternateClassification: string | null;
   unitCost: number | null;
+  // Extended classification data
+  description?: string;
+  reasoning?: string;
+  chapterCode?: string;
+  chapterTitle?: string;
+  sectionCode?: string;
+  sectionTitle?: string;
+  cbpRulings?: any;
+  ruleVerification?: any;
+  ruleConfidence?: number;
+  classificationTrace?: string;
+  alternateClassifications?: any;
 }
 
 /**
@@ -377,105 +500,77 @@ export interface ProductProfile {
  */
 export async function getProductProfiles(userId: string): Promise<ProductProfile[]> {
   try {
-    // OPTIMIZED: Get product profiles with limit
-    const { data: profiles, error: profilesError } = await supabase
-      .from('user_product_profiles')
-      .select('id, product_id, classification_result_id, updated_at')
-      .eq('user_id', userId)
-      .order('updated_at', { ascending: false })
-      .limit(500); // Limit to 500 most recent profiles
-
-    if (profilesError) {
-      console.error('Error fetching product profiles:', profilesError);
-      return [];
-    }
-
-    if (!profiles || profiles.length === 0) {
-      return [];
-    }
-
-    // Get all classification result IDs from profiles
-    const classificationResultIds = profiles
-      .map(p => p.classification_result_id)
-      .filter(Boolean) as number[];
-
-    if (classificationResultIds.length === 0) {
-      return [];
-    }
-
-    // Verify these results are approved
-    const { data: approvedHistory, error: historyError } = await supabase
-      .from('user_product_classification_history')
-      .select('classification_result_id, approved')
-      .in('classification_result_id', classificationResultIds)
-      .eq('approved', true);
-
-    if (historyError) {
-      console.error('Error fetching approval history:', historyError);
-      return [];
-    }
-
-    if (!approvedHistory || approvedHistory.length === 0) {
-      return [];
-    }
-
-    // Create a set of approved result IDs
-    const approvedResultIds = new Set(
-      approvedHistory.map(h => h.classification_result_id)
-    );
-
-    // Filter profiles to only include approved ones
-    const approvedProfiles = profiles.filter(p => 
-      p.classification_result_id && approvedResultIds.has(p.classification_result_id)
-    );
-
-    if (approvedProfiles.length === 0) {
-      return [];
-    }
-
-    // Get all product IDs
-    const productIds = approvedProfiles.map(p => p.product_id).filter(Boolean) as number[];
-    const resultIds = approvedProfiles.map(p => p.classification_result_id).filter(Boolean) as number[];
-
-    // Fetch products and classification results in parallel
-    const [productsResponse, resultsResponse] = await Promise.all([
+    // Get user's products and approved classification history in parallel
+    const [userProductsResponse, approvedHistoryResponse] = await Promise.all([
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, updated_at')
-        .in('id', productIds)
+        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, sku, updated_at')
         .eq('user_id', userId),
       supabase
-        .from('user_product_classification_results')
-        .select('id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost')
-        .in('id', resultIds)
+        .from('user_product_classification_history')
+        .select('classification_result_id')
+        .eq('approved', true)
     ]);
 
-    if (productsResponse.error) {
-      console.error('Error fetching products:', productsResponse.error);
+    if (userProductsResponse.error) {
+      console.error('Error fetching user products:', userProductsResponse.error);
+      return [];
+    }
+    if (approvedHistoryResponse.error) {
+      console.error('Error fetching approval history:', approvedHistoryResponse.error);
       return [];
     }
 
-    if (resultsResponse.error) {
-      console.error('Error fetching classification results:', resultsResponse.error);
+    const userProducts = userProductsResponse.data || [];
+    const approvedHistory = approvedHistoryResponse.data || [];
+
+    if (userProducts.length === 0 || approvedHistory.length === 0) {
       return [];
     }
 
-    const products = productsResponse.data || [];
-    const results = resultsResponse.data || [];
+    const userProductIds = new Set(userProducts.map(p => p.id));
+    const approvedResultIds = approvedHistory.map(h => h.classification_result_id).filter(Boolean) as number[];
 
-    // Create maps for quick lookup
-    const productMap = new Map(products.map(p => [p.id, p]));
-    const resultMap = new Map(results.map(r => [r.id, r]));
+    if (approvedResultIds.length === 0) {
+      return [];
+    }
+
+    // Get classification results for approved items that belong to this user's products
+    const { data: results, error: resultsError } = await supabase
+      .from('user_product_classification_results')
+      .select('id, product_id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
+      .in('id', approvedResultIds)
+      .order('classified_at', { ascending: false })
+      .limit(500);
+
+    if (resultsError) {
+      console.error('Error fetching classification results:', resultsError);
+      return [];
+    }
+
+    if (!results || results.length === 0) {
+      return [];
+    }
+
+    // Filter to only results belonging to this user's products
+    const userResults = results.filter(r => userProductIds.has(r.product_id));
+
+    // Deduplicate: keep latest result per product
+    const latestByProduct = new Map<number, typeof userResults[0]>();
+    for (const result of userResults) {
+      if (!latestByProduct.has(result.product_id)) {
+        latestByProduct.set(result.product_id, result);
+      }
+    }
+
+    // Create product map for quick lookup
+    const productMap = new Map(userProducts.map(p => [p.id, p]));
 
     // Map to ProductProfile format
-    const productProfiles: ProductProfile[] = approvedProfiles
-      .map(profile => {
-        const product = productMap.get(profile.product_id);
-        const result = resultMap.get(profile.classification_result_id || 0);
-
-        if (!product || !result) {
-          return null;
-        }
+    const productProfiles: ProductProfile[] = Array.from(latestByProduct.values())
+      .map(result => {
+        const product = productMap.get(result.product_id);
+        if (!product) return null;
 
         // Format materials (handle JSONB)
         let materialsStr = 'N/A';
@@ -491,20 +586,20 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
 
         // Format cost - use unit_cost from product, fallback to result
         const unitCostValue = product.unit_cost || result.unit_cost || null;
-        const cost = unitCostValue 
+        const cost = unitCostValue
           ? `$${Number(unitCostValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : 'N/A';
 
         // Calculate confidence as percentage
         const confidence = Math.round(((result.confidence as number) || 0) * 100);
-        
+
         // Get tariff data from database
         const tariffRate = result.tariff_rate ? Number(result.tariff_rate) : null;
         const tariffAmount = result.tariff_amount ? Number(result.tariff_amount) : null;
         const totalCost = result.total_cost ? Number(result.total_cost) : null;
         const alternateClassification = result.alternate_classification || null;
 
-        // Determine category from HTS code (simplified - can be enhanced)
+        // Determine category from HTS code
         let category = 'Other';
         const hts = (result.hts_classification as string) || '';
         if (hts.startsWith('85')) category = 'Electrical';
@@ -518,15 +613,14 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
         else if (hts.startsWith('95')) category = 'Toys & Games';
         else if (hts.startsWith('44')) category = 'Wood Products';
 
-        // Use updated_at from profile, fallback to classified_at, then product updated_at
-        const lastUpdated = profile.updated_at || result.classified_at || product.updated_at || new Date().toISOString();
+        const lastUpdated = result.classified_at || product.updated_at || new Date().toISOString();
 
         return {
-          id: profile.id, // Use profile ID
-          productId: product.id, // Add actual product_id for fetching documents
+          id: result.id,
+          productId: product.id,
           name: product.product_name || 'Unnamed Product',
-          description: product.product_description || '', // Add product description
-          sku: `PROD-${product.id}`,
+          description: product.product_description || (result.description as string) || '',
+          sku: product.sku || `PROD-${product.id}`,
           hts: hts || 'N/A',
           materials: materialsStr,
           origin: product.country_of_origin || 'Unknown',
@@ -535,12 +629,22 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
           confidence: confidence,
           lastUpdated: lastUpdated,
           category: category,
-          // From database
           tariffRate: tariffRate,
           tariffAmount: tariffAmount,
           totalCost: totalCost,
           alternateClassification: alternateClassification,
           unitCost: unitCostValue,
+          // Extended classification data
+          reasoning: (result.reasoning as string) || undefined,
+          chapterCode: (result.chapter_code as string) || undefined,
+          chapterTitle: (result.chapter_title as string) || undefined,
+          sectionCode: (result.section_code as string) || undefined,
+          sectionTitle: (result.section_title as string) || undefined,
+          cbpRulings: result.cbp_rulings || undefined,
+          ruleVerification: result.rule_verification || undefined,
+          ruleConfidence: (result.rule_confidence as number) || undefined,
+          classificationTrace: (result.classification_trace as string) || undefined,
+          alternateClassifications: result.alternate_classifications || undefined,
         };
       })
       .filter((p): p is ProductProfile => p !== null);

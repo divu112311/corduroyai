@@ -3,15 +3,17 @@ import { Search, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, M
 import { LLMAssistant } from './LLMAssistant';
 import { ClarificationChatbot } from './ClarificationChatbot';
 import { ClassificationResults, ClassificationResultData } from './ClassificationResults';
-import { classifyProduct, generateRuling } from '../lib/supabaseFunctions';
-import { 
-  createClassificationRun, 
-  addClarificationMessage, 
-  updateClassificationRunStatus, 
-  saveProduct, 
+import { classifyProduct } from '../lib/supabaseFunctions';
+import {
+  createClassificationRun,
+  addClarificationMessage,
+  updateClassificationRunStatus,
+  saveProduct,
   saveClassificationResult,
-  ClarificationMessage 
+  saveClassificationApproval,
+  ClarificationMessage
 } from '../lib/classificationService';
+import { getUserMetadata } from '../lib/userService';
 import { supabase } from '../lib/supabase';
 
 interface MaterialComposition {
@@ -58,6 +60,7 @@ export function ClassificationView() {
   const [isProcessingClarification, setIsProcessingClarification] = useState(false);
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [partialMatches, setPartialMatches] = useState<Array<{hts: string; description: string; score: number}>>([]);
+  const [wasAutoApproved, setWasAutoApproved] = useState(false);
 
   const loadingSteps = [
     'Preprocessing the input...',
@@ -121,6 +124,7 @@ export function ClassificationView() {
       setNeedsClarification(false);
       setClarificationMessages([]);
       setResult(null);
+      setWasAutoApproved(false);
       setCurrentStep('preprocess');
 
       // Get current user
@@ -280,6 +284,7 @@ export function ClassificationView() {
         setNeedsClarification(false);
         setCurrentStep(null);
         setPartialMatches([]);
+        setWasAutoApproved(false);
         setParsedData({ normalized: response.normalized, attributes: response.attributes });
 
         // Save product and result to database
@@ -290,17 +295,44 @@ export function ClassificationView() {
           materials: materials.length > 0 ? materials : undefined,
           unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
           vendor: vendor || undefined,
+          sku: sku || undefined,
         });
 
-        await saveClassificationResult(productId, runId, {
+        const classResultId = await saveClassificationResult(productId, runId, {
           hts_classification: classificationResult.hts,
           alternate_classification: classificationResult.alternate_classification || undefined,
           confidence: primaryCandidate.confidence || primaryCandidate.score || response.max_confidence || undefined,
           unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
+          description: classificationResult.description || undefined,
+          reasoning: classificationResult.reasoning || undefined,
+          chapter_code: classificationResult.chapter_code || undefined,
+          chapter_title: classificationResult.chapter_title || undefined,
+          section_code: classificationResult.section_code || undefined,
+          section_title: classificationResult.section_title || undefined,
+          cbp_rulings: classificationResult.cbp_rulings || undefined,
+          rule_verification: classificationResult.rule_verification || undefined,
+          rule_confidence: classificationResult.rule_confidence || undefined,
+          similarity_score: classificationResult.similarity_score || undefined,
+          classification_trace: classificationResult.classification_trace || undefined,
+          alternate_classifications: classificationResult.alternate_classifications || undefined,
         });
 
         // Update run status to completed
         await updateClassificationRunStatus(runId, 'completed');
+
+        // Auto-approve if enabled and confidence meets threshold
+        const rawConfidence = primaryCandidate.confidence || primaryCandidate.score || response.max_confidence || 0;
+        const userMetadata = await getUserMetadata(user.id);
+        const threshold = userMetadata?.confidence_threshold ?? 0.8;
+        if (userMetadata?.auto_approve_single && rawConfidence >= threshold) {
+          await saveClassificationApproval(
+            productId,
+            classResultId,
+            true,
+            `Auto-approved: confidence (${Math.round(rawConfidence * 100)}%) is above ${Math.round(threshold * 100)}% threshold`
+          );
+          setWasAutoApproved(true);
+        }
       }
 
       setLoading(false);
@@ -487,6 +519,7 @@ export function ClassificationView() {
         setNeedsClarification(false);
         setCurrentStep(null);
         setPartialMatches([]);
+        setWasAutoApproved(false);
         setParsedData({ normalized: classificationResponse.normalized, attributes: classificationResponse.attributes });
 
         // Save to database
@@ -498,16 +531,43 @@ export function ClassificationView() {
             materials: materials.length > 0 ? materials : undefined,
             unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
             vendor: vendor || undefined,
+            sku: sku || undefined,
           });
 
-          await saveClassificationResult(productId, classificationRunId, {
+          const classResultId = await saveClassificationResult(productId, classificationRunId, {
             hts_classification: classificationResult.hts,
             alternate_classification: classificationResult.alternate_classification || undefined,
             confidence: primaryCandidate.confidence || primaryCandidate.score || classificationResponse.max_confidence || undefined,
             unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
+            description: classificationResult.description || undefined,
+            reasoning: classificationResult.reasoning || undefined,
+            chapter_code: classificationResult.chapter_code || undefined,
+            chapter_title: classificationResult.chapter_title || undefined,
+            section_code: classificationResult.section_code || undefined,
+            section_title: classificationResult.section_title || undefined,
+            cbp_rulings: classificationResult.cbp_rulings || undefined,
+            rule_verification: classificationResult.rule_verification || undefined,
+            rule_confidence: classificationResult.rule_confidence || undefined,
+            similarity_score: classificationResult.similarity_score || undefined,
+            classification_trace: classificationResult.classification_trace || undefined,
+            alternate_classifications: classificationResult.alternate_classifications || undefined,
           });
 
           await updateClassificationRunStatus(classificationRunId, 'completed');
+
+          // Auto-approve if enabled and confidence meets threshold
+          const rawConfidence = primaryCandidate.confidence || primaryCandidate.score || classificationResponse.max_confidence || 0;
+          const userMetadata = await getUserMetadata(user.id);
+          const threshold = userMetadata?.confidence_threshold ?? 0.8;
+          if (userMetadata?.auto_approve_single && rawConfidence >= threshold) {
+            await saveClassificationApproval(
+              productId,
+              classResultId,
+              true,
+              `Auto-approved: confidence (${Math.round(rawConfidence * 100)}%) is above ${Math.round(threshold * 100)}% threshold`
+            );
+            setWasAutoApproved(true);
+          }
         }
       }
 
@@ -848,18 +908,57 @@ export function ClassificationView() {
                     />
                   </div>
                 )}
+                {/* Auto-approved banner */}
+                {wasAutoApproved && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <div>
+                      <h4 className="text-emerald-900 font-medium">Auto-Approved</h4>
+                      <p className="text-emerald-700 text-sm">
+                        This classification was automatically approved because the confidence ({result.confidence}%) meets your threshold. You can manage this in Settings &gt; Auto Approve.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* Show results */}
                 <ClassificationResults
                   result={result}
-                  onApprove={async () => {
+                  onApprove={wasAutoApproved ? undefined : async () => {
                     // Handle approve - mark as approved in database
                     if (result && classificationRunId) {
                       const { data: { user } } = await supabase.auth.getUser();
                       if (user) {
-                        // Get the product_id from the result or fetch it
-                        // For now, we'll need to get it from the classification run
-                        // This would need the product_id which we saved earlier
-                        alert('Product approved and saved!');
+                        try {
+                          // Re-fetch productId and classResultId from the DB for this run
+                          const { data: products } = await supabase
+                            .from('user_products')
+                            .select('id')
+                            .eq('classification_run_id', classificationRunId)
+                            .eq('user_id', user.id)
+                            .limit(1)
+                            .single();
+
+                          const { data: classResult } = await supabase
+                            .from('user_product_classification_results')
+                            .select('id')
+                            .eq('classification_run_id', classificationRunId)
+                            .limit(1)
+                            .single();
+
+                          if (products && classResult) {
+                            await saveClassificationApproval(
+                              products.id,
+                              classResult.id,
+                              true,
+                              'Manually approved by user'
+                            );
+                          }
+                        } catch (error) {
+                          console.error('Error saving approval:', error);
+                        }
+
                         // Reset form
                         setResult(null);
                         setQuery('');
@@ -871,10 +970,11 @@ export function ClassificationView() {
                         setUnitCost('');
                         setClarificationMessages([]);
                         setClassificationRunId(null);
+                        setWasAutoApproved(false);
                       }
                     }
                   }}
-                  onReviewLater={handleReviewLater}
+                  onReviewLater={wasAutoApproved ? undefined : handleReviewLater}
                 />
               </div>
             ) : loading ? (

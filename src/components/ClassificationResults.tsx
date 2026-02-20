@@ -450,7 +450,7 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
                       
                       {/* Expandable Details Section */}
                       {isExpanded && (
-                        <div className="border-t border-amber-200 bg-amber-25 p-4">
+                        <div className="border-t border-amber-200 bg-amber-50 p-4">
                           {hasRulings && (
                             <>
                               <h6 className="text-amber-900 font-semibold mb-3 flex items-center gap-2 text-sm">

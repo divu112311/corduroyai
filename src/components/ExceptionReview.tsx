@@ -1,5 +1,17 @@
-import { useState, useRef } from 'react';
-import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2, ChevronDown } from 'lucide-react';
+import { getClassificationRun, addClarificationMessage, ClarificationMessage } from '../lib/classificationService';
+import { classifyProduct } from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
+
+interface AlternateClassification {
+  hts: string;
+  description: string;
+  confidence: number;
+  cbp_rulings?: any[];
+  rationale?: string;
+  rule_verification?: any;
+}
 
 interface ExceptionReviewProps {
   product: {
@@ -11,7 +23,21 @@ interface ExceptionReviewProps {
     tariff: string;
     origin: string;
     reason: string;
+    // Extended classification data
+    hts_description?: string;
+    reasoning?: string;
+    chapter_code?: string;
+    chapter_title?: string;
+    section_code?: string;
+    section_title?: string;
+    cbp_rulings?: any[];
+    rule_verification?: any;
+    rule_confidence?: number;
+    classification_trace?: string;
+    alternate_classifications?: AlternateClassification[];
+    classification_run_id?: number;
   };
+  readOnly?: boolean;
   onClose: () => void;
   onApprove: () => void;
   onReject: () => void;
@@ -23,7 +49,7 @@ interface ChatMessage {
   timestamp?: string;
 }
 
-export function ExceptionReview({ product, onClose, onApprove, onReject }: ExceptionReviewProps) {
+export function ExceptionReview({ product, readOnly, onClose, onApprove, onReject }: ExceptionReviewProps) {
   const [selectedHts, setSelectedHts] = useState(product.hts);
   const [notes, setNotes] = useState('');
   const [currentConfidence, setCurrentConfidence] = useState(product.confidence);
@@ -32,102 +58,144 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
   const [primaryUseProvided, setPrimaryUseProvided] = useState(false);
   const [certificationProvided, setCertificationProvided] = useState(false);
   const [resolvedIssues, setResolvedIssues] = useState<string[]>([]);
-  // Using available data: product.productName, product.confidence, product.hts from database
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
-      timestamp: 'Just now'
-    },
-    {
-      role: 'assistant',
-      // HARDCODED: Chat message content - Should be dynamic based on product.reason or fetched from database
-      // TODO: Make message content dynamic based on actual exception reason
-      text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
-      timestamp: 'Just now'
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [showTrace, setShowTrace] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // HARDCODED: Alternate classifications - Should come from database field: user_product_classification_results.alternate_classifications (jsonb)
-  // TODO: Fetch from database when alternate_classifications field is added
-  const alternatives = [
-    { 
-      hts: '9102.11.0000', 
-      confidence: 68, 
-      description: 'Wrist watches, electrically operated, mechanical display only',
-      tariff: '9.8%',
-      reasoning: 'Product includes timekeeping as primary function'
-    },
-    { 
-      hts: '9031.80.8000', 
-      confidence: 62, 
-      description: 'Measuring or checking instruments, appliances and machines',
-      tariff: '1.7%',
-      reasoning: 'Primary function is health monitoring and measurement'
-    },
-    {
-      hts: '8517.62.0050',
-      confidence: 58,
-      description: 'Machines for reception, conversion, transmission of voice/data',
-      tariff: '0% (Free)',
-      reasoning: 'Device has wireless communication and data transmission capabilities'
-    }
-  ];
+  // Load saved conversation history from classification run on mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      const introMessages: ChatMessage[] = [
+        {
+          role: 'assistant',
+          text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
+          timestamp: 'Just now'
+        },
+        {
+          role: 'assistant',
+          text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
+          timestamp: 'Just now'
+        }
+      ];
+
+      if (!product.classification_run_id) {
+        setChatMessages(introMessages);
+        return;
+      }
+
+      setIsLoadingHistory(true);
+      try {
+        const run = await getClassificationRun(product.classification_run_id);
+        if (run?.conversations && run.conversations.length > 0) {
+          // Map saved ClarificationMessages to ChatMessages
+          const historyMessages: ChatMessage[] = run.conversations.map((msg: ClarificationMessage) => ({
+            role: msg.type === 'user_response' ? 'user' as const : 'assistant' as const,
+            text: msg.content,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          }));
+
+          // Show history header, then saved messages, then intro for this review session
+          setChatMessages([
+            {
+              role: 'assistant',
+              text: `📋 **Previous Classification Conversation** (${historyMessages.length} message${historyMessages.length !== 1 ? 's' : ''})`,
+              timestamp: run.created_at ? new Date(run.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+            },
+            ...historyMessages,
+            {
+              role: 'assistant',
+              text: '---\n**Continuing review...**',
+              timestamp: 'Now',
+            },
+            ...introMessages,
+          ]);
+        } else {
+          setChatMessages(introMessages);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        setChatMessages(introMessages);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadChatHistory();
+  }, [product.classification_run_id]);
+
+  // Use real alternate classifications from database, or empty array if not available
+  const alternatives: Array<{
+    hts: string;
+    confidence: number;
+    description: string;
+    tariff: string;
+    reasoning: string;
+  }> = (product.alternate_classifications || []).map((alt: AlternateClassification) => ({
+    hts: alt.hts || 'N/A',
+    confidence: alt.confidence || 0,
+    description: alt.description || '',
+    tariff: 'N/A',
+    reasoning: alt.rationale || '',
+  }));
 
   // Filter out the proposed classification from alternatives
   const filteredAlternatives = alternatives.filter(alt => alt.hts !== product.hts);
 
-  // HARDCODED: Confidence analysis issues - Should come from database or be dynamically generated based on product.reason
-  // TODO: Generate dynamically based on product.reason or fetch from classification_issues table when created
+  // Build confidence analysis from real rule_verification data
+  const rv = product.rule_verification;
   const confidenceAnalysis = {
     primaryIssues: [
-      {
-        issue: 'Unclear Primary Function',
-        explanation: 'The product combines timekeeping (watch) with health monitoring features. HTS classification depends on which function is primary/predominant.',
-        impact: 'high',
-        resolved: primaryUseProvided
-      },
-      {
-        issue: 'Multiple HTS Categories Apply',
-        explanation: 'This device could legitimately fall under watches (9102), measuring instruments (9031), or communication devices (8517).',
-        impact: 'high',
-        resolved: primaryUseProvided
-      },
-      {
-        issue: 'Insufficient Material Information',
-        explanation: 'Missing details about case material, strap material, and component breakdown affects precise classification.',
-        impact: 'medium',
-        resolved: materialsProvided
-      },
-      {
-        issue: 'Certification Status Unknown',
-        explanation: 'Medical device certification (FDA, CE) significantly impacts classification and duty rates.',
-        impact: 'medium',
-        resolved: certificationProvided
-      }
+      // Issues from checks_failed
+      ...(rv?.checks_failed || []).map((check: string) => ({
+        issue: check,
+        explanation: '',
+        impact: 'high' as const,
+        resolved: false,
+      })),
+      // Issues from missing_info
+      ...(rv?.missing_info || []).map((info: string) => ({
+        issue: info,
+        explanation: 'Additional information needed for accurate classification.',
+        impact: 'medium' as const,
+        resolved: false,
+      })),
+      // If no real data, show a generic low-confidence issue
+      ...(!rv || ((!rv.checks_failed || rv.checks_failed.length === 0) && (!rv.missing_info || rv.missing_info.length === 0))
+        ? [{
+            issue: `Classification confidence is ${product.confidence}%`,
+            explanation: product.reason || 'The classification needs review before approval.',
+            impact: (product.confidence < 60 ? 'high' : 'medium') as 'high' | 'medium',
+            resolved: false,
+          }]
+        : []),
     ],
     suggestedActions: [
-      'Clarify primary intended use: Is it marketed primarily as a watch or health monitor?',
-      'Provide material breakdown (case, strap, internal components)',
-      'Specify if health monitoring is medically certified or recreational',
-      'Upload product specification sheet or marketing materials'
-    ]
+      ...(rv?.missing_info || []).map((info: string) => `Provide: ${info}`),
+      ...(rv?.missing_info?.length ? [] : [
+        'Upload product specification sheet or marketing materials',
+        'Provide additional product details to improve confidence',
+      ]),
+    ],
+    checksPassed: rv?.checks_passed || [],
+    griApplied: rv?.gri_applied || [],
+    reasoning: rv?.reasoning || '',
   };
 
   const updateConfidenceScore = (newIssuesResolved: string[]) => {
     let confidenceBoost = 0;
     const newlyResolved = newIssuesResolved.filter(issue => !resolvedIssues.includes(issue));
-    
-    // HARDCODED: Confidence boost values - Should be configurable or based on issue severity from database
-    // TODO: Make configurable or fetch from database when classification_issues table is created
+
+    // Each resolved issue provides a confidence boost based on type
     newlyResolved.forEach(issue => {
-      if (issue === 'primary_use') confidenceBoost += 12;
-      if (issue === 'materials') confidenceBoost += 8;
-      if (issue === 'certification') confidenceBoost += 9;
+      if (issue === 'primary_use') confidenceBoost += 10;
+      else if (issue === 'materials') confidenceBoost += 8;
+      else if (issue === 'certification') confidenceBoost += 7;
+      else confidenceBoost += 5; // generic boost for other info
     });
 
     if (confidenceBoost > 0) {
@@ -151,8 +219,8 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     }
   };
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isSendingMessage) return;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -161,39 +229,37 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const userInput = chatInput;
+    setChatInput('');
 
-    // Analyze user input for information provided
-    const lowerInput = chatInput.toLowerCase();
+    // Analyze user input for information provided (confidence boost logic)
+    const lowerInput = userInput.toLowerCase();
     const newIssuesResolved: string[] = [];
-    
-    // Detect primary use information
-    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) && 
+
+    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) &&
         (lowerInput.includes('primary') || lowerInput.includes('main') || lowerInput.includes('marketed'))) {
       if (!primaryUseProvided) {
         setPrimaryUseProvided(true);
         newIssuesResolved.push('primary_use');
       }
     }
-    
-    // Detect material information - simplified logic
-    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') || 
+
+    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') ||
                                 lowerInput.includes('composition') || lowerInput.includes('fabric');
-    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') || 
-                           lowerInput.includes('wool') || lowerInput.includes('nylon') || 
+    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') ||
+                           lowerInput.includes('wool') || lowerInput.includes('nylon') ||
                            lowerInput.includes('leather') || lowerInput.includes('rubber') ||
-                           lowerInput.includes('aluminum') || lowerInput.includes('steel') || 
-                           lowerInput.includes('plastic') || lowerInput.includes('silicone') || 
+                           lowerInput.includes('aluminum') || lowerInput.includes('steel') ||
+                           lowerInput.includes('plastic') || lowerInput.includes('silicone') ||
                            lowerInput.includes('metal');
     const hasPercentage = lowerInput.match(/\d+\s*%/);
-    
-    // Trigger if has material keyword + type, OR has percentage (material composition)
+
     if (!materialsProvided && ((hasMaterialKeyword && hasMaterialType) || hasPercentage)) {
       setMaterialsProvided(true);
       newIssuesResolved.push('materials');
     }
-    
-    // Detect certification information
-    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') || 
+
+    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') ||
         lowerInput.includes('class ii') || lowerInput.includes('medical device')) {
       if (!certificationProvided) {
         setCertificationProvided(true);
@@ -201,30 +267,72 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       }
     }
 
-    // Update confidence score BEFORE the AI response
     if (newIssuesResolved.length > 0) {
       updateConfidenceScore(newIssuesResolved);
     }
 
-    // HARDCODED: AI response templates - Should use actual AI service or be dynamic based on product context
-    // TODO: Integrate with AI service or make responses dynamic based on product data
-    setTimeout(() => {
+    // Save user message to classification run conversations if we have a run ID
+    if (product.classification_run_id) {
+      try {
+        await addClarificationMessage(product.classification_run_id, {
+          step: 'rulings',
+          type: 'user_response',
+          content: userInput,
+          timestamp: new Date().toISOString(),
+          metadata: { source: 'exception_review' },
+        });
+      } catch (error) {
+        console.error('Error saving chat message:', error);
+      }
+    }
+
+    // Call the backend API for a real response
+    setIsSendingMessage(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Build a description that includes context for the API
+      const contextDescription = `${product.productName}. ${product.description || ''}. Additional info from user: ${userInput}`;
+
+      const response = await classifyProduct(
+        contextDescription,
+        user.id,
+        undefined,
+        {
+          originalQuery: product.productName,
+          clarificationResponse: userInput,
+        }
+      );
+
       let aiResponse = '';
-      
-      if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
-        aiResponse = "Perfect question! The 'essential character' or primary function is the key to getting this right. If the product is marketed mainly as a fitness/health tracker that happens to tell time, we'd classify it under measuring instruments (9031.80.8000) at 1.7% duty. If it's sold as a watch with health features, it stays under 9102.11.0000 at 9.8% duty. What does your marketing say?";
-      } else if (lowerInput.includes('material') || lowerInput.includes('made of') || hasPercentage) {
-        aiResponse = "Good thinking! Material details will help me nail this down. For watches, the case material directly affects the HTS subcategory:\n• Aluminum/base metal case → different rate\n• Precious metal content → much higher duty\n\nCan you tell me the case material and strap type? Or upload the spec sheet?";
-      } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
-        aiResponse = "This is a game-changer! Medical certification shifts the classification significantly. If you have FDA registration or CE medical device certification, it strengthens the case for 9031.80.8000 (measuring instruments) at 1.7% instead of 9.8%. Some medical devices even qualify for duty-free treatment. Do you have certification documents you can share?";
-      } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
-        // HARDCODED: Tariff comparison - Should use actual tariff rates from database or alternatives data
-        // TODO: Use actual tariff rates from product.tariff and alternatives data
-        aiResponse = `Let me break down the financial impact for you:\n\n📊 HTS 9102.11.0000 (Watches): 9.8% duty\n📊 HTS 9031.80.8000 (Instruments): 1.7% duty\n📊 HTS 8517.62.0050 (Comm devices): 0% duty\n\nIf your shipment value is $11,250, that's a difference of $920 vs $191 vs $0 in duties. Getting this classification right really matters for your bottom line!`;
-      } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
-        aiResponse = "I'm here to help! Here's what would help me increase the confidence score:\n\n1. Product specs or data sheet\n2. How it's marketed (watch vs health device)\n3. Material composition details\n4. Any certifications (FDA, CE, etc.)\n\nYou can either type the details or upload documents using the button below. What works best for you?";
+
+      if (response) {
+        // If the API returned clarification questions, use those
+        if (response.needs_clarification && response.questions && response.questions.length > 0) {
+          aiResponse = `Based on your input, I have a few follow-up questions:\n\n${response.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}\n\nPlease provide any details you can.`;
+        } else if (response.clarifications && response.clarifications.length > 0) {
+          aiResponse = `Thank you for the information! I'd like to clarify:\n\n${response.clarifications.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')}`;
+        } else if (response.matches) {
+          // API returned updated classification matches
+          const matchesArray = Array.isArray(response.matches)
+            ? response.matches
+            : (response.matches as any)?.matched_rules || [];
+
+          if (matchesArray.length > 0) {
+            const topMatch = matchesArray[0];
+            const confidence = topMatch.confidence || topMatch.score || 0;
+            const confidencePercent = Math.round(confidence * 100);
+            aiResponse = `Thanks for the additional information! Based on your input, I've refined the classification:\n\n**Top match:** HTS ${topMatch.hts} — ${topMatch.description}\n**Confidence:** ${confidencePercent}%${topMatch.rationale ? `\n**Reasoning:** ${topMatch.rationale}` : ''}\n\n${matchesArray.length > 1 ? `I also found ${matchesArray.length - 1} alternative${matchesArray.length > 2 ? 's' : ''}. ` : ''}Would you like more details or want to provide additional information?`;
+          } else {
+            aiResponse = `Thank you for the information about "${product.productName}". I've processed your input. Can you provide any additional details like material composition or primary use case to help refine the classification?`;
+          }
+        } else {
+          aiResponse = `Thank you for the information about "${product.productName}". I've noted your input. Is there anything else you can share to help refine the classification?`;
+        }
       } else {
-        aiResponse = "I want to help you get this right! Based on what you're asking, I think more specific product details would really help. You can:\n\n• Upload the product specification sheet\n• Share marketing materials\n• Tell me about certifications\n• Describe the primary use case\n\nWhich of these is easiest for you to provide?";
+        // API call returned null — use fallback
+        aiResponse = getFallbackResponse(userInput, lowerInput);
       }
 
       const assistantMessage: ChatMessage = {
@@ -234,12 +342,65 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       };
 
       setChatMessages(prev => [...prev, assistantMessage]);
+
+      // Save AI response to classification run conversations
+      if (product.classification_run_id) {
+        try {
+          await addClarificationMessage(product.classification_run_id, {
+            step: 'rulings',
+            type: 'question',
+            content: aiResponse,
+            timestamp: new Date().toISOString(),
+            metadata: { source: 'exception_review' },
+          });
+        } catch (error) {
+          console.error('Error saving AI response:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error calling classification API:', error);
+      // Fallback to template response
+      const fallbackResponse = getFallbackResponse(userInput, lowerInput);
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        text: fallbackResponse,
+        timestamp: 'Just now'
+      };
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      setIsSendingMessage(false);
       if (chatEndRef.current) {
         chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
-    }, 800);
+    }
+  };
 
-    setChatInput('');
+  // Fallback template responses when API is unavailable
+  const getFallbackResponse = (userInput: string, lowerInput: string): string => {
+    const altList = filteredAlternatives.length > 0
+      ? filteredAlternatives.map(a => `HTS ${a.hts} (${a.description})`).join(', ')
+      : 'other possible classifications';
+
+    if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
+      return `Great question! The primary function determines the HTS classification. For "${product.productName}", the current classification is HTS ${product.hts}. ${filteredAlternatives.length > 0 ? `Alternatives include ${altList}.` : ''} Can you clarify the primary intended use of this product?`;
+    } else if (lowerInput.includes('material') || lowerInput.includes('made of') || lowerInput.match(/\d+\s*%/)) {
+      return `Material details will help refine the classification for "${product.productName}". The material composition can affect which HTS subheading applies. Can you provide the full material breakdown (e.g., percentages of each material)? Or upload a spec sheet with this information.`;
+    } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
+      return `Certifications can significantly impact classification. If "${product.productName}" has relevant certifications (FDA, CE, etc.), it may qualify for a different HTS code with potentially different duty rates. Do you have certification documents you can share?`;
+    } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
+      let tariffInfo = `Current classification HTS ${product.hts}: ${product.tariff} duty rate.`;
+      if (filteredAlternatives.length > 0) {
+        tariffInfo += '\n\nAlternative classifications:\n' + filteredAlternatives.map(a => `HTS ${a.hts}: ${a.tariff} duty`).join('\n');
+      }
+      return `${tariffInfo}\n\nGetting the classification right can have a significant impact on your duty costs. Would you like to explore which classification best fits your product?`;
+    } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
+      const missingInfo = product.rule_verification?.missing_info || [];
+      if (missingInfo.length > 0) {
+        return `To improve the confidence score for "${product.productName}", I need:\n\n${missingInfo.map((info: string, i: number) => `${i + 1}. ${info}`).join('\n')}\n\nYou can type the details or upload documents using the button below.`;
+      }
+      return `I'm here to help! Here's what would improve the confidence score:\n\n1. Product specification sheet\n2. Primary use case details\n3. Material composition\n4. Any relevant certifications\n\nYou can type details or upload documents using the button below.`;
+    }
+    return `Thanks for the information about "${product.productName}"! To help refine the classification, you can:\n\n• Upload a product specification sheet\n• Describe the primary use case\n• Provide material composition details\n• Share any certifications\n\nWhat would you like to provide?`;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -281,11 +442,9 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
         updateConfidenceScore(newIssuesResolved);
       }
 
-      // HARDCODED: Document analysis response - Should use actual document content analysis or AI processing
-      // TODO: Implement actual document analysis or integrate with AI service
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        text: `Excellent! I've analyzed the document${files.length > 1 ? 's' : ''} and found some key details:\n\n✅ Product marketed as "Smart Health Watch"\n✅ Case: Aluminum alloy (base metal, not precious)\n✅ Primary features: Heart rate, SpO2, sleep tracking (FDA registered Class II)\n✅ Timekeeping listed as secondary/convenience feature\n\nThis evidence strongly supports classifying under 9031.80.8000 (Measuring instruments) rather than 9102 (Watches):\n• Duty drops from 9.8% → 1.7%\n• Classification now has high confidence!\n• Saves you approximately $729 on this shipment\n\nWould you like me to update the recommended classification?`,
+        text: `I've reviewed the document${files.length > 1 ? 's' : ''} you uploaded for "${product.productName}". This additional documentation helps improve the classification confidence. The information from these documents will be factored into the analysis.\n\nWould you like me to update the recommended classification based on this new information?`,
         timestamp: 'Just now'
       };
       setChatMessages(prev => [...prev, assistantMessage]);
@@ -355,7 +514,15 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
             <div>
-              <h2 className="text-slate-900">Low Confidence Classification Review</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-slate-900">{readOnly ? 'Classification Details' : 'Low Confidence Classification Review'}</h2>
+                {readOnly && (
+                  <span className="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs flex items-center gap-1">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Approved
+                  </span>
+                )}
+              </div>
               <p className="text-slate-600 text-sm">{product.productName}</p>
             </div>
           </div>
@@ -370,8 +537,9 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
         {/* Main Content - Split View */}
         <div className="flex-1 overflow-hidden flex">
           {/* Left Panel - Product Info & Classifications */}
-          <div className="w-1/2 border-r border-slate-200 overflow-y-auto p-6 space-y-6">
-            {/* Exception Alert */}
+          <div className={`${readOnly ? 'w-full' : 'w-1/2 border-r border-slate-200'} overflow-y-auto p-6 space-y-6`}>
+            {/* Exception Alert - hidden for approved items */}
+            {!readOnly && (
             <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -400,25 +568,26 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                 </div>
               </div>
             </div>
+            )}
 
-            {/* AI Confidence Analysis */}
+            {/* AI Confidence Analysis - hidden for approved items */}
+            {!readOnly && (
             <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-blue-200">
                 <div className="flex items-center gap-2">
                   <Lightbulb className="w-5 h-5 text-blue-600" />
                   <h3 className="text-slate-900">AI Analysis</h3>
-                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                 </div>
               </div>
-              
+
               <div className="p-4 space-y-4">
                 <div>
                   <h4 className="text-slate-900 text-sm mb-2">Primary Issues Detected:</h4>
                   <div className="space-y-2">
                     {confidenceAnalysis.primaryIssues.map((item, idx) => (
                       <div key={idx} className={`p-3 rounded-lg border transition-all ${
-                        item.resolved 
-                          ? 'bg-green-50 border-green-200' 
+                        item.resolved
+                          ? 'bg-green-50 border-green-200'
                           : 'bg-slate-50 border-slate-200'
                       }`}>
                         <div className="flex items-start gap-2 mb-1">
@@ -432,8 +601,8 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className={`text-sm ${
-                                item.resolved 
-                                  ? 'text-green-900 line-through' 
+                                item.resolved
+                                  ? 'text-green-900 line-through'
                                   : 'text-slate-900'
                               }`}>
                                 {item.issue}
@@ -444,8 +613,8 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                                 </span>
                               ) : (
                                 <span className={`px-1.5 py-0.5 rounded text-xs ${
-                                  item.impact === 'high' 
-                                    ? 'bg-red-100 text-red-700' 
+                                  item.impact === 'high'
+                                    ? 'bg-red-100 text-red-700'
                                     : 'bg-amber-100 text-amber-700'
                                 }`}>
                                   {item.impact}
@@ -455,8 +624,8 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                             <p className={`text-xs mt-1 ${
                               item.resolved ? 'text-green-700' : 'text-slate-600'
                             }`}>
-                              {item.resolved 
-                                ? '✓ Information provided - issue resolved' 
+                              {item.resolved
+                                ? '✓ Information provided - issue resolved'
                                 : item.explanation
                               }
                             </p>
@@ -480,6 +649,7 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                 </div>
               </div>
             </div>
+            )}
 
             {/* Product Information */}
             <div className="bg-white border border-slate-200 rounded-lg p-4">
@@ -517,12 +687,11 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               >
                 <div className="mb-3">
                   <div className="text-blue-600 text-sm mb-1">{product.hts}</div>
-                  {/* HARDCODED: HTS description - Should come from database field: user_product_classification_results.hts_description or hts_code_lookup table */}
-                  {/* TODO: Fetch from database when hts_description field is added or use hts_code_lookup table */}
-                  <div className="text-slate-700 text-xs mb-2 flex items-center gap-2">
-                    <span>Wrist watches, electrically operated, mechanical display only</span>
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
-                  </div>
+                  {product.hts_description && (
+                    <div className="text-slate-700 text-xs mb-2">
+                      <span>{product.hts_description}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <span className={`px-2 py-1 text-xs rounded ${
                       currentConfidence >= 85 ? 'bg-green-100 text-green-700' :
@@ -542,28 +711,31 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   </div>
                 </div>
 
-                {/* HARDCODED: Classification hierarchy - Should come from hts_code_lookup table (chapter, heading, subheading) */}
-                {/* TODO: Fetch from hts_code_lookup table when created, or from database field if added */}
-                <div className="pt-3 border-t border-slate-200">
-                  <div className="text-slate-900 text-sm mb-2 flex items-center gap-2">
-                    <span>Classification Hierarchy</span>
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
+                {(product.chapter_code || product.section_code) && (
+                  <div className="pt-3 border-t border-slate-200">
+                    <div className="text-slate-900 text-sm mb-2">
+                      Classification Hierarchy
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {product.section_code && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-slate-600 min-w-[80px]">Section</span>
+                          <span className="text-slate-700">{product.section_code}{product.section_title ? ` — ${product.section_title}` : ''}</span>
+                        </div>
+                      )}
+                      {product.chapter_code && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-slate-600 min-w-[80px]">Chapter</span>
+                          <span className="text-slate-700">{product.chapter_code}{product.chapter_title ? ` — ${product.chapter_title}` : ''}</span>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="text-slate-600 min-w-[80px]">HTS Code</span>
+                        <span className="text-slate-700">{product.hts}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Chapter</span>
-                      <span className="text-slate-700">91 — Clocks and watches and parts thereof</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Heading</span>
-                      <span className="text-slate-700">9102 — Wrist watches, pocket watches and other watches</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Subheading</span>
-                      <span className="text-slate-700">9102.21 — With automatic winding</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -571,7 +743,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
             <div className="bg-white border border-slate-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-slate-900">Alternative Classifications</h3>
-                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
               </div>
               <div className="space-y-2">
                 {filteredAlternatives.map((alt, index) => (
@@ -589,25 +760,11 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                         <span className="text-slate-900 text-sm block mb-2">{alt.hts}</span>
                         <p className="text-slate-700 text-xs mb-2">{alt.description}</p>
                         
-                        {/* HARDCODED: Alternative classification hierarchy - Should come from hts_code_lookup table or alternate_classifications data */}
-                        {/* TODO: Fetch from database when alternate_classifications includes hierarchy or use hts_code_lookup table */}
-                        <div className="space-y-1 text-xs mb-2">
-                          <div className="mb-1">
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
+                        {alt.reasoning && (
+                          <div className="text-xs text-slate-600 mb-2">
+                            <span className="text-slate-500">Reasoning:</span> {alt.reasoning}
                           </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Chapter</span>
-                            <span className="text-slate-700">{index === 0 ? '91 — Clocks and watches' : index === 1 ? '90 — Optical, measuring, checking instruments' : '85 — Electrical machinery'}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Heading</span>
-                            <span className="text-slate-700">{index === 0 ? '9102 — Wrist watches' : index === 1 ? '9031 — Measuring instruments' : '8517 — Telephone sets'}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Subheading</span>
-                            <span className="text-slate-700">{index === 0 ? '9102.11 — Wrist watches, mechanical display' : index === 1 ? '9031.80 — Measuring instruments' : '8517.62 — Voice/data transmission'}</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 ml-3">
                         <span className={`px-2 py-0.5 text-xs rounded ${
@@ -634,7 +791,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-5 py-3 border-b border-indigo-100">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-indigo-900">Classification Reasoning for Customs Validation</h3>
-                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                 </div>
                 <p className="text-indigo-700 text-sm">Detailed justification for HTS {selectedHts}</p>
               </div>
@@ -646,49 +802,52 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">1</div>
                     <h4 className="text-slate-900">Classification Decision</h4>
                   </div>
-                  {/* HARDCODED: Classification decision reasoning - Should come from database field: user_product_classification_results.reasoning */}
-                  {/* TODO: Fetch from database when reasoning field is added */}
                   <div className="ml-8 p-4 bg-slate-50 rounded-lg">
                     <p className="text-slate-700 text-sm mb-3">
                       <strong>HTS Code {selectedHts}</strong> was selected based on the product's primary function, material composition, and physical characteristics.
                     </p>
-                    <p className="text-slate-600 text-sm">
-                      This classification aligns with the Harmonized Tariff Schedule of the United States (HTSUS) Chapter {selectedHts.substring(0, 2)} which covers: 
-                      {selectedHts.startsWith('91') && ' Clocks and watches and parts thereof.'}
-                      {selectedHts.startsWith('90') && ' Optical, photographic, measuring, checking, precision, medical or surgical instruments and apparatus.'}
-                      {selectedHts.startsWith('85') && ' Electrical machinery and equipment and parts thereof.'}
-                    </p>
+                    {product.reasoning ? (
+                      <p className="text-slate-600 text-sm whitespace-pre-wrap">{product.reasoning}</p>
+                    ) : (
+                      <p className="text-slate-600 text-sm">
+                        This classification aligns with the Harmonized Tariff Schedule of the United States (HTSUS).
+                        {product.chapter_code && ` Chapter ${product.chapter_code}${product.chapter_title ? `: ${product.chapter_title}` : ''}.`}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* HARDCODED: General Rules of Interpretation - Should come from database field: user_product_classification_results.reasoning or be dynamically generated */}
-                {/* TODO: Generate dynamically or fetch from database when reasoning field includes GRI analysis */}
+                {(confidenceAnalysis.griApplied.length > 0 || confidenceAnalysis.checksPassed.length > 0) && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">2</div>
                     <h4 className="text-slate-900">General Rules of Interpretation (GRI)</h4>
                   </div>
                   <div className="ml-8 space-y-2">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-green-900"><strong>GRI 1:</strong> Classification determined by terms of the headings</p>
-                          <p className="text-xs text-green-700 mt-1">Product description matches the heading terminology for HTS {selectedHts}</p>
+                    {confidenceAnalysis.griApplied.map((gri: string, idx: number) => (
+                      <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-green-900">{gri}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-green-900"><strong>GRI 3(a):</strong> Most specific description prevails</p>
-                          <p className="text-xs text-green-700 mt-1">The selected subheading provides the most specific description of the product</p>
+                    ))}
+                    {confidenceAnalysis.checksPassed.map((check: string, idx: number) => (
+                      <div key={`check-${idx}`} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-green-900">{check}</p>
                         </div>
                       </div>
-                    </div>
+                    ))}
+                    {confidenceAnalysis.reasoning && (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-700">{confidenceAnalysis.reasoning}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+                )}
 
                 {/* Material Composition Analysis */}
                 <div>
@@ -750,20 +909,33 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">6</div>
                     <h4 className="text-slate-900">Supporting Documentation</h4>
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                   </div>
-                  {/* HARDCODED: Supporting documentation list - Should come from database table: user_product_documents */}
-                  {/* TODO: Fetch actual documents from user_product_documents table for this product */}
                   <div className="ml-8 space-y-2">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Product specification sheet</p>
-                    </div>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Material composition details</p>
-                    </div>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Country of origin documentation</p>
-                    </div>
+                    {/* CBP Rulings as supporting evidence */}
+                    {product.cbp_rulings && product.cbp_rulings.length > 0 ? (
+                      product.cbp_rulings.map((ruling: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-sm text-blue-900 font-medium">{ruling.ruling_number}</p>
+                              <p className="text-xs text-blue-700 mt-1">{ruling.subject}</p>
+                              {ruling.ruling_date && (
+                                <p className="text-xs text-blue-600 mt-1">Date: {ruling.ruling_date}</p>
+                              )}
+                            </div>
+                            {ruling.url && (
+                              <a href={ruling.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-xs underline ml-2 flex-shrink-0">
+                                View
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">No CBP rulings available for this classification.</p>
+                      </div>
+                    )}
                     {uploadedFiles.length > 0 && uploadedFiles.map((file, idx) => (
                       <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-sm text-green-900">✓ {file.name} (uploaded)</p>
@@ -771,6 +943,25 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                     ))}
                   </div>
                 </div>
+
+                {/* Classification Trace */}
+                {product.classification_trace && (
+                  <div>
+                    <button
+                      onClick={() => setShowTrace(!showTrace)}
+                      className="flex items-center gap-2 mb-2 w-full text-left"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">7</div>
+                      <h4 className="text-slate-900 flex-1">Classification Trace</h4>
+                      <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showTrace ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showTrace && (
+                      <div className="ml-8 p-4 bg-slate-50 rounded-lg">
+                        <pre className="text-xs text-slate-700 whitespace-pre-wrap font-mono overflow-x-auto">{product.classification_trace}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Compliance Notes */}
                 <div className="border-t border-slate-200 pt-4">
@@ -791,19 +982,22 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
             </div>
 
             {/* Notes */}
-            <div className="bg-white border border-slate-200 rounded-lg p-4">
-              <label className="block text-slate-900 mb-2 text-sm">Classification Notes (Optional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="Add any notes about this classification decision..."
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-              />
-            </div>
+            {!readOnly && (
+              <div className="bg-white border border-slate-200 rounded-lg p-4">
+                <label className="block text-slate-900 mb-2 text-sm">Classification Notes (Optional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => handleNotesChange(e.target.value)}
+                  placeholder="Add any notes about this classification decision..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Right Panel - AI Chat Assistant */}
+          {/* Right Panel - AI Chat Assistant (hidden when readOnly) */}
+          {!readOnly && (
           <div className="w-1/2 flex flex-col bg-gradient-to-br from-slate-50 to-blue-50">
             {/* Chat Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-4 flex-shrink-0">
@@ -820,6 +1014,12 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {isLoadingHistory && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                  <span className="text-sm text-slate-500">Loading conversation history...</span>
+                </div>
+              )}
               {chatMessages.map((message, idx) => (
                 <div
                   key={idx}
@@ -846,6 +1046,19 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   </div>
                 </div>
               ))}
+              {isSendingMessage && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                      <span className="text-sm text-slate-500">Analyzing your input...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -898,16 +1111,16 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask about materials, primary function, certifications..."
+                  onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && handleSendMessage()}
+                  placeholder={isSendingMessage ? "Waiting for response..." : "Ask about materials, primary function, certifications..."}
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={!chatInput.trim()}
+                  disabled={!chatInput.trim() || isSendingMessage}
                   className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-5 h-5" />
+                  {isSendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
 
@@ -916,30 +1129,48 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3 px-6 py-4 bg-white border-t border-slate-200 flex-shrink-0">
-          <button
-            onClick={handleApprove}
-            className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-          >
-            <ThumbsUp className="w-5 h-5" />
-            Approve Classification
-          </button>
-          <button
-            onClick={onReject}
-            className="px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
-          >
-            <ThumbsDown className="w-5 h-5" />
-            Review Later
-          </button>
-          <button
-            onClick={onClose}
-            className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            Cancel
-          </button>
+          {readOnly ? (
+            <>
+              <div className="flex-1 py-3 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                Classification Approved
+              </div>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Close
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleApprove}
+                className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <ThumbsUp className="w-5 h-5" />
+                Approve Classification
+              </button>
+              <button
+                onClick={onReject}
+                className="px-6 py-3 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2"
+              >
+                <ThumbsDown className="w-5 h-5" />
+                Review Later
+              </button>
+              <button
+                onClick={onClose}
+                className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

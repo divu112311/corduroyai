@@ -6,6 +6,8 @@ export interface UserMetadata {
   company_name: string | null;
   profile_info: Record<string, any>;
   confidence_threshold: number;
+  auto_approve_single: boolean;
+  auto_approve_bulk: boolean;
   created_at: string;
   last_login_at: string | null;
 }
@@ -54,6 +56,8 @@ export async function updateUserMetadata(
     company_name?: string;
     profile_info?: Record<string, any>;
     confidence_threshold?: number;
+    auto_approve_single?: boolean;
+    auto_approve_bulk?: boolean;
   }
 ): Promise<UserMetadata | null> {
   try {

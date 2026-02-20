@@ -472,7 +472,7 @@ export default function App() {
             <FileText className="w-5 h-5" />
             <span>Product Profiles</span>
           </button>
-          
+
           <button
             onClick={() => setCurrentView('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
