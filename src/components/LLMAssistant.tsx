@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, X, Minimize2, Maximize2 } from 'lucide-react';
-import { generateRuling } from '../lib/supabaseFunctions';
 
 interface Message {
   role: 'user' | 'assistant';

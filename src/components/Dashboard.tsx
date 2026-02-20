@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Clock, TrendingUp, MessageSquare, Sparkles, ChevronRight, Package, FileText, X, Upload, Database, BarChart, Search, Plus, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle, TrendingUp, MessageSquare, Sparkles, ChevronRight, Package, X, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ExceptionReview } from './ExceptionReview';
 import { supabase } from '../lib/supabase';
@@ -37,6 +37,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     { label: 'Avg Confidence', value: '0%', subtext: 'Approved Products', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
   ]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   // Load data from database on mount
@@ -86,6 +87,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setLastSyncTime(new Date());
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        setLoadError('Failed to load dashboard data. Please refresh the page to try again.');
         setIsLoadingExceptions(false);
         setIsLoadingRecentActivity(false);
         setIsLoadingStats(false);
@@ -188,6 +190,19 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
           </div>
         </div>
+
+        {loadError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <span className="text-red-700 text-sm flex-1">{loadError}</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6">
           {/* Main Content - Full Width */}

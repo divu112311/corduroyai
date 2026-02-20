@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { X, ArrowLeft, Sparkles, Save } from 'lucide-react';
+import { X, ArrowLeft, Sparkles, Save, Loader2 } from 'lucide-react';
+import { classifyProduct } from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
 
 interface AddProductModalProps {
   onClose: () => void;
@@ -18,29 +20,84 @@ export function AddProductModal({ onClose, onSave, editingProduct }: AddProductM
     cost: editingProduct && editingProduct.cost ? editingProduct.cost : '',
     vendor: editingProduct && editingProduct.vendor ? editingProduct.vendor : '',
   });
-  const [classification, setClassification] = useState(editingProduct && editingProduct.hts ? {
+  const [classification, setClassification] = useState<{
+    hts: string;
+    confidence: number;
+    description: string;
+    tariff: string;
+  } | null>(editingProduct && editingProduct.hts ? {
     hts: editingProduct.hts,
     confidence: editingProduct.confidence,
     description: 'Product classification',
     tariff: '0%'
   } : null);
   const [isClassifying, setIsClassifying] = useState(false);
+  const [classifyError, setClassifyError] = useState<string | null>(null);
 
-  const handleClassify = () => {
+  const handleClassify = async () => {
     setIsClassifying(true);
+    setClassifyError(null);
 
-    // HARDCODED: Simulated AI classification - Should call actual classification API
-    // TODO: Replace with actual API call to classifyProduct() from supabaseFunctions
-    setTimeout(() => {
-      setClassification({
-        hts: '8517.62.0050', // HARDCODED
-        confidence: 96, // HARDCODED
-        description: 'Machines for the reception, conversion and transmission or regeneration of voice, images or other data', // HARDCODED
-        tariff: '0% (Free)' // HARDCODED
-      });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setClassifyError('Please log in to classify products');
+        setIsClassifying(false);
+        return;
+      }
+
+      // Build description from form data
+      let description = `${formData.name}. ${formData.description}`;
+      if (formData.materials) description += `. Materials: ${formData.materials}`;
+      if (formData.origin) description += `. Country of origin: ${formData.origin}`;
+
+      const response = await classifyProduct(description, user.id);
+
+      if (!response) {
+        setClassifyError('Classification failed. Please try again.');
+        setIsClassifying(false);
+        return;
+      }
+
+      // Extract the top match from the response
+      let topMatch: { hts: string; description: string; confidence: number } | null = null;
+
+      if (response.type === 'answer' && response.matches) {
+        const matches = Array.isArray(response.matches)
+          ? response.matches
+          : response.matches.matched_rules || [];
+        if (matches.length > 0) {
+          topMatch = {
+            hts: matches[0].hts || 'N/A',
+            description: matches[0].description || '',
+            confidence: Math.round((matches[0].confidence || matches[0].score || 0) * 100),
+          };
+        }
+      } else if (response.candidates && response.candidates.length > 0) {
+        topMatch = {
+          hts: response.candidates[0].hts || 'N/A',
+          description: response.candidates[0].description || '',
+          confidence: Math.round((response.candidates[0].confidence || response.candidates[0].score || 0) * 100),
+        };
+      }
+
+      if (topMatch) {
+        setClassification({
+          hts: topMatch.hts,
+          confidence: topMatch.confidence,
+          description: topMatch.description,
+          tariff: 'See full classification for rates',
+        });
+        setStep('classify');
+      } else {
+        setClassifyError('No classification results found. Try providing more product details.');
+      }
+    } catch (error: any) {
+      console.error('Classification error:', error);
+      setClassifyError(error.message || 'An error occurred during classification');
+    } finally {
       setIsClassifying(false);
-      setStep('classify');
-    }, 1500);
+    }
   };
 
   const handleSave = () => {
@@ -155,11 +212,6 @@ export function AddProductModal({ onClose, onSave, editingProduct }: AddProductM
 
                   <div>
                     <label className="block text-slate-700 mb-2">Country of Origin *</label>
-                    {/* HARDCODED: Country list - Should fetch from database or use a country API */}
-                    {/* TODO: Replace with dynamic country list from database or country API */}
-                    <div className="mb-1">
-                      <span className="px-1 py-0.5 bg-red-100 text-red-600 text-[10px] rounded border border-red-300">HARDCODED</span>
-                    </div>
                     <select
                       value={formData.origin}
                       onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
@@ -202,6 +254,13 @@ export function AddProductModal({ onClose, onSave, editingProduct }: AddProductM
                 </div>
               </div>
 
+              {/* Error message */}
+              {classifyError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                  {classifyError}
+                </div>
+              )}
+
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-slate-200">
                 <button
@@ -209,7 +268,7 @@ export function AddProductModal({ onClose, onSave, editingProduct }: AddProductM
                   disabled={!isFormValid || isClassifying}
                   className="flex-1 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  <Sparkles className="w-5 h-5" />
+                  {isClassifying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                   {isClassifying ? 'Classifying...' : 'Classify with AI'}
                 </button>
                 <button
@@ -227,7 +286,6 @@ export function AddProductModal({ onClose, onSave, editingProduct }: AddProductM
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <h3 className="text-slate-900">AI Classification Result</h3>
-                    <span className="px-1 py-0.5 bg-red-100 text-red-600 text-[10px] rounded border border-red-300">HARDCODED</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-green-600 text-sm">Confidence:</span>

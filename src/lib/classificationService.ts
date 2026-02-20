@@ -131,6 +131,7 @@ export async function saveProduct(
     materials?: any; // JSONB
     unit_cost?: number;
     vendor?: string;
+    sku?: string;
   }
 ): Promise<number> {
   try {

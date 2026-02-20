@@ -295,6 +295,7 @@ export function ClassificationView() {
           materials: materials.length > 0 ? materials : undefined,
           unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
           vendor: vendor || undefined,
+          sku: sku || undefined,
         });
 
         const classResultId = await saveClassificationResult(productId, runId, {
@@ -530,6 +531,7 @@ export function ClassificationView() {
             materials: materials.length > 0 ? materials : undefined,
             unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
             vendor: vendor || undefined,
+            sku: sku || undefined,
           });
 
           const classResultId = await saveClassificationResult(productId, classificationRunId, {
@@ -928,7 +930,35 @@ export function ClassificationView() {
                     if (result && classificationRunId) {
                       const { data: { user } } = await supabase.auth.getUser();
                       if (user) {
-                        alert('Product approved and saved!');
+                        try {
+                          // Re-fetch productId and classResultId from the DB for this run
+                          const { data: products } = await supabase
+                            .from('user_products')
+                            .select('id')
+                            .eq('classification_run_id', classificationRunId)
+                            .eq('user_id', user.id)
+                            .limit(1)
+                            .single();
+
+                          const { data: classResult } = await supabase
+                            .from('user_product_classification_results')
+                            .select('id')
+                            .eq('classification_run_id', classificationRunId)
+                            .limit(1)
+                            .single();
+
+                          if (products && classResult) {
+                            await saveClassificationApproval(
+                              products.id,
+                              classResult.id,
+                              true,
+                              'Manually approved by user'
+                            );
+                          }
+                        } catch (error) {
+                          console.error('Error saving approval:', error);
+                        }
+
                         // Reset form
                         setResult(null);
                         setQuery('');

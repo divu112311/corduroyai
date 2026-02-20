@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, Clock, Package, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ChevronRight, Clock, CheckCircle, Loader2 } from 'lucide-react';
 import { ExceptionReview } from './ExceptionReview';
 import { saveClassificationApproval } from '../lib/classificationService';
 

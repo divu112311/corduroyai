@@ -538,7 +538,8 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
         <div className="flex-1 overflow-hidden flex">
           {/* Left Panel - Product Info & Classifications */}
           <div className={`${readOnly ? 'w-full' : 'w-1/2 border-r border-slate-200'} overflow-y-auto p-6 space-y-6`}>
-            {/* Exception Alert */}
+            {/* Exception Alert - hidden for approved items */}
+            {!readOnly && (
             <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -567,6 +568,7 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
                 </div>
               </div>
             </div>
+            )}
 
             {/* AI Confidence Analysis */}
             <div className="bg-white border border-blue-200 rounded-lg overflow-hidden">
