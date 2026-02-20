@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, MapPin, DollarSign, Package, FileText, Edit, Filter, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, MapPin, DollarSign, Package, FileText, Filter, X, ChevronDown, ExternalLink } from 'lucide-react';
 import { AddProductModal } from './AddProductModal';
 import { LLMAssistant } from './LLMAssistant';
 import { ProductDetailsModal } from './ProductDetailsModal';
@@ -26,6 +26,16 @@ interface Product {
   totalCost?: number | null;
   alternateClassification?: string | null;
   unitCost?: number | null;
+  // Extended classification data
+  reasoning?: string;
+  chapterCode?: string;
+  chapterTitle?: string;
+  sectionCode?: string;
+  sectionTitle?: string;
+  cbpRulings?: any;
+  ruleVerification?: any;
+  ruleConfidence?: number;
+  alternateClassifications?: any;
 }
 
 export function ProductProfile() {
@@ -165,20 +175,6 @@ export function ProductProfile() {
     }
     setShowAddModal(false);
     setEditingProduct(null);
-  };
-
-  const handleReclassify = () => {
-    if (selectedProduct) {
-      setEditingProduct(selectedProduct);
-      setShowAddModal(true);
-    }
-  };
-
-  const handleEdit = () => {
-    if (selectedProduct) {
-      setEditingProduct(selectedProduct);
-      setShowAddModal(true);
-    }
   };
 
   const handleProductClick = (product: Product) => {
@@ -461,14 +457,10 @@ export function ProductProfile() {
                   <div>
                     <h2 className="text-slate-900 mb-1">{selectedProduct.name}</h2>
                     <p className="text-slate-600">SKU: {selectedProduct.sku}</p>
+                    {selectedProduct.description && (
+                      <p className="text-slate-500 text-sm mt-1">{selectedProduct.description}</p>
+                    )}
                   </div>
-                  <button 
-                    onClick={handleEdit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit Product
-                  </button>
                 </div>
 
                 {/* Classification Info */}
@@ -481,63 +473,107 @@ export function ProductProfile() {
                     </div>
                   </div>
                   <div className="text-green-800 text-lg mb-3">HTS Code: {selectedProduct.hts}</div>
-                  
-                  {/* HARDCODED: HTS Chapter/Heading/Subheading descriptions - No fields in DB for these descriptions */}
-                  <div className="space-y-1 text-xs mb-3">
-                    <div className="mb-1">
-                      <span className="px-1 py-0.5 bg-red-100 text-red-600 text-[10px] rounded border border-red-300">HARDCODED</span>
+
+                  {(selectedProduct.sectionCode || selectedProduct.chapterCode) && (
+                    <div className="space-y-1 text-xs mb-3">
+                      {selectedProduct.sectionCode && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-green-700 min-w-[60px]">Section</span>
+                          <span className="text-green-800">{selectedProduct.sectionCode}{selectedProduct.sectionTitle ? ` — ${selectedProduct.sectionTitle}` : ''}</span>
+                        </div>
+                      )}
+                      {selectedProduct.chapterCode && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-green-700 min-w-[60px]">Chapter</span>
+                          <span className="text-green-800">{selectedProduct.chapterCode}{selectedProduct.chapterTitle ? ` — ${selectedProduct.chapterTitle}` : ''}</span>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-700 min-w-[60px]">HTS Code</span>
+                        <span className="text-green-800">{selectedProduct.hts}</span>
+                      </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-700 min-w-[60px]">Chapter</span>
-                      <span className="text-green-800">
-                        {selectedProduct.hts.startsWith('85') && '85 — Electrical machinery and equipment'}
-                        {selectedProduct.hts.startsWith('61') && '61 — Articles of apparel, knitted or crocheted'}
-                        {selectedProduct.hts.startsWith('94') && '94 — Furniture; bedding, mattresses, cushions'}
-                        {selectedProduct.hts.startsWith('73') && '73 — Articles of iron or steel'}
-                        {selectedProduct.hts.startsWith('42') && '42 — Articles of leather; travel goods'}
-                        {selectedProduct.hts.startsWith('91') && '91 — Clocks and watches and parts thereof'}
-                        {selectedProduct.hts.startsWith('55') && '55 — Man-made staple fibers'}
-                        {selectedProduct.hts.startsWith('69') && '69 — Ceramic products'}
-                        {selectedProduct.hts.startsWith('95') && '95 — Toys, games and sports equipment'}
-                        {selectedProduct.hts.startsWith('44') && '44 — Wood and articles of wood'}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-700 min-w-[60px]">Heading</span>
-                      <span className="text-green-800">
-                        {selectedProduct.hts.startsWith('8518') && '8518 — Loudspeakers, headphones, microphones'}
-                        {selectedProduct.hts.startsWith('6109') && '6109 — T-shirts, singlets and other vests, knitted'}
-                        {selectedProduct.hts.startsWith('9405') && '9405 — Lamps and lighting fittings'}
-                        {selectedProduct.hts.startsWith('7323') && '7323 — Table, kitchen or other household articles of iron or steel'}
-                        {selectedProduct.hts.startsWith('4202') && '4202 — Trunks, suitcases, vanity cases, briefcases'}
-                        {selectedProduct.hts.startsWith('9102') && '9102 — Wrist watches, pocket watches and other watches'}
-                        {selectedProduct.hts.startsWith('5515') && '5515 — Other woven fabrics of synthetic staple fibers'}
-                        {selectedProduct.hts.startsWith('6912') && '6912 — Tableware, kitchenware, other household articles of ceramics'}
-                        {selectedProduct.hts.startsWith('9506') && '9506 — Articles and equipment for general physical exercise'}
-                        {selectedProduct.hts.startsWith('4419') && '4419 — Tableware and kitchenware, of wood'}
-                      </span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-700 min-w-[60px]">Subheading</span>
-                      <span className="text-green-800">
-                        {selectedProduct.hts.startsWith('8518.22') && '8518.22 — Multiple loudspeakers, mounted in the same enclosure'}
-                        {selectedProduct.hts.startsWith('6109.10') && '6109.10 — Of cotton'}
-                        {selectedProduct.hts.startsWith('9405.20') && '9405.20 — Electric table, desk, bedside or floor-standing lamps'}
-                        {selectedProduct.hts.startsWith('7323.93') && '7323.93 — Of stainless steel'}
-                        {selectedProduct.hts.startsWith('4202.92') && '4202.92 — With outer surface of sheeting of plastic or of textile materials'}
-                        {selectedProduct.hts.startsWith('9102.11') && '9102.11 — With mechanical display only'}
-                        {selectedProduct.hts.startsWith('5515.11') && '5515.11 — Mixed mainly or solely with viscose rayon staple fibers'}
-                        {selectedProduct.hts.startsWith('6912.00') && '6912.00 — Tableware, kitchenware, other household articles'}
-                        {selectedProduct.hts.startsWith('9506.91') && '9506.91 — Articles and equipment for general physical exercise, gymnastics or athletics'}
-                        {selectedProduct.hts.startsWith('4419.19') && '4419.19 — Other'}
-                      </span>
-                    </div>
-                  </div>
-                  
+                  )}
+
                   <div className="text-green-700 text-sm">
                     Last updated: {new Date(selectedProduct.lastUpdated).toLocaleDateString()}
                   </div>
                 </div>
+
+                {/* CBP Rulings */}
+                {selectedProduct.cbpRulings && selectedProduct.cbpRulings.length > 0 && (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h3 className="text-blue-900 mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      CBP Rulings ({selectedProduct.cbpRulings.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {selectedProduct.cbpRulings.map((ruling: any, idx: number) => (
+                        <div key={idx} className="bg-white rounded-lg p-3 border border-blue-200">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <span className="text-blue-900 text-sm font-medium">{ruling.ruling_number}</span>
+                              {ruling.ruling_date && (
+                                <span className="text-blue-600 text-xs ml-2">
+                                  {new Date(ruling.ruling_date).toLocaleDateString()}
+                                </span>
+                              )}
+                              <p className="text-blue-800 text-sm mt-1">{ruling.subject}</p>
+                            </div>
+                            {ruling.url && (
+                              <a href={ruling.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:text-blue-700">
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Rule Verification */}
+                {selectedProduct.ruleVerification && (
+                  <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <h3 className="text-indigo-900 mb-3 flex items-center gap-2">
+                      Rule Verification
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${
+                        selectedProduct.ruleVerification.status === 'verified'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {selectedProduct.ruleVerification.status}
+                      </span>
+                    </h3>
+                    {selectedProduct.ruleVerification.gri_applied?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {selectedProduct.ruleVerification.gri_applied.map((gri: string, idx: number) => (
+                          <span key={idx} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-lg border border-indigo-200">{gri}</span>
+                        ))}
+                      </div>
+                    )}
+                    {selectedProduct.ruleVerification.checks_passed?.length > 0 && (
+                      <div className="mb-2">
+                        {selectedProduct.ruleVerification.checks_passed.map((check: string, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-green-700 mb-1">
+                            <span className="w-3.5 h-3.5 flex-shrink-0 text-green-600">✓</span>
+                            <span>{check}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {selectedProduct.ruleVerification.checks_failed?.length > 0 && (
+                      <div className="mb-2">
+                        {selectedProduct.ruleVerification.checks_failed.map((check: string, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2 text-sm text-red-700 mb-1">
+                            <span className="w-3.5 h-3.5 flex-shrink-0 text-red-600">✗</span>
+                            <span>{check}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Product Details Grid */}
                 <div className="grid grid-cols-2 gap-4 mb-6">
@@ -604,12 +640,27 @@ export function ProductProfile() {
                           : 'N/A'}
                       </span>
                     </div>
-                    {selectedProduct.alternateClassification && (
+                    {selectedProduct.alternateClassifications && selectedProduct.alternateClassifications.length > 0 ? (
+                      <div className="p-3 bg-amber-50 rounded-lg">
+                        <span className="text-amber-900 text-sm font-medium block mb-2">Alternate Classifications</span>
+                        <div className="space-y-2">
+                          {selectedProduct.alternateClassifications.map((alt: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between text-sm">
+                              <div>
+                                <span className="text-amber-800 font-mono">{alt.hts}</span>
+                                <span className="text-amber-700 ml-2">{alt.description}</span>
+                              </div>
+                              <span className="text-amber-600 text-xs">{alt.confidence}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : selectedProduct.alternateClassification ? (
                       <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
                         <span className="text-amber-900">Alternate Classification</span>
                         <span className="text-amber-700">{selectedProduct.alternateClassification}</span>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
@@ -620,10 +671,8 @@ export function ProductProfile() {
                     <div className="flex items-center justify-between p-3 bg-slate-50 rounded">
                       <div>
                         <div className="text-slate-900">HTS {selectedProduct.hts}</div>
-                        {/* HARDCODED: "Classified by AI Agent" - No field in DB for classifier name/type */}
-                        <div className="text-slate-600 flex items-center gap-2">
-                          <span>Classified by AI Agent</span>
-                          <span className="px-1 py-0.5 bg-red-100 text-red-600 text-[10px] rounded border border-red-300">HARDCODED</span>
+                        <div className="text-slate-600">
+                          Confidence: {selectedProduct.confidence}%
                         </div>
                       </div>
                       <div className="text-slate-600">{new Date(selectedProduct.lastUpdated).toLocaleDateString()}</div>
@@ -681,10 +730,6 @@ export function ProductProfile() {
         <ProductDetailsModal
           product={selectedProduct}
           onClose={() => setShowDetailsModal(false)}
-          onEdit={() => {
-            setShowDetailsModal(false);
-            handleEdit();
-          }}
         />
       )}
     </div>
