@@ -1,5 +1,8 @@
-import { useState, useRef } from 'react';
-import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2 } from 'lucide-react';
+import { getClassificationRun, addClarificationMessage, ClarificationMessage } from '../lib/classificationService';
+import { classifyProduct } from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
 
 interface AlternateClassification {
   hts: string;
@@ -32,6 +35,7 @@ interface ExceptionReviewProps {
     rule_confidence?: number;
     classification_trace?: string;
     alternate_classifications?: AlternateClassification[];
+    classification_run_id?: number;
   };
   onClose: () => void;
   onApprove: () => void;
@@ -53,25 +57,74 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
   const [primaryUseProvided, setPrimaryUseProvided] = useState(false);
   const [certificationProvided, setCertificationProvided] = useState(false);
   const [resolvedIssues, setResolvedIssues] = useState<string[]>([]);
-  // Using available data: product.productName, product.confidence, product.hts from database
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
-      timestamp: 'Just now'
-    },
-    {
-      role: 'assistant',
-      // HARDCODED: Chat message content - Should be dynamic based on product.reason or fetched from database
-      // TODO: Make message content dynamic based on actual exception reason
-      text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
-      timestamp: 'Just now'
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // Load saved conversation history from classification run on mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      const introMessages: ChatMessage[] = [
+        {
+          role: 'assistant',
+          text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
+          timestamp: 'Just now'
+        },
+        {
+          role: 'assistant',
+          text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
+          timestamp: 'Just now'
+        }
+      ];
+
+      if (!product.classification_run_id) {
+        setChatMessages(introMessages);
+        return;
+      }
+
+      setIsLoadingHistory(true);
+      try {
+        const run = await getClassificationRun(product.classification_run_id);
+        if (run?.conversations && run.conversations.length > 0) {
+          // Map saved ClarificationMessages to ChatMessages
+          const historyMessages: ChatMessage[] = run.conversations.map((msg: ClarificationMessage) => ({
+            role: msg.type === 'user_response' ? 'user' as const : 'assistant' as const,
+            text: msg.content,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+          }));
+
+          // Show history header, then saved messages, then intro for this review session
+          setChatMessages([
+            {
+              role: 'assistant',
+              text: `📋 **Previous Classification Conversation** (${historyMessages.length} message${historyMessages.length !== 1 ? 's' : ''})`,
+              timestamp: run.created_at ? new Date(run.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+            },
+            ...historyMessages,
+            {
+              role: 'assistant',
+              text: '---\n**Continuing review...**',
+              timestamp: 'Now',
+            },
+            ...introMessages,
+          ]);
+        } else {
+          setChatMessages(introMessages);
+        }
+      } catch (error) {
+        console.error('Error loading chat history:', error);
+        setChatMessages(introMessages);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadChatHistory();
+  }, [product.classification_run_id]);
 
   // Use real alternate classifications from database, or empty array if not available
   const alternatives: Array<{
@@ -164,8 +217,8 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     }
   };
 
-  const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isSendingMessage) return;
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -174,39 +227,37 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const userInput = chatInput;
+    setChatInput('');
 
-    // Analyze user input for information provided
-    const lowerInput = chatInput.toLowerCase();
+    // Analyze user input for information provided (confidence boost logic)
+    const lowerInput = userInput.toLowerCase();
     const newIssuesResolved: string[] = [];
-    
-    // Detect primary use information
-    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) && 
+
+    if ((lowerInput.includes('health') || lowerInput.includes('fitness') || lowerInput.includes('monitor') || lowerInput.includes('track')) &&
         (lowerInput.includes('primary') || lowerInput.includes('main') || lowerInput.includes('marketed'))) {
       if (!primaryUseProvided) {
         setPrimaryUseProvided(true);
         newIssuesResolved.push('primary_use');
       }
     }
-    
-    // Detect material information - simplified logic
-    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') || 
+
+    const hasMaterialKeyword = lowerInput.includes('material') || lowerInput.includes('made') ||
                                 lowerInput.includes('composition') || lowerInput.includes('fabric');
-    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') || 
-                           lowerInput.includes('wool') || lowerInput.includes('nylon') || 
+    const hasMaterialType = lowerInput.includes('cotton') || lowerInput.includes('polyester') ||
+                           lowerInput.includes('wool') || lowerInput.includes('nylon') ||
                            lowerInput.includes('leather') || lowerInput.includes('rubber') ||
-                           lowerInput.includes('aluminum') || lowerInput.includes('steel') || 
-                           lowerInput.includes('plastic') || lowerInput.includes('silicone') || 
+                           lowerInput.includes('aluminum') || lowerInput.includes('steel') ||
+                           lowerInput.includes('plastic') || lowerInput.includes('silicone') ||
                            lowerInput.includes('metal');
     const hasPercentage = lowerInput.match(/\d+\s*%/);
-    
-    // Trigger if has material keyword + type, OR has percentage (material composition)
+
     if (!materialsProvided && ((hasMaterialKeyword && hasMaterialType) || hasPercentage)) {
       setMaterialsProvided(true);
       newIssuesResolved.push('materials');
     }
-    
-    // Detect certification information
-    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') || 
+
+    if (lowerInput.includes('fda') || lowerInput.includes('ce mark') || lowerInput.includes('certified') ||
         lowerInput.includes('class ii') || lowerInput.includes('medical device')) {
       if (!certificationProvided) {
         setCertificationProvided(true);
@@ -214,39 +265,72 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       }
     }
 
-    // Update confidence score BEFORE the AI response
     if (newIssuesResolved.length > 0) {
       updateConfidenceScore(newIssuesResolved);
     }
 
-    // Dynamic AI response templates using actual product data
-    setTimeout(() => {
-      let aiResponse = '';
-      const altList = filteredAlternatives.length > 0
-        ? filteredAlternatives.map(a => `HTS ${a.hts} (${a.description})`).join(', ')
-        : 'other possible classifications';
+    // Save user message to classification run conversations if we have a run ID
+    if (product.classification_run_id) {
+      try {
+        await addClarificationMessage(product.classification_run_id, {
+          step: 'rulings',
+          type: 'user_response',
+          content: userInput,
+          timestamp: new Date().toISOString(),
+          metadata: { source: 'exception_review' },
+        });
+      } catch (error) {
+        console.error('Error saving chat message:', error);
+      }
+    }
 
-      if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
-        aiResponse = `Great question! The primary function determines the HTS classification. For "${product.productName}", the current classification is HTS ${product.hts}. ${filteredAlternatives.length > 0 ? `Alternatives include ${altList}.` : ''} Can you clarify the primary intended use of this product?`;
-      } else if (lowerInput.includes('material') || lowerInput.includes('made of') || hasPercentage) {
-        aiResponse = `Material details will help refine the classification for "${product.productName}". The material composition can affect which HTS subheading applies. Can you provide the full material breakdown (e.g., percentages of each material)? Or upload a spec sheet with this information.`;
-      } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
-        aiResponse = `Certifications can significantly impact classification. If "${product.productName}" has relevant certifications (FDA, CE, etc.), it may qualify for a different HTS code with potentially different duty rates. Do you have certification documents you can share?`;
-      } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
-        let tariffInfo = `Current classification HTS ${product.hts}: ${product.tariff} duty rate.`;
-        if (filteredAlternatives.length > 0) {
-          tariffInfo += '\n\nAlternative classifications:\n' + filteredAlternatives.map(a => `📊 HTS ${a.hts}: ${a.tariff} duty`).join('\n');
+    // Call the backend API for a real response
+    setIsSendingMessage(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Build a description that includes context for the API
+      const contextDescription = `${product.productName}. ${product.description || ''}. Additional info from user: ${userInput}`;
+
+      const response = await classifyProduct(
+        contextDescription,
+        user.id,
+        undefined,
+        {
+          originalQuery: product.productName,
+          clarificationResponse: userInput,
         }
-        aiResponse = `${tariffInfo}\n\nGetting the classification right can have a significant impact on your duty costs. Would you like to explore which classification best fits your product?`;
-      } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
-        const missingInfo = product.rule_verification?.missing_info || [];
-        if (missingInfo.length > 0) {
-          aiResponse = `To improve the confidence score for "${product.productName}", I need:\n\n${missingInfo.map((info: string, i: number) => `${i + 1}. ${info}`).join('\n')}\n\nYou can type the details or upload documents using the button below.`;
+      );
+
+      let aiResponse = '';
+
+      if (response) {
+        // If the API returned clarification questions, use those
+        if (response.needs_clarification && response.questions && response.questions.length > 0) {
+          aiResponse = `Based on your input, I have a few follow-up questions:\n\n${response.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}\n\nPlease provide any details you can.`;
+        } else if (response.clarifications && response.clarifications.length > 0) {
+          aiResponse = `Thank you for the information! I'd like to clarify:\n\n${response.clarifications.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')}`;
+        } else if (response.matches) {
+          // API returned updated classification matches
+          const matchesArray = Array.isArray(response.matches)
+            ? response.matches
+            : (response.matches as any)?.matched_rules || [];
+
+          if (matchesArray.length > 0) {
+            const topMatch = matchesArray[0];
+            const confidence = topMatch.confidence || topMatch.score || 0;
+            const confidencePercent = Math.round(confidence * 100);
+            aiResponse = `Thanks for the additional information! Based on your input, I've refined the classification:\n\n**Top match:** HTS ${topMatch.hts} — ${topMatch.description}\n**Confidence:** ${confidencePercent}%${topMatch.rationale ? `\n**Reasoning:** ${topMatch.rationale}` : ''}\n\n${matchesArray.length > 1 ? `I also found ${matchesArray.length - 1} alternative${matchesArray.length > 2 ? 's' : ''}. ` : ''}Would you like more details or want to provide additional information?`;
+          } else {
+            aiResponse = `Thank you for the information about "${product.productName}". I've processed your input. Can you provide any additional details like material composition or primary use case to help refine the classification?`;
+          }
         } else {
-          aiResponse = `I'm here to help! Here's what would improve the confidence score:\n\n1. Product specification sheet\n2. Primary use case details\n3. Material composition\n4. Any relevant certifications\n\nYou can type details or upload documents using the button below.`;
+          aiResponse = `Thank you for the information about "${product.productName}". I've noted your input. Is there anything else you can share to help refine the classification?`;
         }
       } else {
-        aiResponse = `Thanks for the information about "${product.productName}"! To help refine the classification, you can:\n\n• Upload a product specification sheet\n• Describe the primary use case\n• Provide material composition details\n• Share any certifications\n\nWhat would you like to provide?`;
+        // API call returned null — use fallback
+        aiResponse = getFallbackResponse(userInput, lowerInput);
       }
 
       const assistantMessage: ChatMessage = {
@@ -256,12 +340,65 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       };
 
       setChatMessages(prev => [...prev, assistantMessage]);
+
+      // Save AI response to classification run conversations
+      if (product.classification_run_id) {
+        try {
+          await addClarificationMessage(product.classification_run_id, {
+            step: 'rulings',
+            type: 'question',
+            content: aiResponse,
+            timestamp: new Date().toISOString(),
+            metadata: { source: 'exception_review' },
+          });
+        } catch (error) {
+          console.error('Error saving AI response:', error);
+        }
+      }
+    } catch (error) {
+      console.error('Error calling classification API:', error);
+      // Fallback to template response
+      const fallbackResponse = getFallbackResponse(userInput, lowerInput);
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        text: fallbackResponse,
+        timestamp: 'Just now'
+      };
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } finally {
+      setIsSendingMessage(false);
       if (chatEndRef.current) {
         chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
-    }, 800);
+    }
+  };
 
-    setChatInput('');
+  // Fallback template responses when API is unavailable
+  const getFallbackResponse = (userInput: string, lowerInput: string): string => {
+    const altList = filteredAlternatives.length > 0
+      ? filteredAlternatives.map(a => `HTS ${a.hts} (${a.description})`).join(', ')
+      : 'other possible classifications';
+
+    if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
+      return `Great question! The primary function determines the HTS classification. For "${product.productName}", the current classification is HTS ${product.hts}. ${filteredAlternatives.length > 0 ? `Alternatives include ${altList}.` : ''} Can you clarify the primary intended use of this product?`;
+    } else if (lowerInput.includes('material') || lowerInput.includes('made of') || lowerInput.match(/\d+\s*%/)) {
+      return `Material details will help refine the classification for "${product.productName}". The material composition can affect which HTS subheading applies. Can you provide the full material breakdown (e.g., percentages of each material)? Or upload a spec sheet with this information.`;
+    } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
+      return `Certifications can significantly impact classification. If "${product.productName}" has relevant certifications (FDA, CE, etc.), it may qualify for a different HTS code with potentially different duty rates. Do you have certification documents you can share?`;
+    } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
+      let tariffInfo = `Current classification HTS ${product.hts}: ${product.tariff} duty rate.`;
+      if (filteredAlternatives.length > 0) {
+        tariffInfo += '\n\nAlternative classifications:\n' + filteredAlternatives.map(a => `HTS ${a.hts}: ${a.tariff} duty`).join('\n');
+      }
+      return `${tariffInfo}\n\nGetting the classification right can have a significant impact on your duty costs. Would you like to explore which classification best fits your product?`;
+    } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
+      const missingInfo = product.rule_verification?.missing_info || [];
+      if (missingInfo.length > 0) {
+        return `To improve the confidence score for "${product.productName}", I need:\n\n${missingInfo.map((info: string, i: number) => `${i + 1}. ${info}`).join('\n')}\n\nYou can type the details or upload documents using the button below.`;
+      }
+      return `I'm here to help! Here's what would improve the confidence score:\n\n1. Product specification sheet\n2. Primary use case details\n3. Material composition\n4. Any relevant certifications\n\nYou can type details or upload documents using the button below.`;
+    }
+    return `Thanks for the information about "${product.productName}"! To help refine the classification, you can:\n\n• Upload a product specification sheet\n• Describe the primary use case\n• Provide material composition details\n• Share any certifications\n\nWhat would you like to provide?`;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -841,6 +978,12 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {isLoadingHistory && (
+                <div className="flex items-center justify-center gap-2 py-4">
+                  <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                  <span className="text-sm text-slate-500">Loading conversation history...</span>
+                </div>
+              )}
               {chatMessages.map((message, idx) => (
                 <div
                   key={idx}
@@ -867,6 +1010,19 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   </div>
                 </div>
               ))}
+              {isSendingMessage && (
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                      <span className="text-sm text-slate-500">Analyzing your input...</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -919,16 +1075,16 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   type="text"
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask about materials, primary function, certifications..."
+                  onKeyPress={(e) => e.key === 'Enter' && !isSendingMessage && handleSendMessage()}
+                  placeholder={isSendingMessage ? "Waiting for response..." : "Ask about materials, primary function, certifications..."}
                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                 />
                 <button
                   onClick={handleSendMessage}
-                  disabled={!chatInput.trim()}
+                  disabled={!chatInput.trim() || isSendingMessage}
                   className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Send className="w-5 h-5" />
+                  {isSendingMessage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </button>
               </div>
 

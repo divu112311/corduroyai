@@ -29,6 +29,7 @@ export interface ExceptionItem {
   rule_confidence?: number;
   classification_trace?: string;
   alternate_classifications?: any;
+  classification_run_id?: number;
 }
 
 export interface RecentActivity {
@@ -52,6 +53,7 @@ export interface RecentActivity {
   alternate_classifications?: any;
   classification_trace?: string;
   confidenceRaw?: number;
+  classification_run_id?: number;
 }
 
 /**
@@ -204,6 +206,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
           rule_confidence: (result.rule_confidence as number) || undefined,
           classification_trace: (result.classification_trace as string) || undefined,
           alternate_classifications: result.alternate_classifications || undefined,
+          classification_run_id: (result.classification_run_id as number) || undefined,
         };
       })
       .filter((e): e is ExceptionItem => e !== null);
@@ -318,6 +321,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
           alternate_classifications: result.alternate_classifications || undefined,
           classification_trace: (result.classification_trace as string) || undefined,
           confidenceRaw: (result.confidence as number) || 0,
+          classification_run_id: (result.classification_run_id as number) || undefined,
         };
       })
       .filter((a): a is RecentActivity => a !== null);

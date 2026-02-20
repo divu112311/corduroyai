@@ -369,6 +369,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                             classification_trace: activity.classification_trace,
                             product_id: activity.product_id,
                             classification_result_id: activity.classification_result_id,
+                            classification_run_id: activity.classification_run_id,
                           });
                         } else {
                           onNavigate('activity');
@@ -423,6 +424,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             rule_confidence: selectedException.rule_confidence,
             classification_trace: selectedException.classification_trace,
             alternate_classifications: selectedException.alternate_classifications,
+            classification_run_id: selectedException.classification_run_id,
           }}
           onClose={() => setSelectedException(null)}
           onApprove={() => handleResolveException(selectedException)}
