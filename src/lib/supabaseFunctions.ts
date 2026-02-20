@@ -54,7 +54,7 @@ export async function classifyProduct(
     let threshold = confidenceThreshold;
     if (threshold === undefined) {
       const userMetadata = await getUserMetadata(userId);
-      threshold = userMetadata?.confidence_threshold || 0.75;
+      threshold = userMetadata?.confidence_threshold ?? 0.75;
     }
 
     console.log('Invoking python-proxy edge function with:', {

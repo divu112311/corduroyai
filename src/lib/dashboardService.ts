@@ -65,10 +65,12 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     // Get user's confidence threshold
     const userMetadata = await getUserMetadata(userId);
     if (!userMetadata) {
+      console.warn('getExceptions: No user metadata found for user:', userId);
       return [];
     }
 
-    const threshold = userMetadata.confidence_threshold || 0.8;
+    const threshold = userMetadata.confidence_threshold ?? 0.8;
+    console.log('getExceptions: Using confidence threshold:', threshold);
 
     // OPTIMIZED: Get results with product data in fewer queries
     // First get product IDs for this user
@@ -78,24 +80,37 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       .eq('user_id', userId)
       .limit(1000); // Reasonable limit
 
-    if (productsError || !userProducts || userProducts.length === 0) {
+    if (productsError) {
+      console.error('getExceptions: Error fetching user products:', productsError);
+      return [];
+    }
+    if (!userProducts || userProducts.length === 0) {
+      console.log('getExceptions: No products found for user');
       return [];
     }
 
     const productIds = userProducts.map(p => p.id);
 
     // Get classification results for user's products (including extended fields)
+    // Use .or() to catch both low-confidence AND null-confidence results
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
       .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
       .in('product_id', productIds)
-      .lt('confidence', threshold)
+      .or(`confidence.lt.${threshold},confidence.is.null`)
       .order('classified_at', { ascending: false })
       .limit(100); // Limit to 100 most recent exceptions
 
-    if (resultsError || !allResults || allResults.length === 0) {
+    if (resultsError) {
+      console.error('getExceptions: Error fetching classification results:', resultsError);
       return [];
     }
+    if (!allResults || allResults.length === 0) {
+      console.log('getExceptions: No results found below threshold', threshold, 'for', productIds.length, 'products');
+      return [];
+    }
+
+    console.log('getExceptions: Found', allResults.length, 'results below threshold', threshold);
 
     // Get approval history and products in parallel
     const resultIds = allResults.map(r => r.id);
@@ -377,7 +392,7 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
     ]);
 
     const userMetadata = userMetadataResponse;
-    const threshold = userMetadata?.confidence_threshold || 0.8;
+    const threshold = userMetadata?.confidence_threshold ?? 0.8;
     const classifiedCount = runsResponse.count || 0;
     const userProductIds = new Set((userProductsResponse.data || []).map(p => p.id));
     const approvedResultIds = new Set((approvedHistoryResponse.data || []).map(h => h.classification_result_id));
@@ -392,23 +407,25 @@ export async function getDashboardStats(userId: string): Promise<DashboardStats>
     }
 
     // Get approved results for user's products only
-    const { data: approvedResults } = await supabase
-      .from('user_product_classification_results')
-      .select('id, confidence, product_id')
-      .in('id', Array.from(approvedResultIds))
-      .in('product_id', Array.from(userProductIds));
-
-    const userApprovedResults = (approvedResults || []).filter(r => userProductIds.has(r.product_id));
+    // Guard against empty arrays which can cause Supabase query issues
+    let userApprovedResults: any[] = [];
+    if (approvedResultIds.size > 0 && userProductIds.size > 0) {
+      const { data: approvedResults } = await supabase
+        .from('user_product_classification_results')
+        .select('id, confidence, product_id')
+        .in('id', Array.from(approvedResultIds))
+        .in('product_id', Array.from(userProductIds));
+      userApprovedResults = (approvedResults || []).filter(r => userProductIds.has(r.product_id));
+    }
     const productProfilesCount = userApprovedResults.length;
     const userApprovedResultIds = new Set(userApprovedResults.map(r => r.id));
 
-    // Get exceptions: results with confidence < threshold and not approved
-    // Fetch and filter in memory (more reliable than complex query)
+    // Get exceptions: results with confidence < threshold (or null) and not approved
     const { data: exceptionResults } = await supabase
       .from('user_product_classification_results')
       .select('id')
       .in('product_id', Array.from(userProductIds))
-      .lt('confidence', threshold)
+      .or(`confidence.lt.${threshold},confidence.is.null`)
       .limit(1000); // Reasonable limit
     
     const exceptionsCount = (exceptionResults || []).filter(r => !userApprovedResultIds.has(r.id)).length;
