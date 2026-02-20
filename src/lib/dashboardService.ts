@@ -115,7 +115,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         .eq('approved', true),
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, unit_cost, sku')
+        .select('id, product_name, product_description, country_of_origin, unit_cost')
         .in('id', productIds)
     ]);
 
@@ -265,7 +265,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
     const [productsResponse, historyResponse] = await Promise.all([
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, sku')
+        .select('id, product_name, product_description, country_of_origin')
         .in('id', productIds)
         .eq('user_id', userId),
       supabase
@@ -501,7 +501,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
     const [userProductsResponse, approvedHistoryResponse] = await Promise.all([
       supabase
         .from('user_products')
-        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, sku, updated_at')
+        .select('id, product_name, product_description, country_of_origin, materials, vendor, unit_cost, updated_at')
         .eq('user_id', userId),
       supabase
         .from('user_product_classification_history')
