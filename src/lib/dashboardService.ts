@@ -482,6 +482,18 @@ export interface ProductProfile {
   totalCost: number | null;
   alternateClassification: string | null;
   unitCost: number | null;
+  // Extended classification data
+  description?: string;
+  reasoning?: string;
+  chapterCode?: string;
+  chapterTitle?: string;
+  sectionCode?: string;
+  sectionTitle?: string;
+  cbpRulings?: any;
+  ruleVerification?: any;
+  ruleConfidence?: number;
+  classificationTrace?: string;
+  alternateClassifications?: any;
 }
 
 /**
@@ -528,7 +540,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
     // Get classification results for approved items that belong to this user's products
     const { data: results, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, product_id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost')
+      .select('id, product_id, hts_classification, alternate_classification, confidence, classified_at, tariff_rate, tariff_amount, total_cost, unit_cost, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
       .in('id', approvedResultIds)
       .order('classified_at', { ascending: false })
       .limit(500);
@@ -609,7 +621,7 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
           id: result.id,
           productId: product.id,
           name: product.product_name || 'Unnamed Product',
-          description: product.product_description || '',
+          description: product.product_description || (result.description as string) || '',
           sku: `PROD-${product.id}`,
           hts: hts || 'N/A',
           materials: materialsStr,
@@ -624,6 +636,17 @@ export async function getProductProfiles(userId: string): Promise<ProductProfile
           totalCost: totalCost,
           alternateClassification: alternateClassification,
           unitCost: unitCostValue,
+          // Extended classification data
+          reasoning: (result.reasoning as string) || undefined,
+          chapterCode: (result.chapter_code as string) || undefined,
+          chapterTitle: (result.chapter_title as string) || undefined,
+          sectionCode: (result.section_code as string) || undefined,
+          sectionTitle: (result.section_title as string) || undefined,
+          cbpRulings: result.cbp_rulings || undefined,
+          ruleVerification: result.rule_verification || undefined,
+          ruleConfidence: (result.rule_confidence as number) || undefined,
+          classificationTrace: (result.classification_trace as string) || undefined,
+          alternateClassifications: result.alternate_classifications || undefined,
         };
       })
       .filter((p): p is ProductProfile => p !== null);
