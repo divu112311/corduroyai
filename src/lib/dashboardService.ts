@@ -134,9 +134,12 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
     // Create product map
     const productMap = new Map((productsResponse.data || []).map(p => [p.id, p]));
 
+    console.log('getExceptions: approved count:', approvedIds.size, 'products in map:', productMap.size);
+    const afterApprovalFilter = allResults.filter(r => !approvedIds.has(r.id));
+    console.log('getExceptions: after removing approved:', afterApprovalFilter.length, 'of', allResults.length);
+
     // Filter out approved results and map to ExceptionItem format
-    const exceptions: ExceptionItem[] = allResults
-      .filter(r => !approvedIds.has(r.id))
+    const exceptions: ExceptionItem[] = afterApprovalFilter
       .map((result: any) => {
         const product = productMap.get(result.product_id);
         if (!product) return null;
@@ -226,6 +229,7 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
       })
       .filter((e): e is ExceptionItem => e !== null);
 
+    console.log('getExceptions: final exceptions count:', exceptions.length);
     return exceptions;
   } catch (error) {
     console.error('Error fetching exceptions:', error);
