@@ -171,6 +171,18 @@ export async function saveClassificationResult(
     unit_cost?: number;
     tariff_amount?: number;
     total_cost?: number;
+    description?: string;
+    reasoning?: string;
+    chapter_code?: string;
+    chapter_title?: string;
+    section_code?: string;
+    section_title?: string;
+    cbp_rulings?: any;
+    rule_verification?: any;
+    rule_confidence?: number;
+    similarity_score?: number;
+    classification_trace?: string;
+    alternate_classifications?: any;
   }
 ): Promise<number> {
   try {

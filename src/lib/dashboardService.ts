@@ -17,6 +17,18 @@ export interface ExceptionItem {
   classification_result_id: number;
   confidence: number;
   tariff_rate?: number;
+  // Extended classification data
+  hts_description?: string;
+  reasoning?: string;
+  chapter_code?: string;
+  chapter_title?: string;
+  section_code?: string;
+  section_title?: string;
+  cbp_rulings?: any;
+  rule_verification?: any;
+  rule_confidence?: number;
+  classification_trace?: string;
+  alternate_classifications?: any;
 }
 
 export interface RecentActivity {
@@ -25,6 +37,21 @@ export interface RecentActivity {
   confidence: string;
   time: string;
   status: string;
+  classification_result_id?: number;
+  product_id?: number;
+  description?: string;
+  origin?: string;
+  tariff_rate?: number;
+  reasoning?: string;
+  chapter_code?: string;
+  chapter_title?: string;
+  section_code?: string;
+  section_title?: string;
+  cbp_rulings?: any;
+  rule_verification?: any;
+  alternate_classifications?: any;
+  classification_trace?: string;
+  confidenceRaw?: number;
 }
 
 /**
@@ -55,10 +82,10 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
 
     const productIds = userProducts.map(p => p.id);
 
-    // Get classification results for user's products
+    // Get classification results for user's products (including extended fields)
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate')
+      .select('id, confidence, hts_classification, product_id, classification_run_id, classified_at, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, classification_trace, alternate_classifications')
       .in('product_id', productIds)
       .lt('confidence', threshold)
       .order('classified_at', { ascending: false })
@@ -110,26 +137,73 @@ export async function getExceptions(userId: string): Promise<ExceptionItem[]> {
         }
 
         // Format value
-        const value = product.unit_cost 
+        const value = product.unit_cost
           ? `$${Number(product.unit_cost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
           : 'N/A';
+
+        // Determine category from actual data instead of hardcoding
+        let category: 'lowConfidence' | 'missingDoc' | 'multipleHTS' | 'materialIssues' = 'lowConfidence';
+        const ruleVerification = result.rule_verification as any;
+        const altClassifications = result.alternate_classifications as any[];
+
+        if (altClassifications && altClassifications.length > 1) {
+          // Multiple alternative HTS codes with close confidence scores
+          const topAltConfidence = altClassifications[0]?.confidence || 0;
+          if (topAltConfidence > 0 && (confidencePercent - topAltConfidence) < 15) {
+            category = 'multipleHTS';
+          }
+        }
+        if (ruleVerification?.missing_info && ruleVerification.missing_info.length > 0) {
+          // Check if missing info relates to materials
+          const missingStr = JSON.stringify(ruleVerification.missing_info).toLowerCase();
+          if (missingStr.includes('material') || missingStr.includes('composition')) {
+            category = 'materialIssues';
+          } else {
+            category = 'missingDoc';
+          }
+        }
+        // If confidence is very low and no other specific category, keep lowConfidence
+
+        // Build a more descriptive reason
+        let reason = `Low confidence (${confidencePercent}%)`;
+        if (ruleVerification?.missing_info && ruleVerification.missing_info.length > 0) {
+          reason = ruleVerification.missing_info[0];
+        } else if (ruleVerification?.checks_failed && ruleVerification.checks_failed.length > 0) {
+          reason = ruleVerification.checks_failed[0];
+        } else if (result.reasoning) {
+          // Truncate reasoning for the summary
+          const reasonText = result.reasoning as string;
+          reason = reasonText.length > 100 ? reasonText.substring(0, 100) + '...' : reasonText;
+        }
 
         return {
           id: result.id,
           product: product.product_name || 'Unnamed Product',
           sku: `PROD-${product.id}`,
-          reason: `Low confidence (${confidencePercent}%)`,
+          reason,
           hts: result.hts_classification || 'N/A',
           status: priority === 'high' ? 'urgent' : 'review',
           origin: product.country_of_origin || 'Unknown',
           value: value,
           description: product.product_description || '',
           priority: priority,
-          category: 'lowConfidence',
+          category,
           product_id: product.id,
           classification_result_id: result.id,
           confidence: result.confidence,
           tariff_rate: result.tariff_rate,
+          // Extended classification data
+          hts_description: (result.description as string) || undefined,
+          reasoning: (result.reasoning as string) || undefined,
+          chapter_code: (result.chapter_code as string) || undefined,
+          chapter_title: (result.chapter_title as string) || undefined,
+          section_code: (result.section_code as string) || undefined,
+          section_title: (result.section_title as string) || undefined,
+          cbp_rulings: result.cbp_rulings || undefined,
+          rule_verification: result.rule_verification || undefined,
+          rule_confidence: (result.rule_confidence as number) || undefined,
+          classification_trace: (result.classification_trace as string) || undefined,
+          alternate_classifications: result.alternate_classifications || undefined,
         };
       })
       .filter((e): e is ExceptionItem => e !== null);
@@ -162,10 +236,10 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
 
     const runIds = runs.map(r => r.id);
 
-    // Get all classification results for these runs in one query
+    // Get all classification results for these runs in one query (including extended fields)
     const { data: allResults, error: resultsError } = await supabase
       .from('user_product_classification_results')
-      .select('id, hts_classification, confidence, product_id, classification_run_id')
+      .select('id, hts_classification, confidence, product_id, classification_run_id, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, alternate_classifications, classification_trace')
       .in('classification_run_id', runIds)
       .order('classified_at', { ascending: false });
 
@@ -179,7 +253,7 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
     // Get all products in one query
     const { data: products, error: productsError } = await supabase
       .from('user_products')
-      .select('id, product_name')
+      .select('id, product_name, product_description, country_of_origin')
       .in('id', productIds)
       .eq('user_id', userId);
 
@@ -229,6 +303,21 @@ export async function getRecentActivity(userId: string): Promise<RecentActivity[
           confidence: `${confidencePercent}%`,
           time: timeStr,
           status: 'auto-approved',
+          classification_result_id: result.id,
+          product_id: result.product_id,
+          description: (result.description as string) || product.product_description || '',
+          origin: product.country_of_origin || 'Unknown',
+          tariff_rate: (result.tariff_rate as number) || undefined,
+          reasoning: (result.reasoning as string) || undefined,
+          chapter_code: (result.chapter_code as string) || undefined,
+          chapter_title: (result.chapter_title as string) || undefined,
+          section_code: (result.section_code as string) || undefined,
+          section_title: (result.section_title as string) || undefined,
+          cbp_rulings: result.cbp_rulings || undefined,
+          rule_verification: result.rule_verification || undefined,
+          alternate_classifications: result.alternate_classifications || undefined,
+          classification_trace: (result.classification_trace as string) || undefined,
+          confidenceRaw: (result.confidence as number) || 0,
         };
       })
       .filter((a): a is RecentActivity => a !== null);

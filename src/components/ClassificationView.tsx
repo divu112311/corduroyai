@@ -297,6 +297,18 @@ export function ClassificationView() {
           alternate_classification: classificationResult.alternate_classification || undefined,
           confidence: primaryCandidate.confidence || primaryCandidate.score || response.max_confidence || undefined,
           unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
+          description: classificationResult.description || undefined,
+          reasoning: classificationResult.reasoning || undefined,
+          chapter_code: classificationResult.chapter_code || undefined,
+          chapter_title: classificationResult.chapter_title || undefined,
+          section_code: classificationResult.section_code || undefined,
+          section_title: classificationResult.section_title || undefined,
+          cbp_rulings: classificationResult.cbp_rulings || undefined,
+          rule_verification: classificationResult.rule_verification || undefined,
+          rule_confidence: classificationResult.rule_confidence || undefined,
+          similarity_score: classificationResult.similarity_score || undefined,
+          classification_trace: classificationResult.classification_trace || undefined,
+          alternate_classifications: classificationResult.alternate_classifications || undefined,
         });
 
         // Update run status to completed
@@ -505,6 +517,18 @@ export function ClassificationView() {
             alternate_classification: classificationResult.alternate_classification || undefined,
             confidence: primaryCandidate.confidence || primaryCandidate.score || classificationResponse.max_confidence || undefined,
             unit_cost: unitCost ? parseFloat(unitCost.replace(/[^0-9.]/g, '')) : undefined,
+            description: classificationResult.description || undefined,
+            reasoning: classificationResult.reasoning || undefined,
+            chapter_code: classificationResult.chapter_code || undefined,
+            chapter_title: classificationResult.chapter_title || undefined,
+            section_code: classificationResult.section_code || undefined,
+            section_title: classificationResult.section_title || undefined,
+            cbp_rulings: classificationResult.cbp_rulings || undefined,
+            rule_verification: classificationResult.rule_verification || undefined,
+            rule_confidence: classificationResult.rule_confidence || undefined,
+            similarity_score: classificationResult.similarity_score || undefined,
+            classification_trace: classificationResult.classification_trace || undefined,
+            alternate_classifications: classificationResult.alternate_classifications || undefined,
           });
 
           await updateClassificationRunStatus(classificationRunId, 'completed');

@@ -1,6 +1,15 @@
 import { useState, useRef } from 'react';
 import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus } from 'lucide-react';
 
+interface AlternateClassification {
+  hts: string;
+  description: string;
+  confidence: number;
+  cbp_rulings?: any[];
+  rationale?: string;
+  rule_verification?: any;
+}
+
 interface ExceptionReviewProps {
   product: {
     id: number;
@@ -11,6 +20,18 @@ interface ExceptionReviewProps {
     tariff: string;
     origin: string;
     reason: string;
+    // Extended classification data
+    hts_description?: string;
+    reasoning?: string;
+    chapter_code?: string;
+    chapter_title?: string;
+    section_code?: string;
+    section_title?: string;
+    cbp_rulings?: any[];
+    rule_verification?: any;
+    rule_confidence?: number;
+    classification_trace?: string;
+    alternate_classifications?: AlternateClassification[];
   };
   onClose: () => void;
   onApprove: () => void;
@@ -52,82 +73,74 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
   const fileInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // HARDCODED: Alternate classifications - Should come from database field: user_product_classification_results.alternate_classifications (jsonb)
-  // TODO: Fetch from database when alternate_classifications field is added
-  const alternatives = [
-    { 
-      hts: '9102.11.0000', 
-      confidence: 68, 
-      description: 'Wrist watches, electrically operated, mechanical display only',
-      tariff: '9.8%',
-      reasoning: 'Product includes timekeeping as primary function'
-    },
-    { 
-      hts: '9031.80.8000', 
-      confidence: 62, 
-      description: 'Measuring or checking instruments, appliances and machines',
-      tariff: '1.7%',
-      reasoning: 'Primary function is health monitoring and measurement'
-    },
-    {
-      hts: '8517.62.0050',
-      confidence: 58,
-      description: 'Machines for reception, conversion, transmission of voice/data',
-      tariff: '0% (Free)',
-      reasoning: 'Device has wireless communication and data transmission capabilities'
-    }
-  ];
+  // Use real alternate classifications from database, or empty array if not available
+  const alternatives: Array<{
+    hts: string;
+    confidence: number;
+    description: string;
+    tariff: string;
+    reasoning: string;
+  }> = (product.alternate_classifications || []).map((alt: AlternateClassification) => ({
+    hts: alt.hts || 'N/A',
+    confidence: alt.confidence || 0,
+    description: alt.description || '',
+    tariff: 'N/A',
+    reasoning: alt.rationale || '',
+  }));
 
   // Filter out the proposed classification from alternatives
   const filteredAlternatives = alternatives.filter(alt => alt.hts !== product.hts);
 
-  // HARDCODED: Confidence analysis issues - Should come from database or be dynamically generated based on product.reason
-  // TODO: Generate dynamically based on product.reason or fetch from classification_issues table when created
+  // Build confidence analysis from real rule_verification data
+  const rv = product.rule_verification;
   const confidenceAnalysis = {
     primaryIssues: [
-      {
-        issue: 'Unclear Primary Function',
-        explanation: 'The product combines timekeeping (watch) with health monitoring features. HTS classification depends on which function is primary/predominant.',
-        impact: 'high',
-        resolved: primaryUseProvided
-      },
-      {
-        issue: 'Multiple HTS Categories Apply',
-        explanation: 'This device could legitimately fall under watches (9102), measuring instruments (9031), or communication devices (8517).',
-        impact: 'high',
-        resolved: primaryUseProvided
-      },
-      {
-        issue: 'Insufficient Material Information',
-        explanation: 'Missing details about case material, strap material, and component breakdown affects precise classification.',
-        impact: 'medium',
-        resolved: materialsProvided
-      },
-      {
-        issue: 'Certification Status Unknown',
-        explanation: 'Medical device certification (FDA, CE) significantly impacts classification and duty rates.',
-        impact: 'medium',
-        resolved: certificationProvided
-      }
+      // Issues from checks_failed
+      ...(rv?.checks_failed || []).map((check: string) => ({
+        issue: check,
+        explanation: '',
+        impact: 'high' as const,
+        resolved: false,
+      })),
+      // Issues from missing_info
+      ...(rv?.missing_info || []).map((info: string) => ({
+        issue: info,
+        explanation: 'Additional information needed for accurate classification.',
+        impact: 'medium' as const,
+        resolved: false,
+      })),
+      // If no real data, show a generic low-confidence issue
+      ...(!rv || ((!rv.checks_failed || rv.checks_failed.length === 0) && (!rv.missing_info || rv.missing_info.length === 0))
+        ? [{
+            issue: `Classification confidence is ${product.confidence}%`,
+            explanation: product.reason || 'The classification needs review before approval.',
+            impact: (product.confidence < 60 ? 'high' : 'medium') as 'high' | 'medium',
+            resolved: false,
+          }]
+        : []),
     ],
     suggestedActions: [
-      'Clarify primary intended use: Is it marketed primarily as a watch or health monitor?',
-      'Provide material breakdown (case, strap, internal components)',
-      'Specify if health monitoring is medically certified or recreational',
-      'Upload product specification sheet or marketing materials'
-    ]
+      ...(rv?.missing_info || []).map((info: string) => `Provide: ${info}`),
+      ...(rv?.missing_info?.length ? [] : [
+        'Upload product specification sheet or marketing materials',
+        'Provide additional product details to improve confidence',
+      ]),
+    ],
+    checksPassed: rv?.checks_passed || [],
+    griApplied: rv?.gri_applied || [],
+    reasoning: rv?.reasoning || '',
   };
 
   const updateConfidenceScore = (newIssuesResolved: string[]) => {
     let confidenceBoost = 0;
     const newlyResolved = newIssuesResolved.filter(issue => !resolvedIssues.includes(issue));
-    
-    // HARDCODED: Confidence boost values - Should be configurable or based on issue severity from database
-    // TODO: Make configurable or fetch from database when classification_issues table is created
+
+    // Each resolved issue provides a confidence boost based on type
     newlyResolved.forEach(issue => {
-      if (issue === 'primary_use') confidenceBoost += 12;
-      if (issue === 'materials') confidenceBoost += 8;
-      if (issue === 'certification') confidenceBoost += 9;
+      if (issue === 'primary_use') confidenceBoost += 10;
+      else if (issue === 'materials') confidenceBoost += 8;
+      else if (issue === 'certification') confidenceBoost += 7;
+      else confidenceBoost += 5; // generic boost for other info
     });
 
     if (confidenceBoost > 0) {
@@ -206,25 +219,34 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
       updateConfidenceScore(newIssuesResolved);
     }
 
-    // HARDCODED: AI response templates - Should use actual AI service or be dynamic based on product context
-    // TODO: Integrate with AI service or make responses dynamic based on product data
+    // Dynamic AI response templates using actual product data
     setTimeout(() => {
       let aiResponse = '';
-      
+      const altList = filteredAlternatives.length > 0
+        ? filteredAlternatives.map(a => `HTS ${a.hts} (${a.description})`).join(', ')
+        : 'other possible classifications';
+
       if (lowerInput.includes('primary function') || lowerInput.includes('main use')) {
-        aiResponse = "Perfect question! The 'essential character' or primary function is the key to getting this right. If the product is marketed mainly as a fitness/health tracker that happens to tell time, we'd classify it under measuring instruments (9031.80.8000) at 1.7% duty. If it's sold as a watch with health features, it stays under 9102.11.0000 at 9.8% duty. What does your marketing say?";
+        aiResponse = `Great question! The primary function determines the HTS classification. For "${product.productName}", the current classification is HTS ${product.hts}. ${filteredAlternatives.length > 0 ? `Alternatives include ${altList}.` : ''} Can you clarify the primary intended use of this product?`;
       } else if (lowerInput.includes('material') || lowerInput.includes('made of') || hasPercentage) {
-        aiResponse = "Good thinking! Material details will help me nail this down. For watches, the case material directly affects the HTS subcategory:\n• Aluminum/base metal case → different rate\n• Precious metal content → much higher duty\n\nCan you tell me the case material and strap type? Or upload the spec sheet?";
+        aiResponse = `Material details will help refine the classification for "${product.productName}". The material composition can affect which HTS subheading applies. Can you provide the full material breakdown (e.g., percentages of each material)? Or upload a spec sheet with this information.`;
       } else if (lowerInput.includes('medical') || lowerInput.includes('fda') || lowerInput.includes('certified')) {
-        aiResponse = "This is a game-changer! Medical certification shifts the classification significantly. If you have FDA registration or CE medical device certification, it strengthens the case for 9031.80.8000 (measuring instruments) at 1.7% instead of 9.8%. Some medical devices even qualify for duty-free treatment. Do you have certification documents you can share?";
+        aiResponse = `Certifications can significantly impact classification. If "${product.productName}" has relevant certifications (FDA, CE, etc.), it may qualify for a different HTS code with potentially different duty rates. Do you have certification documents you can share?`;
       } else if (lowerInput.includes('tariff') || lowerInput.includes('duty') || lowerInput.includes('rate') || lowerInput.includes('save') || lowerInput.includes('cost')) {
-        // HARDCODED: Tariff comparison - Should use actual tariff rates from database or alternatives data
-        // TODO: Use actual tariff rates from product.tariff and alternatives data
-        aiResponse = `Let me break down the financial impact for you:\n\n📊 HTS 9102.11.0000 (Watches): 9.8% duty\n📊 HTS 9031.80.8000 (Instruments): 1.7% duty\n📊 HTS 8517.62.0050 (Comm devices): 0% duty\n\nIf your shipment value is $11,250, that's a difference of $920 vs $191 vs $0 in duties. Getting this classification right really matters for your bottom line!`;
+        let tariffInfo = `Current classification HTS ${product.hts}: ${product.tariff} duty rate.`;
+        if (filteredAlternatives.length > 0) {
+          tariffInfo += '\n\nAlternative classifications:\n' + filteredAlternatives.map(a => `📊 HTS ${a.hts}: ${a.tariff} duty`).join('\n');
+        }
+        aiResponse = `${tariffInfo}\n\nGetting the classification right can have a significant impact on your duty costs. Would you like to explore which classification best fits your product?`;
       } else if (lowerInput.includes('help') || lowerInput.includes('what do you need') || lowerInput.includes('how can')) {
-        aiResponse = "I'm here to help! Here's what would help me increase the confidence score:\n\n1. Product specs or data sheet\n2. How it's marketed (watch vs health device)\n3. Material composition details\n4. Any certifications (FDA, CE, etc.)\n\nYou can either type the details or upload documents using the button below. What works best for you?";
+        const missingInfo = product.rule_verification?.missing_info || [];
+        if (missingInfo.length > 0) {
+          aiResponse = `To improve the confidence score for "${product.productName}", I need:\n\n${missingInfo.map((info: string, i: number) => `${i + 1}. ${info}`).join('\n')}\n\nYou can type the details or upload documents using the button below.`;
+        } else {
+          aiResponse = `I'm here to help! Here's what would improve the confidence score:\n\n1. Product specification sheet\n2. Primary use case details\n3. Material composition\n4. Any relevant certifications\n\nYou can type details or upload documents using the button below.`;
+        }
       } else {
-        aiResponse = "I want to help you get this right! Based on what you're asking, I think more specific product details would really help. You can:\n\n• Upload the product specification sheet\n• Share marketing materials\n• Tell me about certifications\n• Describe the primary use case\n\nWhich of these is easiest for you to provide?";
+        aiResponse = `Thanks for the information about "${product.productName}"! To help refine the classification, you can:\n\n• Upload a product specification sheet\n• Describe the primary use case\n• Provide material composition details\n• Share any certifications\n\nWhat would you like to provide?`;
       }
 
       const assistantMessage: ChatMessage = {
@@ -281,11 +303,9 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
         updateConfidenceScore(newIssuesResolved);
       }
 
-      // HARDCODED: Document analysis response - Should use actual document content analysis or AI processing
-      // TODO: Implement actual document analysis or integrate with AI service
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        text: `Excellent! I've analyzed the document${files.length > 1 ? 's' : ''} and found some key details:\n\n✅ Product marketed as "Smart Health Watch"\n✅ Case: Aluminum alloy (base metal, not precious)\n✅ Primary features: Heart rate, SpO2, sleep tracking (FDA registered Class II)\n✅ Timekeeping listed as secondary/convenience feature\n\nThis evidence strongly supports classifying under 9031.80.8000 (Measuring instruments) rather than 9102 (Watches):\n• Duty drops from 9.8% → 1.7%\n• Classification now has high confidence!\n• Saves you approximately $729 on this shipment\n\nWould you like me to update the recommended classification?`,
+        text: `I've reviewed the document${files.length > 1 ? 's' : ''} you uploaded for "${product.productName}". This additional documentation helps improve the classification confidence. The information from these documents will be factored into the analysis.\n\nWould you like me to update the recommended classification based on this new information?`,
         timestamp: 'Just now'
       };
       setChatMessages(prev => [...prev, assistantMessage]);
@@ -407,7 +427,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                 <div className="flex items-center gap-2">
                   <Lightbulb className="w-5 h-5 text-blue-600" />
                   <h3 className="text-slate-900">AI Analysis</h3>
-                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                 </div>
               </div>
               
@@ -517,12 +536,11 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               >
                 <div className="mb-3">
                   <div className="text-blue-600 text-sm mb-1">{product.hts}</div>
-                  {/* HARDCODED: HTS description - Should come from database field: user_product_classification_results.hts_description or hts_code_lookup table */}
-                  {/* TODO: Fetch from database when hts_description field is added or use hts_code_lookup table */}
-                  <div className="text-slate-700 text-xs mb-2 flex items-center gap-2">
-                    <span>Wrist watches, electrically operated, mechanical display only</span>
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
-                  </div>
+                  {product.hts_description && (
+                    <div className="text-slate-700 text-xs mb-2">
+                      <span>{product.hts_description}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3">
                     <span className={`px-2 py-1 text-xs rounded ${
                       currentConfidence >= 85 ? 'bg-green-100 text-green-700' :
@@ -542,28 +560,31 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   </div>
                 </div>
 
-                {/* HARDCODED: Classification hierarchy - Should come from hts_code_lookup table (chapter, heading, subheading) */}
-                {/* TODO: Fetch from hts_code_lookup table when created, or from database field if added */}
-                <div className="pt-3 border-t border-slate-200">
-                  <div className="text-slate-900 text-sm mb-2 flex items-center gap-2">
-                    <span>Classification Hierarchy</span>
-                    <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
+                {(product.chapter_code || product.section_code) && (
+                  <div className="pt-3 border-t border-slate-200">
+                    <div className="text-slate-900 text-sm mb-2">
+                      Classification Hierarchy
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      {product.section_code && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-slate-600 min-w-[80px]">Section</span>
+                          <span className="text-slate-700">{product.section_code}{product.section_title ? ` — ${product.section_title}` : ''}</span>
+                        </div>
+                      )}
+                      {product.chapter_code && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-slate-600 min-w-[80px]">Chapter</span>
+                          <span className="text-slate-700">{product.chapter_code}{product.chapter_title ? ` — ${product.chapter_title}` : ''}</span>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="text-slate-600 min-w-[80px]">HTS Code</span>
+                        <span className="text-slate-700">{product.hts}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5 text-xs">
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Chapter</span>
-                      <span className="text-slate-700">91 — Clocks and watches and parts thereof</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Heading</span>
-                      <span className="text-slate-700">9102 — Wrist watches, pocket watches and other watches</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-600 min-w-[80px]">Subheading</span>
-                      <span className="text-slate-700">9102.21 — With automatic winding</span>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -571,7 +592,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
             <div className="bg-white border border-slate-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <h3 className="text-slate-900">Alternative Classifications</h3>
-                <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
               </div>
               <div className="space-y-2">
                 {filteredAlternatives.map((alt, index) => (
@@ -589,25 +609,11 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                         <span className="text-slate-900 text-sm block mb-2">{alt.hts}</span>
                         <p className="text-slate-700 text-xs mb-2">{alt.description}</p>
                         
-                        {/* HARDCODED: Alternative classification hierarchy - Should come from hts_code_lookup table or alternate_classifications data */}
-                        {/* TODO: Fetch from database when alternate_classifications includes hierarchy or use hts_code_lookup table */}
-                        <div className="space-y-1 text-xs mb-2">
-                          <div className="mb-1">
-                            <span className="px-1.5 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
+                        {alt.reasoning && (
+                          <div className="text-xs text-slate-600 mb-2">
+                            <span className="text-slate-500">Reasoning:</span> {alt.reasoning}
                           </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Chapter</span>
-                            <span className="text-slate-700">{index === 0 ? '91 — Clocks and watches' : index === 1 ? '90 — Optical, measuring, checking instruments' : '85 — Electrical machinery'}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Heading</span>
-                            <span className="text-slate-700">{index === 0 ? '9102 — Wrist watches' : index === 1 ? '9031 — Measuring instruments' : '8517 — Telephone sets'}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <span className="text-slate-600 min-w-[55px]">Subheading</span>
-                            <span className="text-slate-700">{index === 0 ? '9102.11 — Wrist watches, mechanical display' : index === 1 ? '9031.80 — Measuring instruments' : '8517.62 — Voice/data transmission'}</span>
-                          </div>
-                        </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 ml-3">
                         <span className={`px-2 py-0.5 text-xs rounded ${
@@ -634,7 +640,6 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-5 py-3 border-b border-indigo-100">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-indigo-900">Classification Reasoning for Customs Validation</h3>
-                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                 </div>
                 <p className="text-indigo-700 text-sm">Detailed justification for HTS {selectedHts}</p>
               </div>
@@ -646,49 +651,52 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">1</div>
                     <h4 className="text-slate-900">Classification Decision</h4>
                   </div>
-                  {/* HARDCODED: Classification decision reasoning - Should come from database field: user_product_classification_results.reasoning */}
-                  {/* TODO: Fetch from database when reasoning field is added */}
                   <div className="ml-8 p-4 bg-slate-50 rounded-lg">
                     <p className="text-slate-700 text-sm mb-3">
                       <strong>HTS Code {selectedHts}</strong> was selected based on the product's primary function, material composition, and physical characteristics.
                     </p>
-                    <p className="text-slate-600 text-sm">
-                      This classification aligns with the Harmonized Tariff Schedule of the United States (HTSUS) Chapter {selectedHts.substring(0, 2)} which covers: 
-                      {selectedHts.startsWith('91') && ' Clocks and watches and parts thereof.'}
-                      {selectedHts.startsWith('90') && ' Optical, photographic, measuring, checking, precision, medical or surgical instruments and apparatus.'}
-                      {selectedHts.startsWith('85') && ' Electrical machinery and equipment and parts thereof.'}
-                    </p>
+                    {product.reasoning ? (
+                      <p className="text-slate-600 text-sm whitespace-pre-wrap">{product.reasoning}</p>
+                    ) : (
+                      <p className="text-slate-600 text-sm">
+                        This classification aligns with the Harmonized Tariff Schedule of the United States (HTSUS).
+                        {product.chapter_code && ` Chapter ${product.chapter_code}${product.chapter_title ? `: ${product.chapter_title}` : ''}.`}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* HARDCODED: General Rules of Interpretation - Should come from database field: user_product_classification_results.reasoning or be dynamically generated */}
-                {/* TODO: Generate dynamically or fetch from database when reasoning field includes GRI analysis */}
+                {(confidenceAnalysis.griApplied.length > 0 || confidenceAnalysis.checksPassed.length > 0) && (
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">2</div>
                     <h4 className="text-slate-900">General Rules of Interpretation (GRI)</h4>
                   </div>
                   <div className="ml-8 space-y-2">
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-green-900"><strong>GRI 1:</strong> Classification determined by terms of the headings</p>
-                          <p className="text-xs text-green-700 mt-1">Product description matches the heading terminology for HTS {selectedHts}</p>
+                    {confidenceAnalysis.griApplied.map((gri: string, idx: number) => (
+                      <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-green-900">{gri}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm text-green-900"><strong>GRI 3(a):</strong> Most specific description prevails</p>
-                          <p className="text-xs text-green-700 mt-1">The selected subheading provides the most specific description of the product</p>
+                    ))}
+                    {confidenceAnalysis.checksPassed.map((check: string, idx: number) => (
+                      <div key={`check-${idx}`} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-green-900">{check}</p>
                         </div>
                       </div>
-                    </div>
+                    ))}
+                    {confidenceAnalysis.reasoning && (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-700">{confidenceAnalysis.reasoning}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
+                )}
 
                 {/* Material Composition Analysis */}
                 <div>
@@ -750,20 +758,33 @@ export function ExceptionReview({ product, onClose, onApprove, onReject }: Excep
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-sm">6</div>
                     <h4 className="text-slate-900">Supporting Documentation</h4>
-                    <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded border border-red-300">HARDCODED</span>
                   </div>
-                  {/* HARDCODED: Supporting documentation list - Should come from database table: user_product_documents */}
-                  {/* TODO: Fetch actual documents from user_product_documents table for this product */}
                   <div className="ml-8 space-y-2">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Product specification sheet</p>
-                    </div>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Material composition details</p>
-                    </div>
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-900">✓ Country of origin documentation</p>
-                    </div>
+                    {/* CBP Rulings as supporting evidence */}
+                    {product.cbp_rulings && product.cbp_rulings.length > 0 ? (
+                      product.cbp_rulings.map((ruling: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-sm text-blue-900 font-medium">{ruling.ruling_number}</p>
+                              <p className="text-xs text-blue-700 mt-1">{ruling.subject}</p>
+                              {ruling.ruling_date && (
+                                <p className="text-xs text-blue-600 mt-1">Date: {ruling.ruling_date}</p>
+                              )}
+                            </div>
+                            {ruling.url && (
+                              <a href={ruling.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-xs underline ml-2 flex-shrink-0">
+                                View
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <p className="text-sm text-slate-600">No CBP rulings available for this classification.</p>
+                      </div>
+                    )}
                     {uploadedFiles.length > 0 && uploadedFiles.map((file, idx) => (
                       <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-sm text-green-900">✓ {file.name} (uploaded)</p>

@@ -37,6 +37,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     { label: 'Avg Confidence', value: '0%', subtext: 'Approved Products', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
   ]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   // Load data from database on mount
   useEffect(() => {
@@ -82,6 +83,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setIsLoadingExceptions(false);
         setIsLoadingRecentActivity(false);
         setIsLoadingStats(false);
+        setLastSyncTime(new Date());
       } catch (error) {
         console.error('Error loading dashboard data:', error);
         setIsLoadingExceptions(false);
@@ -98,17 +100,26 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   const handleSendMessage = () => {
     if (!aiInput.trim()) return;
-    
+
     setAiMessages(prev => [...prev, { role: 'user', text: aiInput }]);
-    
-    // Simulate AI response
+
+    // Generate contextual response based on current exceptions
     setTimeout(() => {
-      setAiMessages(prev => [...prev, { 
-        role: 'assistant', 
-        text: "I can help with that! The Smart Watch classification needs clarification on its primary function. Is it mainly used for timekeeping or health monitoring? This will determine if it's classified under watches (9102) or medical devices (9018)."
-      }]);
-    }, 1000);
-    
+      const lowerInput = aiInput.toLowerCase();
+      let responseText = '';
+
+      if (activeExceptions.length > 0 && (lowerInput.includes('help') || lowerInput.includes('exception') || lowerInput.includes('review'))) {
+        const topException = activeExceptions[0];
+        responseText = `You have ${activeExceptions.length} exception${activeExceptions.length > 1 ? 's' : ''} to review. The highest priority is "${topException.product}" (HTS: ${topException.hts}). Click on it in the Actions Required section to start reviewing.`;
+      } else if (lowerInput.includes('classify') || lowerInput.includes('product')) {
+        responseText = `To classify a new product, go to the "Classify Product" section in the sidebar. You can enter product details and I'll suggest the best HTS code with confidence scoring.`;
+      } else {
+        responseText = `I can help you with:\n• Reviewing exceptions in your queue\n• Classifying new products\n• Understanding HTS codes and tariff rates\n\nWhat would you like to do?`;
+      }
+
+      setAiMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
+    }, 800);
+
     setAiInput('');
   };
 
@@ -171,7 +182,9 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
             <div className="text-left sm:text-right flex-shrink-0">
               <div className="text-slate-600 text-sm whitespace-nowrap">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              <div className="text-slate-500 text-sm whitespace-nowrap">Last sync: 2 min ago</div>
+              <div className="text-slate-500 text-sm whitespace-nowrap">
+                {lastSyncTime ? `Last sync: ${lastSyncTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'Syncing...'}
+              </div>
             </div>
           </div>
         </div>
@@ -226,7 +239,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                       .filter(item => filterBy === 'all' || item.category === filterBy)
                       .sort((a, b) => {
                         if (sortBy === 'priority') {
-                          return a.priority.localeCompare(b.priority);
+                          const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+                          return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
                         } else if (sortBy === 'product') {
                           return a.product.localeCompare(b.product);
                         }
@@ -314,7 +328,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-slate-900 text-sm truncate">{item.product}</div>
-                          <div className="text-green-600 text-xs">Exception resolved • Confidence improved to 96%</div>
+                          <div className="text-green-600 text-xs">Exception resolved • Classification approved</div>
                         </div>
                         <div className="text-slate-400 text-xs whitespace-nowrap">Just now</div>
                         <ChevronRight className="w-4 h-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -328,10 +342,38 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="p-4 text-center text-slate-500">No recent activity</div>
                 ) : (
                   recentClassifications.map((activity, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
-                      onClick={() => onNavigate('activity')}
+                      onClick={() => {
+                        // Open ExceptionReview with the activity's data
+                        if (activity.classification_result_id) {
+                          setSelectedException({
+                            id: activity.classification_result_id,
+                            product: activity.product,
+                            description: activity.description || '',
+                            hts: activity.hts,
+                            confidence: activity.confidenceRaw || 0,
+                            tariff_rate: activity.tariff_rate,
+                            origin: activity.origin || 'Unknown',
+                            reason: `Confidence: ${activity.confidence}`,
+                            hts_description: activity.description,
+                            reasoning: activity.reasoning,
+                            chapter_code: activity.chapter_code,
+                            chapter_title: activity.chapter_title,
+                            section_code: activity.section_code,
+                            section_title: activity.section_title,
+                            cbp_rulings: activity.cbp_rulings,
+                            rule_verification: activity.rule_verification,
+                            alternate_classifications: activity.alternate_classifications,
+                            classification_trace: activity.classification_trace,
+                            product_id: activity.product_id,
+                            classification_result_id: activity.classification_result_id,
+                          });
+                        } else {
+                          onNavigate('activity');
+                        }
+                      }}
                     >
                       <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
@@ -368,7 +410,19 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             confidence: Math.round((selectedException.confidence || 0) * 100),
             tariff: selectedException.tariff_rate ? `${(selectedException.tariff_rate * 100).toFixed(1)}%` : 'N/A',
             origin: selectedException.origin,
-            reason: selectedException.reason
+            reason: selectedException.reason,
+            // Extended classification data
+            hts_description: selectedException.hts_description,
+            reasoning: selectedException.reasoning,
+            chapter_code: selectedException.chapter_code,
+            chapter_title: selectedException.chapter_title,
+            section_code: selectedException.section_code,
+            section_title: selectedException.section_title,
+            cbp_rulings: selectedException.cbp_rulings,
+            rule_verification: selectedException.rule_verification,
+            rule_confidence: selectedException.rule_confidence,
+            classification_trace: selectedException.classification_trace,
+            alternate_classifications: selectedException.alternate_classifications,
           }}
           onClose={() => setSelectedException(null)}
           onApprove={() => handleResolveException(selectedException)}
