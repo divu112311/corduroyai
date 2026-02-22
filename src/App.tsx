@@ -78,6 +78,9 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const shouldLogout = urlParams.get('logout') === 'true';
 
+    // Check for PKCE auth code in query string (used by PKCE flow)
+    const authCode = urlParams.get('code');
+
     if (shouldLogout) {
       // User explicitly wants to logout, clear session
       supabase.auth.signOut().then(() => {
@@ -95,9 +98,21 @@ export default function App() {
       setAuthView('new-password');
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
+    } else if (authCode) {
+      // PKCE flow: Supabase redirected with ?code=... in query string
+      // exchangeCodeForSession handles the token exchange; onAuthStateChange fires SIGNED_IN
+      supabase.auth.exchangeCodeForSession(authCode).then(({ error }) => {
+        // Clean the code from the URL regardless of outcome
+        window.history.replaceState(null, '', window.location.pathname);
+        if (error) {
+          console.error('Failed to exchange auth code for session:', error.message);
+          setIsLoading(false);
+        }
+        // On success, onAuthStateChange SIGNED_IN will fire and call loadUserData
+      });
     } else if (hashParams.get('access_token') || hashParams.get('code')) {
-      // OAuth redirect (e.g. Google login) — let onAuthStateChange handle it
-      // Don't call checkSession() to avoid flashing the login screen
+      // Implicit flow fallback: OAuth redirect with tokens in hash fragment
+      // Let onAuthStateChange handle it — don't call checkSession() to avoid flash
     } else {
       checkSession();
     }
