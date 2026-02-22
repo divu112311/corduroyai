@@ -217,7 +217,7 @@ const getAlternativesForProduct = (productName: string, origin?: string): Altern
 // Helper function to get AI reasoning
 const getAIReasoning = (productName: string, description: string) => {
   if (productName.toLowerCase().includes('speaker')) {
-    return 'Based on the product description \"wireless bluetooth speaker,\" this item is classified as a telecommunications device. The primary function is receiving and converting wireless audio signals. Key classification factors: wireless connectivity (Bluetooth), audio transmission capability, and electronic amplification.';
+    return 'Based on the product description "wireless bluetooth speaker," this item is classified as a telecommunications device. The primary function is receiving and converting wireless audio signals. Key classification factors: wireless connectivity (Bluetooth), audio transmission capability, and electronic amplification.';
   } else if (productName.toLowerCase().includes('t-shirt') || productName.toLowerCase().includes('cotton')) {
     return 'This garment is classified under knitted apparel based on its cotton composition and construction method. The classification depends on material content (100% cotton), garment type (T-shirt), and whether it is knitted or woven. Key factors: fiber content, gender neutrality, and manufacturing process.';
   } else if (productName.toLowerCase().includes('lamp')) {
@@ -225,7 +225,7 @@ const getAIReasoning = (productName: string, description: string) => {
   } else if (productName.toLowerCase().includes('water bottle') || productName.toLowerCase().includes('bottle')) {
     return 'Classified as household articles of iron or steel based on material composition (stainless steel) and intended use (food/beverage storage). Key factors: insulated construction, capacity, and primary material. The vacuum insulation feature does not change the fundamental classification.';
   } else if (productName.toLowerCase().includes('watch')) {
-    return 'This device is classified as a wristwatch with electronic display. Classification factors include: presence of health monitoring sensors, electronic movement, and wearable form factor. The \"smart\" functionality and connectivity features place it in a specific subcategory of electronic watches.';
+    return 'This device is classified as a wristwatch with electronic display. Classification factors include: presence of health monitoring sensors, electronic movement, and wearable form factor. The "smart" functionality and connectivity features place it in a specific subcategory of electronic watches.';
   } else if (productName.toLowerCase().includes('fabric')) {
     return 'This textile material is classified based on fiber composition (60% cotton, 40% polyester blend). The classification follows the Chief Value rule - the constituent material that gives the fabric its essential character. Cotton-polyester blends are categorized by the predominant fiber content and weaving/knitting method.';
   } else if (productName.toLowerCase().includes('mug') || productName.toLowerCase().includes('ceramic')) {
@@ -233,7 +233,7 @@ const getAIReasoning = (productName: string, description: string) => {
   } else if (productName.toLowerCase().includes('cutting board') || productName.toLowerCase().includes('bamboo')) {
     return 'This item is classified under wood or bamboo household articles. Primary classification factors: bamboo as the principal material, intended use in food preparation, and manufacturing process. Bamboo is treated similarly to wood products in HTS classification despite being a grass species.';
   }
-  return `This product is classified based on its primary function, material composition, and physical characteristics. The AI analyzed the product description \"${description}\" along with origin country data to determine the most appropriate HTS code.`;
+  return `This product is classified based on its primary function, material composition, and physical characteristics. The AI analyzed the product description "${description}" along with origin country data to determine the most appropriate HTS code.`;
 };
 
 export function BulkItemDetail({ item, onClose, onSave }: BulkItemDetailProps) {

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Save, Building2, Lock, Sliders, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Save, Edit2, Building2, Lock, Sliders, Eye, EyeOff, AlertCircle, CheckCircle, Monitor, ToggleLeft, ToggleRight, Zap, Construction } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getUserMetadata, updateUserMetadata } from '../lib/userService';
+import { logActivity } from '../lib/activityLogger';
+import { ActiveSessions } from './ActiveSessions';
 
 export function Settings() {
   // Account Settings
@@ -27,6 +29,12 @@ export function Settings() {
   const [isLoadingAutomation, setIsLoadingAutomation] = useState(true);
   const [isEditingAutomation, setIsEditingAutomation] = useState(false);
   const [originalThreshold, setOriginalThreshold] = useState(80);
+
+  // Auto Approve Settings
+  const [autoApproveSingle, setAutoApproveSingle] = useState(false);
+  const [autoApproveBulk, setAutoApproveBulk] = useState(false);
+  const [autoApproveMessage, setAutoApproveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [isSavingAutoApprove, setIsSavingAutoApprove] = useState(false);
 
   // Load user metadata on mount
   useEffect(() => {
@@ -54,6 +62,8 @@ export function Settings() {
             setOriginalCompanyName(company);
             setAutoApprovalThreshold(threshold);
             setOriginalThreshold(threshold);
+            setAutoApproveSingle(metadata.auto_approve_single ?? false);
+            setAutoApproveBulk(metadata.auto_approve_bulk ?? false);
           } else {
             console.log('No metadata found, using defaults');
             // Use defaults if no metadata exists
@@ -61,6 +71,8 @@ export function Settings() {
             setOriginalCompanyName('');
             setAutoApprovalThreshold(80);
             setOriginalThreshold(80);
+            setAutoApproveSingle(false);
+            setAutoApproveBulk(false);
           }
         } else {
           console.log('No user found');
@@ -133,9 +145,13 @@ export function Settings() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      logActivity(user.id, 'password_changed');
 
-      // Clear message after 3 seconds
-      setTimeout(() => setPasswordMessage(null), 3000);
+      // Close modal and clear message after a short delay
+      setTimeout(() => {
+        setShowPasswordModal(false);
+        setPasswordMessage(null);
+      }, 1500);
     } catch (error: any) {
       setPasswordMessage({ type: 'error', text: error.message || 'An error occurred while updating password' });
     }
@@ -176,6 +192,7 @@ export function Settings() {
         setOriginalCompanyName(companyName.trim());
         setCompanyMessage({ type: 'success', text: 'Company details saved successfully' });
         setIsEditingCompany(false);
+        logActivity(user.id, 'settings_updated', { field: 'company_name', value: companyName.trim() });
         setTimeout(() => setCompanyMessage(null), 3000);
       } else {
         setCompanyMessage({ type: 'error', text: 'Failed to save company details' });
@@ -184,6 +201,46 @@ export function Settings() {
     } catch (error: any) {
       setCompanyMessage({ type: 'error', text: error.message || 'An error occurred while saving' });
       setTimeout(() => setCompanyMessage(null), 3000);
+    }
+  };
+
+  const handleAutoApproveToggle = async (field: 'auto_approve_single' | 'auto_approve_bulk', value: boolean) => {
+    try {
+      setIsSavingAutoApprove(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setAutoApproveMessage({ type: 'error', text: 'User not found' });
+        setIsSavingAutoApprove(false);
+        return;
+      }
+
+      if (field === 'auto_approve_single') {
+        setAutoApproveSingle(value);
+      } else {
+        setAutoApproveBulk(value);
+      }
+
+      const updated = await updateUserMetadata(user.id, { [field]: value });
+
+      if (updated) {
+        setAutoApproveMessage({ type: 'success', text: `Auto-approve ${field === 'auto_approve_single' ? 'single' : 'bulk'} classification ${value ? 'enabled' : 'disabled'}` });
+        logActivity(user.id, 'settings_updated', { field, value });
+        setTimeout(() => setAutoApproveMessage(null), 3000);
+      } else {
+        // Revert on failure
+        if (field === 'auto_approve_single') setAutoApproveSingle(!value);
+        else setAutoApproveBulk(!value);
+        setAutoApproveMessage({ type: 'error', text: 'Failed to save auto-approve setting' });
+        setTimeout(() => setAutoApproveMessage(null), 3000);
+      }
+    } catch (error: any) {
+      // Revert on error
+      if (field === 'auto_approve_single') setAutoApproveSingle(!value);
+      else setAutoApproveBulk(!value);
+      setAutoApproveMessage({ type: 'error', text: error.message || 'An error occurred' });
+      setTimeout(() => setAutoApproveMessage(null), 3000);
+    } finally {
+      setIsSavingAutoApprove(false);
     }
   };
 
@@ -225,6 +282,7 @@ export function Settings() {
         setOriginalThreshold(autoApprovalThreshold);
         setAutomationMessage({ type: 'success', text: 'Automation settings saved successfully' });
         setIsEditingAutomation(false);
+        logActivity(user.id, 'settings_updated', { field: 'confidence_threshold', value: autoApprovalThreshold });
         setTimeout(() => setAutomationMessage(null), 3000);
       } else {
         setAutomationMessage({ type: 'error', text: 'Failed to save automation settings' });
@@ -294,12 +352,7 @@ export function Settings() {
                   <p className="text-slate-600 text-sm mt-1">Enter your current password and choose a new one</p>
                 </div>
 
-                <form onSubmit={(e) => {
-                  handlePasswordChange(e);
-                  if (newPassword && confirmPassword && newPassword === confirmPassword && newPassword.length >= 8) {
-                    setTimeout(() => setShowPasswordModal(false), 1500);
-                  }
-                }} className="p-6">
+                <form onSubmit={handlePasswordChange} className="p-6">
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm text-slate-700 mb-2">Current Password</label>
@@ -463,7 +516,7 @@ export function Settings() {
                     onClick={handleCompanyEdit}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
-                    <Save className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     Edit Company Details
                   </button>
                 )}
@@ -488,8 +541,8 @@ export function Settings() {
             <form onSubmit={handleAutomationSave} className="p-6">
               {automationMessage && (
                 <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
-                  automationMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-800 border border-green-200' 
+                  automationMessage.type === 'success'
+                    ? 'bg-green-50 text-green-800 border border-green-200'
                     : 'bg-red-50 text-red-800 border border-red-200'
                 }`}>
                   {automationMessage.type === 'success' ? (
@@ -577,12 +630,136 @@ export function Settings() {
                     onClick={handleAutomationEdit}
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
-                    <Save className="w-4 h-4" />
+                    <Edit2 className="w-4 h-4" />
                     Edit Automation Settings
                   </button>
                 )}
               </div>
             </form>
+          </div>
+
+          {/* Auto Approve Settings */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h2 className="text-slate-900">Auto Approve</h2>
+                  <p className="text-slate-600 text-sm">Automatically approve classifications that meet your confidence threshold</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {autoApproveMessage && (
+                <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
+                  autoApproveMessage.type === 'success'
+                    ? 'bg-green-50 text-green-800 border border-green-200'
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {autoApproveMessage.type === 'success' ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4" />
+                  )}
+                  <span className="text-sm">{autoApproveMessage.text}</span>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Single Classification Auto Approve */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-slate-900 font-medium">Single Classification</h4>
+                    </div>
+                    <p className="text-slate-500 text-sm mt-1">
+                      When enabled, single product classifications with confidence above your threshold ({autoApprovalThreshold}%) will be automatically approved and saved.
+                    </p>
+                    {autoApproveSingle && (
+                      <div className="mt-2 p-2 bg-emerald-50 rounded border border-emerald-200">
+                        <p className="text-emerald-700 text-xs">
+                          Products classified with confidence &ge; {autoApprovalThreshold}% will be auto-approved with reason: "Auto-approved: confidence above {autoApprovalThreshold}% threshold"
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleAutoApproveToggle('auto_approve_single', !autoApproveSingle)}
+                    disabled={isSavingAutoApprove}
+                    className="ml-4 flex-shrink-0"
+                  >
+                    {autoApproveSingle ? (
+                      <ToggleRight className="w-10 h-10 text-emerald-600" />
+                    ) : (
+                      <ToggleLeft className="w-10 h-10 text-slate-400" />
+                    )}
+                  </button>
+                </div>
+
+                {/* Bulk Classification Auto Approve */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 relative">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+                    <Construction className="w-3 h-3" />
+                    Coming Soon
+                  </div>
+                  <div className="flex-1 opacity-60">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-slate-900 font-medium">Bulk Classification</h4>
+                    </div>
+                    <p className="text-slate-500 text-sm mt-1">
+                      When enabled, bulk classification results with confidence above your threshold will be automatically approved.
+                    </p>
+                  </div>
+                  <button
+                    disabled
+                    className="ml-4 flex-shrink-0 cursor-not-allowed"
+                  >
+                    <ToggleLeft className="w-10 h-10 text-slate-300" />
+                  </button>
+                </div>
+              </div>
+
+              {/* How it works */}
+              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="text-blue-900 text-sm font-medium mb-2">How Auto Approve Works</h4>
+                <ul className="text-blue-800 text-sm space-y-1">
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">&#8226;</span>
+                    <span>When <strong>ON</strong>: Classifications with confidence &ge; {autoApprovalThreshold}% are automatically approved. No manual "Approve & Save" needed.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">&#8226;</span>
+                    <span>When <strong>OFF</strong>: All classifications require manual approval via the "Approve & Save" button.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-blue-400 mt-0.5">&#8226;</span>
+                    <span>Classifications <strong>below</strong> {autoApprovalThreshold}% always require manual review regardless of this setting.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Sessions */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 bg-slate-50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <Monitor className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <h2 className="text-slate-900">Active Sessions</h2>
+                  <p className="text-slate-600 text-sm">Manage your logged-in devices and sessions</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <ActiveSessions />
+            </div>
           </div>
         </div>
       </div>

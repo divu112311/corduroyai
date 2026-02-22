@@ -43,4 +43,17 @@ server/node_modules/
 .supabase/
 SUPABASE_SCHEMA.md
 
+# Backup / scratch files — never commit these
+*_bkp.*
+*_bkp
+*_backup.*
+*_backup
+*.bak
+*.orig
 
+# Sensitive documentation (schema details, internal analysis)
+DATABASE_ANALYSIS.md
+
+# Staging folder and clone for private repo (do not commit)
+_for_corduroyaiscripts/
+_corduroyaiscripts_repo/

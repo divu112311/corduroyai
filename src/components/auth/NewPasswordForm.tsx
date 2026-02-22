@@ -16,15 +16,20 @@ export function NewPasswordForm({ onResetComplete }: NewPasswordFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidSession, setIsValidSession] = useState(false);
 
-  // Check if we have a valid password reset session
+  // Check if we have a valid password reset session (Fix #4: retry instead of arbitrary delay)
   useEffect(() => {
     const checkSession = async () => {
-      // Wait a bit for Supabase to process the URL hash
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session) {
+      let session = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data, error: sessionError } = await supabase.auth.getSession();
+        if (data?.session && !sessionError) {
+          session = data.session;
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      if (!session) {
         setError('Invalid or expired reset link. Please request a new password reset.');
         setIsValidSession(false);
       } else {

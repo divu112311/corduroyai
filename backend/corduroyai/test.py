@@ -1,1 +1,0 @@
-print("VM is stable")

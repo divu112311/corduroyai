@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dashboard } from './components/Dashboard';
 import { UnifiedClassification } from './components/UnifiedClassification';
 import { ProductProfile } from './components/ProductProfile';
@@ -10,10 +10,15 @@ import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
+import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
 import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
 import { getUserMetadata, updateLastLogin, createOrUpdateUserMetadata } from './lib/userService';
+import { recordLogin, upsertSession, heartbeat, removeCurrentSession } from './lib/sessionService';
+import { logActivity } from './lib/activityLogger';
+import { setSentryUser } from './lib/sentry';
+import { useIdleTimeout } from './hooks/useIdleTimeout';
 
 type View = 'dashboard' | 'classify' | 'profile' | 'settings' | 'activity';
 type AuthView = 'login' | 'signup' | 'reset-password' | 'new-password';
@@ -38,17 +43,44 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState(false);
+
+  // Refs to avoid stale closures in onAuthStateChange callback (Fix #1)
+  const isAuthenticatedRef = useRef(isAuthenticated);
+  const authViewRef = useRef(authView);
+  const userRef = useRef(user);
+  useEffect(() => { isAuthenticatedRef.current = isAuthenticated; }, [isAuthenticated]);
+  useEffect(() => { authViewRef.current = authView; }, [authView]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // Idle timeout — auto-logout after 15 min inactivity, 2 min warning
+  const { showWarning: showIdleWarning, remainingSeconds, stayLoggedIn } = useIdleTimeout({
+    idleTimeout: 15 * 60 * 1000,
+    warningDuration: 2 * 60 * 1000,
+    onTimeout: () => handleLogout(),
+    enabled: isAuthenticated,
+  });
+
+  // Session heartbeat — ping every 2 minutes while authenticated
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    const interval = setInterval(() => heartbeat(user.id), 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, user?.id]);
 
   // Check for existing session on mount
   useEffect(() => {
     // Check for password reset token in URL hash
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get('type');
-    
+
     // Check for explicit logout parameter
     const urlParams = new URLSearchParams(window.location.search);
     const shouldLogout = urlParams.get('logout') === 'true';
-    
+
+    // Check for PKCE auth code in query string (used by PKCE flow)
+    const authCode = urlParams.get('code');
+
     if (shouldLogout) {
       // User explicitly wants to logout, clear session
       supabase.auth.signOut().then(() => {
@@ -60,31 +92,62 @@ export default function App() {
       });
       return;
     }
-    
+
     if (type === 'recovery') {
       // User came from password reset email link
       setAuthView('new-password');
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
+    } else if (authCode) {
+      // PKCE flow: Supabase redirected with ?code=... in query string
+      // exchangeCodeForSession handles the token exchange; onAuthStateChange fires SIGNED_IN
+      supabase.auth.exchangeCodeForSession(authCode).then(({ error }) => {
+        // Clean the code from the URL regardless of outcome
+        window.history.replaceState(null, '', window.location.pathname);
+        if (error) {
+          console.error('Failed to exchange auth code for session:', error.message);
+          setIsLoading(false);
+        }
+        // On success, onAuthStateChange SIGNED_IN will fire and call loadUserData
+      });
+    } else if (hashParams.get('access_token') || hashParams.get('code')) {
+      // Implicit flow fallback: OAuth redirect with tokens in hash fragment
+      // Let onAuthStateChange handle it — don't call checkSession() to avoid flash
     } else {
       checkSession();
     }
 
-    // Listen for auth changes
+    // Listen for auth changes (Fix #1: read from refs, Fix #2: handle all events)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Only auto-login on SIGNED_IN event, not on every state change
-      // This prevents auto-login when user is already on login page
       if (_event === 'SIGNED_IN' && session) {
-        // Only auto-login if not already authenticated and not on login page
-        if (!isAuthenticated && authView !== 'login') {
-          loadUserData(session.user);
+        // Auto-login unless already authenticated or explicitly skipping (after logout)
+        const skipAutoLogin = sessionStorage.getItem('skipAutoLogin') === 'true';
+        if (!isAuthenticatedRef.current && !skipAutoLogin) {
+          loadUserData(session.user).finally(() => setIsLoading(false));
+        } else {
+          setIsLoading(false);
         }
+      } else if (_event === 'TOKEN_REFRESHED') {
+        if (!session) {
+          // Token refresh failed — session expired (Fix #3)
+          setIsAuthenticated(false);
+          setUser(null);
+          setSessionExpiredMessage(true);
+        }
+        // If session exists, refresh succeeded silently — nothing to do
+      } else if (_event === 'USER_UPDATED' && session) {
+        // User profile was updated, reload data
+        loadUserData(session.user);
       } else if (_event === 'SIGNED_OUT' || !session) {
-        // Session ended, log out
+        // Session ended
+        const wasAuthenticated = isAuthenticatedRef.current;
         setIsAuthenticated(false);
         setUser(null);
+        // Show expiry notice if this was an unexpected logout (Fix #7)
+        if (wasAuthenticated && _event !== 'SIGNED_OUT') {
+          setSessionExpiredMessage(true);
+        }
       }
-      // For other events (like TOKEN_REFRESHED), don't auto-login if already on login page
     });
 
     return () => {
@@ -92,36 +155,16 @@ export default function App() {
     };
   }, []);
 
-  // Clear skipAutoLogin flag when user navigates to login page
-  useEffect(() => {
-    if (authView === 'login') {
-      // Clear the flag when user is on login page (they want to log in manually)
-      sessionStorage.removeItem('skipAutoLogin');
-    }
-  }, [authView]);
-
+  // Fix #5: Simplified skipAutoLogin — read once, clear immediately, then decide
   const checkSession = async () => {
     try {
-      // Check if user explicitly wants to skip auto-login (e.g., after logout)
       const skipAutoLogin = sessionStorage.getItem('skipAutoLogin') === 'true';
-      
-      // Clear skipAutoLogin flag if user is on login page (they want to log in manually)
-      if (authView === 'login' && skipAutoLogin) {
-        sessionStorage.removeItem('skipAutoLogin');
-      }
-      
+      sessionStorage.removeItem('skipAutoLogin');
+
       const { data: { session } } = await supabase.auth.getSession();
-      
-      // Only auto-login if:
-      // 1. Session exists
-      // 2. User hasn't explicitly skipped auto-login
-      // 3. User is NOT on the login page (they want to log in manually)
-      if (session?.user && !skipAutoLogin && authView !== 'login') {
-        // Only auto-login if user hasn't explicitly skipped it and is not on login page
-        loadUserData(session.user);
-      } else if (skipAutoLogin && authView !== 'login') {
-        // Clear the flag after checking (only if not on login page)
-        sessionStorage.removeItem('skipAutoLogin');
+
+      if (session?.user && !skipAutoLogin) {
+        await loadUserData(session.user);
       }
     } catch (error) {
       console.error('Error checking session:', error);
@@ -167,6 +210,13 @@ export default function App() {
       console.log('Setting user data:', userData);
       setUser(userData);
       setIsAuthenticated(true);
+
+      // Track login: record history, register session, identify in Sentry
+      const authMethod = supabaseUser.app_metadata?.provider === 'google' ? 'google' : 'email';
+      setSentryUser({ id: userData.id, email: userData.email });
+      recordLogin(supabaseUser.id, authMethod as 'email' | 'google');
+      upsertSession(supabaseUser.id);
+      logActivity(supabaseUser.id, 'login', { auth_method: authMethod });
     } catch (error: any) {
       console.error('Error loading user data:', error);
       console.error('Error details:', {
@@ -199,29 +249,32 @@ export default function App() {
 
   // Authentication handlers
   const handleLogin = async (supabaseUser: any) => {
-    // Clear skip auto-login flag on successful login
     sessionStorage.removeItem('skipAutoLogin');
+    setSessionExpiredMessage(false);
     try {
       await loadUserData(supabaseUser);
     } catch (error) {
       console.error('Error during login:', error);
-      // Re-throw error so LoginForm can display it
       throw error;
     }
   };
 
+  // Fix #4: Replace arbitrary delay with retry polling
   const handleSignUp = async (data: SignUpData) => {
     try {
-      // Wait a moment for Supabase Auth to process the signup
-      // The user should be available from the signup response
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Get the current user (should be authenticated after signup)
-      const { data: { user: supabaseUser }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !supabaseUser) {
-        console.error('Error getting user after signup:', userError);
-        // Fallback - user metadata will be created by trigger, but we'll set basic user data
+      // Poll for the authenticated user instead of using an arbitrary delay
+      let supabaseUser = null;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { data: { user: fetchedUser }, error: userError } = await supabase.auth.getUser();
+        if (fetchedUser && !userError) {
+          supabaseUser = fetchedUser;
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      if (!supabaseUser) {
+        console.error('Could not retrieve user after signup');
         setUser({
           id: '',
           email: data.email,
@@ -236,21 +289,17 @@ export default function App() {
         return;
       }
 
-      // Create or update user metadata with company name
-      // Note: The trigger should have already created user_metadata, but we update company_name
       await createOrUpdateUserMetadata(
         supabaseUser.id,
         data.email,
         data.company
       );
 
-      // Load full user data (which will fetch from user_metadata table)
       await loadUserData(supabaseUser);
-      
-      setShowWelcome(true); // Show welcome screen for new users
+      logActivity(supabaseUser.id, 'signup', { email: data.email, company: data.company });
+      setShowWelcome(true);
     } catch (error) {
       console.error('Error during signup:', error);
-      // Fallback
       setUser({
         id: '',
         email: data.email,
@@ -276,6 +325,14 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      // Log activity and clean up session before signing out
+      const currentUser = userRef.current;
+      if (currentUser?.id) {
+        await logActivity(currentUser.id, 'logout');
+      }
+      await removeCurrentSession();
+      setSentryUser(null);
+
       // Set flag to skip auto-login after logout
       sessionStorage.setItem('skipAutoLogin', 'true');
       await supabase.auth.signOut();
@@ -305,11 +362,27 @@ export default function App() {
   if (!isAuthenticated) {
     if (authView === 'login') {
       return (
-        <LoginForm
-          onLogin={handleLogin}
-          onSwitchToSignUp={() => setAuthView('signup')}
-          onSwitchToResetPassword={() => setAuthView('reset-password')}
-        />
+        <>
+          {/* Fix #7: Session expiry notification */}
+          {sessionExpiredMessage && (
+            <div className="fixed top-0 left-0 right-0 z-50 bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
+              <p className="text-amber-800 text-sm">
+                Your session has expired. Please sign in again.
+                <button
+                  onClick={() => setSessionExpiredMessage(false)}
+                  className="ml-3 text-amber-600 hover:text-amber-800 underline text-sm"
+                >
+                  Dismiss
+                </button>
+              </p>
+            </div>
+          )}
+          <LoginForm
+            onLogin={handleLogin}
+            onSwitchToSignUp={() => setAuthView('signup')}
+            onSwitchToResetPassword={() => setAuthView('reset-password')}
+          />
+        </>
       );
     }
 
@@ -363,6 +436,14 @@ export default function App() {
 
   // Authenticated app
   return (
+    <>
+    {showIdleWarning && (
+      <IdleTimeoutWarning
+        remainingSeconds={remainingSeconds}
+        onStayLoggedIn={stayLoggedIn}
+        onLogout={handleLogout}
+      />
+    )}
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
@@ -406,7 +487,7 @@ export default function App() {
             <FileText className="w-5 h-5" />
             <span>Product Profiles</span>
           </button>
-          
+
           <button
             onClick={() => setCurrentView('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -478,5 +559,6 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
     </div>
+    </>
   );
 }
