@@ -25,6 +25,9 @@ export function LoginForm({ onLogin, onSwitchToSignUp, onSwitchToResetPassword }
         provider: 'google',
         options: {
           redirectTo: siteUrl,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
       if (oauthError) {

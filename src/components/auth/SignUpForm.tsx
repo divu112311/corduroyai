@@ -38,6 +38,9 @@ export function SignUpForm({ onSignUp, onSwitchToLogin }: SignUpFormProps) {
         provider: 'google',
         options: {
           redirectTo: siteUrl,
+          queryParams: {
+            prompt: 'select_account',
+          },
         },
       });
       if (oauthError) {
