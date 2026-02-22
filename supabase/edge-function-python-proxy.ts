@@ -123,10 +123,8 @@ serve(async (req: Request) => {
     }
   }
 
-  const action = body?.action as Action;
-  if (!action) {
-    return corsResponse("Missing action", 400);
-  }
+  // Default to "classify" if no action is specified (backward compatibility)
+  const action = (body?.action || "classify") as Action;
 
   const route = mapActionToRoute(action, body);
   if (!route.path) {

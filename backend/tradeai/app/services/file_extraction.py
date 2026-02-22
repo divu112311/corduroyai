@@ -22,6 +22,7 @@ STANDARD_FIELDS = [
     "unit_value",
     "vendor",
     "category",
+    "intended_use",
 ]
 
 # Common synonyms for auto-detection before LLM fallback
@@ -57,7 +58,19 @@ COMMON_SYNONYMS = {
         "category", "type", "product type", "classification", "class",
         "product category", "group",
     ],
+    "intended_use": [
+        "intended use", "use", "usage", "purpose", "end use",
+        "application", "function",
+    ],
 }
+
+
+def _normalize_header(h: str) -> str:
+    """Normalize a column header: lowercase, replace separators with spaces, collapse whitespace."""
+    normalized = h.lower().strip()
+    normalized = re.sub(r'[_\-./]+', ' ', normalized)  # Replace _, -, ., / with spaces
+    normalized = re.sub(r'\s+', ' ', normalized).strip()  # Collapse multiple spaces
+    return normalized
 
 
 def detect_column_mapping(headers: List[str]) -> Dict[str, str]:
@@ -66,7 +79,7 @@ def detect_column_mapping(headers: List[str]) -> Dict[str, str]:
     Returns a dict of {standard_field: original_column_name}.
     """
     mapping = {}
-    normalized_headers = {h: h.lower().strip() for h in headers}
+    normalized_headers = {h: _normalize_header(h) for h in headers}
 
     for standard_field, synonyms in COMMON_SYNONYMS.items():
         for header, normalized in normalized_headers.items():
@@ -119,6 +132,7 @@ STANDARD FIELDS to map to:
 - unit_value: Price per unit
 - vendor: Supplier/manufacturer name
 - category: Product category or type
+- intended_use: What the product is used for (purpose, application, end use)
 
 Respond with ONLY a JSON object mapping standard field names to the original column header.
 Only include fields where you're confident about the mapping.
@@ -226,13 +240,17 @@ Respond ONLY with JSON."""
 def extract_all_products(
     rows: List[Dict[str, Any]],
     file_name: str,
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     Main entry point: extract structured product data from parsed rows.
     Handles both tabular data (with column mapping) and raw text (PDF fallback).
+
+    Returns a dict with:
+      - "products": List of extracted product dicts
+      - "metadata": {detected_columns, column_mapping, total_rows}
     """
     if not rows:
-        return []
+        return {"products": [], "metadata": {"detected_columns": [], "column_mapping": {}, "total_rows": 0}}
 
     # Check if rows contain raw text (PDF without tables)
     if "__raw_text" in rows[0]:
@@ -244,7 +262,14 @@ def extract_all_products(
                 for i, p in enumerate(extracted):
                     p["__row_number"] = len(products) + i + 1
                     products.append(p)
-        return products
+        return {
+            "products": products,
+            "metadata": {
+                "detected_columns": [],
+                "column_mapping": {},
+                "total_rows": len(rows),
+            },
+        }
 
     # Tabular data: detect column mapping, then extract
     headers = [k for k in rows[0].keys() if not k.startswith("__")]
@@ -260,4 +285,11 @@ def extract_all_products(
         if product.get("product_name") or product.get("description"):
             products.append(product)
 
-    return products
+    return {
+        "products": products,
+        "metadata": {
+            "detected_columns": list(column_mapping.values()),
+            "column_mapping": column_mapping,
+            "total_rows": len(rows),
+        },
+    }

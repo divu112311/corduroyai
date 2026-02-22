@@ -7,6 +7,7 @@ import {
   getBulkClassificationStatus,
   cancelBulkClassification,
   type BulkClassificationItem,
+  type FileMetadata,
 } from '../lib/supabaseFunctions';
 import React from 'react';
 
@@ -80,6 +81,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [bulkRunId, setBulkRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
 
   // Polling logic with backoff
   const pollStatus = useCallback(async (runId: string, attempt: number = 0) => {
@@ -95,6 +97,11 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
     if (data.items && data.items.length > 0) {
       setItems(data.items.map(mapBulkItemToUI));
+    }
+
+    // Capture file metadata from polling response (if not already set)
+    if (data.file_metadata && !fileMetadata) {
+      setFileMetadata(data.file_metadata);
     }
 
     if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
@@ -164,6 +171,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setItems([]);
     setProgressCurrent(0);
     setProgressTotal(0);
+    setFileMetadata(null);
 
     // TODO: Replace with actual user_id from auth context
     const userId = 'anonymous';
@@ -178,6 +186,9 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
     setBulkRunId(result.run_id);
     setProgressTotal(result.total_items);
+    if (result.file_metadata) {
+      setFileMetadata(result.file_metadata);
+    }
 
     // Start polling
     pollStatus(result.run_id);
@@ -545,14 +556,20 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                       <strong>📄 Main File Detected:</strong>
                     </p>
                     <p className="text-blue-800 text-xs mb-1">
-                      {uploadedMainFile && uploadedMainFile.name.endsWith('.pdf') ? 'PDF document' : uploadedMainFile && uploadedMainFile.name.endsWith('.csv') ? 'CSV file' : 'Excel spreadsheet'} 
-                      {' with 8 product entries'}
+                      {uploadedMainFile && uploadedMainFile.name.endsWith('.pdf') ? 'PDF document' : uploadedMainFile && uploadedMainFile.name.endsWith('.csv') ? 'CSV file' : 'Excel spreadsheet'}
+                      {` with ${progressTotal || items.length} product entries`}
                     </p>
                     <p className="text-blue-800 text-xs">
-                      Found columns: <span className="font-medium">Product Name, Description, Country of Origin, Materials, Unit Cost</span>
+                      Found columns: <span className="font-medium">
+                        {fileMetadata?.detected_columns && fileMetadata.detected_columns.length > 0
+                          ? fileMetadata.detected_columns.join(', ')
+                          : 'Detecting...'}
+                      </span>
                     </p>
                     <p className="text-blue-700 text-xs mt-1">
-                      Products include electronics, textiles, and household items.
+                      {items.length > 0
+                        ? `${items.length} product${items.length !== 1 ? 's' : ''} detected for classification.`
+                        : 'Analyzing product data...'}
                     </p>
                   </div>
 
@@ -678,6 +695,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                   setItems([]);
                   setUploadedMainFile(null);
                   setSupportingFiles([]);
+                  setFileMetadata(null);
                 }}
                 className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
               >

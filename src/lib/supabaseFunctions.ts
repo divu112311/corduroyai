@@ -64,6 +64,7 @@ export async function classifyProduct(
     });
 
     const requestBody: Record<string, any> = {
+      action: 'classify',
       product_description: productDescription,
       user_id: userId,
       confidence_threshold: threshold,
@@ -172,6 +173,12 @@ export interface BulkClassificationItem {
   clarification_answers: Record<string, string> | null;
 }
 
+export interface FileMetadata {
+  detected_columns: string[];
+  column_mapping: Record<string, string>;
+  total_rows: number;
+}
+
 export interface BulkClassificationRun {
   run_id: string;
   user_id: string;
@@ -187,101 +194,154 @@ export interface BulkClassificationRun {
     errors: number;
   };
   items: BulkClassificationItem[];
+  file_metadata?: FileMetadata;
   error_message: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
 }
 
-// Cloud Run base URL — set VITE_PY_BASE_URL in your Vercel / local .env
-// The Cloud Run service is deployed with --allow-unauthenticated so no auth header is needed.
-// Example: https://trade-ai-dev-xxxx-uc.a.run.app
-const PY_BASE_URL = (import.meta.env.VITE_PY_BASE_URL as string | undefined) || '';
-
 /**
- * Helper: call Cloud Run directly via fetch.
- * Falls back gracefully if PY_BASE_URL is not configured.
+ * Helper: parse a Supabase edge function response that may be a string or object.
  */
-async function callCloudRun(
-  path: string,
-  method: 'GET' | 'POST' | 'DELETE',
-  body?: BodyInit,
-  extraHeaders?: Record<string, string>,
-): Promise<any | null> {
-  if (!PY_BASE_URL) {
-    console.error('VITE_PY_BASE_URL is not set. Add it to your Vercel environment variables.');
-    return null;
-  }
-  try {
-    const resp = await fetch(`${PY_BASE_URL}${path}`, {
-      method,
-      body,
-      headers: extraHeaders,
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      console.error(`Cloud Run ${method} ${path} → ${resp.status}:`, text);
+function parseEdgeFunctionResponse(response: any): any | null {
+  if (response == null) return null;
+  if (typeof response === 'string') {
+    try {
+      return JSON.parse(response);
+    } catch {
       return null;
     }
-    return await resp.json();
-  } catch (err) {
-    console.error(`Cloud Run fetch error (${method} ${path}):`, err);
-    return null;
   }
+  return response;
 }
 
 /**
  * Start a bulk classification run by uploading a file.
- * Calls Cloud Run directly: POST /bulk-classify
- * Requires VITE_PY_BASE_URL environment variable.
+ * Routes through the python-dev Supabase Edge Function with action='bulk-classify'.
+ * The edge function forwards the file to the Python backend POST /bulk-classify.
  */
 export async function startBulkClassification(
   file: File,
   userId: string,
   confidenceThreshold: number = 0.70,
-): Promise<{ run_id: string; status: string; total_items: number } | null> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('user_id', userId);
-  formData.append('confidence_threshold', confidenceThreshold.toString());
-  // No Content-Type header — fetch sets it automatically with the correct boundary
-  return callCloudRun('/bulk-classify', 'POST', formData);
+): Promise<{ run_id: string; status: string; total_items: number; file_metadata?: FileMetadata } | null> {
+  try {
+    const formData = new FormData();
+    formData.append('action', 'bulk-classify');
+    formData.append('file', file);
+    formData.append('user_id', userId);
+    formData.append('confidence_threshold', confidenceThreshold.toString());
+
+    console.log('Starting bulk classification via edge function:', {
+      fileName: file.name,
+      userId,
+      confidenceThreshold,
+    });
+
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: formData,
+    });
+
+    console.log('Bulk classification start response:', { data, error });
+
+    if (error) {
+      console.error('Edge function error (bulk-classify):', error);
+      return null;
+    }
+
+    return parseEdgeFunctionResponse(data);
+  } catch (err) {
+    console.error('Error starting bulk classification:', err);
+    return null;
+  }
 }
 
 /**
  * Poll the status of a bulk classification run.
- * Calls Cloud Run directly: GET /bulk-classify/{run_id}
+ * Routes through the python-dev Edge Function with action='bulk-classify-status'.
+ * The edge function forwards to GET /bulk-classify/{run_id}.
  */
 export async function getBulkClassificationStatus(
   runId: string,
 ): Promise<BulkClassificationRun | null> {
-  return callCloudRun(`/bulk-classify/${runId}`, 'GET');
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: {
+        action: 'bulk-classify-status',
+        run_id: runId,
+      },
+    });
+
+    if (error) {
+      console.error('Edge function error (bulk-classify-status):', error);
+      return null;
+    }
+
+    return parseEdgeFunctionResponse(data);
+  } catch (err) {
+    console.error('Error polling bulk classification status:', err);
+    return null;
+  }
 }
 
 /**
  * Submit clarification answers for a bulk classification exception item.
- * Calls Cloud Run directly: POST /bulk-classify/{run_id}/clarify
+ * Routes through the python-dev Edge Function with action='bulk-classify-clarify'.
+ * The edge function forwards to POST /bulk-classify/{run_id}/clarify.
  */
 export async function clarifyBulkItem(
   runId: string,
   itemId: string,
   answers: Record<string, string>,
 ): Promise<any | null> {
-  return callCloudRun(
-    `/bulk-classify/${runId}/clarify`,
-    'POST',
-    JSON.stringify({ item_id: itemId, answers }),
-    { 'Content-Type': 'application/json' },
-  );
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: {
+        action: 'bulk-classify-clarify',
+        run_id: runId,
+        item_id: itemId,
+        answers,
+      },
+    });
+
+    if (error) {
+      console.error('Edge function error (bulk-classify-clarify):', error);
+      return null;
+    }
+
+    return parseEdgeFunctionResponse(data);
+  } catch (err) {
+    console.error('Error clarifying bulk item:', err);
+    return null;
+  }
 }
 
 /**
  * Cancel a running bulk classification.
- * Calls Cloud Run directly: DELETE /bulk-classify/{run_id}
+ * Routes through the python-dev Edge Function with action='bulk-classify-cancel'.
+ * The edge function forwards to DELETE /bulk-classify/{run_id}.
  */
 export async function cancelBulkClassification(
   runId: string,
 ): Promise<boolean> {
-  const result = await callCloudRun(`/bulk-classify/${runId}`, 'DELETE');
-  return result?.success === true;
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: {
+        action: 'bulk-classify-cancel',
+        run_id: runId,
+      },
+    });
+
+    if (error) {
+      console.error('Edge function error (bulk-classify-cancel):', error);
+      return false;
+    }
+
+    const result = parseEdgeFunctionResponse(data);
+    return result?.success === true;
+  } catch (err) {
+    console.error('Error cancelling bulk classification:', err);
+    return false;
+  }
 }

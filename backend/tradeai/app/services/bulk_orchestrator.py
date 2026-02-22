@@ -45,8 +45,11 @@ def create_bulk_run(
     if not rows:
         raise ValueError("File contains no data or could not be parsed")
 
-    # Extract structured product data
-    products = extract_all_products(rows, file_name)
+    # Extract structured product data (returns dict with products + metadata)
+    extraction_result = extract_all_products(rows, file_name)
+    products = extraction_result["products"]
+    file_metadata = extraction_result["metadata"]
+
     if not products:
         raise ValueError("No products could be extracted from the file")
 
@@ -67,6 +70,7 @@ def create_bulk_run(
         "results_summary": {"completed": 0, "exceptions": 0, "errors": 0},
         "items": [],
         "products": products,  # Keep for re-classification
+        "file_metadata": file_metadata,
         "confidence_threshold": confidence_threshold,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -94,6 +98,7 @@ def create_bulk_run(
         "run_id": run_id,
         "status": "processing",
         "total_items": total_items,
+        "file_metadata": file_metadata,
     }
 
 
@@ -112,6 +117,8 @@ def classify_single_product(product_data: Dict[str, Any], confidence_threshold: 
         description_parts.append(f"Material: {product_data['materials']}")
     if product_data.get("country_of_origin"):
         description_parts.append(f"Origin: {product_data['country_of_origin']}")
+    if product_data.get("intended_use"):
+        description_parts.append(f"Intended use: {product_data['intended_use']}")
 
     product_description = ". ".join(description_parts)
 
@@ -287,6 +294,7 @@ def get_bulk_run(run_id: str) -> Optional[Dict[str, Any]]:
         "progress_current": run["progress_current"],
         "progress_total": run["progress_total"],
         "results_summary": run["results_summary"],
+        "file_metadata": run.get("file_metadata"),
         "items": [
             {
                 "id": item["id"],
