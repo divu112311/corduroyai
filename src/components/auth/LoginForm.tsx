@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Mail, Lock, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import logo from '../../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
-import { supabase } from '../../lib/supabase';
+import { supabase, siteUrl } from '../../lib/supabase';
 
 interface LoginFormProps {
   onLogin: (user: any) => void;
@@ -24,7 +24,7 @@ export function LoginForm({ onLogin, onSwitchToSignUp, onSwitchToResetPassword }
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: siteUrl,
         },
       });
       if (oauthError) {
