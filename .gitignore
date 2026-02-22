@@ -53,3 +53,7 @@ SUPABASE_SCHEMA.md
 
 # Sensitive documentation (schema details, internal analysis)
 DATABASE_ANALYSIS.md
+
+# Staging folder and clone for private repo (do not commit)
+_for_corduroyaiscripts/
+_corduroyaiscripts_repo/
