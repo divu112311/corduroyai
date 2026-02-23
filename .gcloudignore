@@ -1,0 +1,13 @@
+.git
+.gitignore
+node_modules/
+.env
+.env.*
+*.log
+.vscode/
+.idea/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+supabase/.temp/
