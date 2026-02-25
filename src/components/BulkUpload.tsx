@@ -9,6 +9,7 @@ import {
   type BulkClassificationItem,
   type FileMetadata,
 } from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
 import React from 'react';
 
 interface BulkItem {
@@ -173,10 +174,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setProgressTotal(0);
     setFileMetadata(null);
 
-    // TODO: Replace with actual user_id from auth context
-    const userId = 'anonymous';
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErrorMessage('You must be logged in to classify products.');
+      setProcessing(false);
+      return;
+    }
 
-    const result = await startBulkClassification(fileToUpload, userId);
+    const result = await startBulkClassification(fileToUpload, user.id);
 
     if (!result) {
       setErrorMessage('Failed to start bulk classification. Please try again.');

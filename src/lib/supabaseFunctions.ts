@@ -204,11 +204,20 @@ export interface BulkClassificationRun {
 /**
  * Helper: parse a Supabase edge function response that may be a string or object.
  */
-function parseEdgeFunctionResponse(response: any): any | null {
+async function parseEdgeFunctionResponse(response: any): Promise<any | null> {
   if (response == null) return null;
   if (typeof response === 'string') {
     try {
       return JSON.parse(response);
+    } catch {
+      return null;
+    }
+  }
+  // Supabase JS may return a Blob when the request uses FormData
+  if (response instanceof Blob) {
+    try {
+      const text = await response.text();
+      return JSON.parse(text);
     } catch {
       return null;
     }
@@ -338,7 +347,7 @@ export async function cancelBulkClassification(
       return false;
     }
 
-    const result = parseEdgeFunctionResponse(data);
+    const result = await parseEdgeFunctionResponse(data);
     return result?.success === true;
   } catch (err) {
     console.error('Error cancelling bulk classification:', err);
