@@ -255,14 +255,25 @@ export async function startBulkClassification(
     console.log('Bulk classification start response:', { data, error });
 
     if (error) {
-      console.error('Edge function error (bulk-classify):', error);
+      // Try to extract detailed error from the response context
+      let detail = '';
+      try {
+        const ctx = (error as any).context;
+        if (ctx && typeof ctx.json === 'function') {
+          const body = await ctx.json();
+          detail = body?.detail || '';
+        }
+      } catch { /* ignore parse errors */ }
+      console.error('Edge function error (bulk-classify):', error, 'detail:', detail);
+      // Throw with detail so the caller can show a meaningful message
+      if (detail) throw new Error(detail);
       return null;
     }
 
     return parseEdgeFunctionResponse(data);
   } catch (err) {
     console.error('Error starting bulk classification:', err);
-    return null;
+    throw err;
   }
 }
 

@@ -168,6 +168,9 @@ async def bulk_classify(
         raise HTTPException(status_code=400, detail=str(e))
     except ImportError as e:
         raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        print(f"Unexpected error in bulk-classify: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
     # Start processing in background thread
     thread = threading.Thread(
