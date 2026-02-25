@@ -365,7 +365,7 @@ export default function App() {
 
   // Authenticated app
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
         <div className="mb-8">
@@ -421,22 +421,6 @@ export default function App() {
             <span>Settings</span>
           </button>
 
-          <div className="mt-4 pt-4 border-t border-slate-200">
-            <button
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                isChatOpen
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 border border-blue-200'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              <Sparkles className="w-5 h-5" />
-              <span>AI Chat</span>
-              {!isChatOpen && (
-                <span className="ml-auto w-2 h-2 bg-green-500 rounded-full"></span>
-              )}
-            </button>
-          </div>
         </nav>
         
         {/* User Profile Section */}
@@ -496,6 +480,18 @@ export default function App() {
         {currentView === 'activity' && <Activity />}
         {currentView === 'settings' && <Settings />}
       </main>
+
+      {/* AI Chat toggle — right edge */}
+      {!isChatOpen && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className="fixed top-4 right-4 z-40 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+          title="Open AI Chat"
+        >
+          <Sparkles className="w-5 h-5" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></span>
+        </button>
+      )}
 
       {/* Chat Panel — right sidebar */}
       <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
