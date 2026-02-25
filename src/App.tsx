@@ -10,7 +10,7 @@ import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
-import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon, Sparkles } from 'lucide-react';
+import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
 import { ChatPanel } from './components/ChatPanel';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
@@ -423,19 +423,6 @@ export default function App() {
 
         </nav>
 
-        {/* AI Chat toggle — in sidebar, above user profile */}
-        <button
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-4 ${
-            isChatOpen
-              ? 'bg-blue-50 text-blue-600'
-              : 'text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          <Sparkles className="w-5 h-5" />
-          <span>AI Chat</span>
-        </button>
-
         {/* User Profile Section */}
         <div className="mt-auto pt-6 border-t border-slate-200">
           <div className="relative">
@@ -494,8 +481,8 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
 
-      {/* Chat Panel — flex child, not floating */}
-      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      {/* Chat Panel — always rendered on right, has its own toggle */}
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
     </div>
   );
 }
