@@ -33,11 +33,13 @@ def parse_csv(file_content: bytes) -> List[Dict[str, Any]]:
 
     rows = []
     for i, row in enumerate(reader):
+        # DictReader may add a None key for extra columns — remove it
+        clean_row = {k: v for k, v in row.items() if k is not None}
         # Skip completely empty rows
-        if all(v is None or v.strip() == "" for v in row.values()):
+        if all(v is None or (isinstance(v, str) and v.strip() == "") for v in clean_row.values()):
             continue
-        row["__row_number"] = i + 1
-        rows.append(dict(row))
+        clean_row["__row_number"] = i + 1
+        rows.append(clean_row)
 
     return rows
 

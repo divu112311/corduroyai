@@ -3,13 +3,154 @@ import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Fil
 import { BulkItemDetail } from './BulkItemDetail';
 import { ExceptionReview } from './ExceptionReview';
 import {
-  startBulkClassification,
-  getBulkClassificationStatus,
-  cancelBulkClassification,
-  type BulkClassificationItem,
+  classifyProduct,
   type FileMetadata,
 } from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
+import { getUserMetadata } from '../lib/userService';
 import React from 'react';
+
+// ── CSV parsing ──────────────────────────────────────────────────────────────
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { result.push(current.trim()); current = ''; }
+      else current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
+  // Handle BOM
+  const clean = text.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  const headers = parseCSVLine(lines[0]);
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseCSVLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
+// ── Column detection ─────────────────────────────────────────────────────────
+
+const COLUMN_SYNONYMS: Record<string, string[]> = {
+  product_name: ['product', 'product name', 'product_name', 'item', 'item name', 'name', 'sku', 'sku name', 'part', 'part name', 'article'],
+  description:  ['description', 'desc', 'product description', 'details', 'product details', 'item description'],
+  origin:       ['origin', 'country', 'country of origin', 'coo', 'source', 'made in', 'country_of_origin'],
+  materials:    ['material', 'materials', 'fabric', 'composition', 'material composition', 'component'],
+  cost:         ['cost', 'value', 'price', 'unit value', 'unit_value', 'unit cost', 'unit price', 'fob', 'declared value'],
+};
+
+function detectColumns(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+
+  for (const [field, synonyms] of Object.entries(COLUMN_SYNONYMS)) {
+    for (const syn of synonyms) {
+      const idx = lowerHeaders.indexOf(syn);
+      if (idx !== -1 && !Object.values(mapping).includes(headers[idx])) {
+        mapping[field] = headers[idx];
+        break;
+      }
+    }
+  }
+  // Fallback: first column = product_name if not detected
+  if (!mapping.product_name && headers.length > 0) mapping.product_name = headers[0];
+  if (!mapping.description && headers.length > 1 && !Object.values(mapping).includes(headers[1])) {
+    mapping.description = headers[1];
+  }
+  return mapping;
+}
+
+// ── Concurrency helper ───────────────────────────────────────────────────────
+
+async function runWithConcurrency(
+  tasks: (() => Promise<void>)[],
+  limit: number,
+  shouldCancel: () => boolean,
+): Promise<void> {
+  let idx = 0;
+  async function worker() {
+    while (idx < tasks.length && !shouldCancel()) {
+      const i = idx++;
+      if (i < tasks.length) await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
+}
+
+// ── Build product description from a CSV row ─────────────────────────────────
+// Uses the detected column mapping to build a clean, natural-language product
+// description — exactly like the working single-item flow.
+// This avoids dumping raw key-value pairs (e.g. "Cost: 15.99") into the prompt.
+
+function buildProductDescription(
+  row: Record<string, string>,
+  colMap: Record<string, string>,
+): string {
+  const parts: string[] = [];
+
+  const productName = colMap.product_name ? row[colMap.product_name] : '';
+  const description = colMap.description ? row[colMap.description] : '';
+  const origin = colMap.origin ? row[colMap.origin] : '';
+  const materials = colMap.materials ? row[colMap.materials] : '';
+
+  if (productName) parts.push(productName);
+  if (description && description !== productName) parts.push(description);
+  if (materials) parts.push(`Material: ${materials}`);
+  if (origin) parts.push(`Country of origin: ${origin}`);
+
+  // If nothing was mapped, fall back to joining all non-empty values
+  if (parts.length === 0) {
+    return Object.entries(row)
+      .filter(([_, v]) => v && v.trim())
+      .map(([_, v]) => v.trim())
+      .join('. ');
+  }
+
+  return parts.join('. ');
+}
+
+// ── Retry helper with exponential backoff ─────────────────────────────────────
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  baseDelay: number = 1000,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+      }
+    }
+  }
+  throw lastError;
+}
 
 interface BulkItem {
   id: number | string;
@@ -24,6 +165,7 @@ interface BulkItem {
   cost?: string;
   bulkItemId?: string;
   clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
+  error?: string;
 }
 
 type SortField = 'name' | 'confidence' | 'status';
@@ -33,34 +175,6 @@ interface BulkUploadProps {
   initialFile?: File | null;
   initialSupportingFiles?: File[];
   autoStart?: boolean;
-}
-
-function mapBulkItemToUI(item: BulkClassificationItem): BulkItem {
-  const result = item.classification_result;
-  const matchedRules = result?.matched_rules || [];
-  const topRule = matchedRules[0];
-  const maxConf = matchedRules.length > 0
-    ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
-    : 0;
-
-  let status: 'pending' | 'complete' | 'exception' = 'pending';
-  if (item.status === 'completed') status = 'complete';
-  else if (item.status === 'exception' || item.status === 'error') status = 'exception';
-
-  return {
-    id: item.row_number,
-    productName: item.extracted_data.product_name || item.extracted_data.description || 'Unknown',
-    description: item.extracted_data.description || '',
-    status,
-    hts: topRule?.hts || '',
-    confidence: maxConf,
-    tariff: topRule?.tariff_rate ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
-    origin: item.extracted_data.country_of_origin || '',
-    materials: item.extracted_data.materials || '',
-    cost: item.extracted_data.unit_value || '',
-    bulkItemId: item.id,
-    clarificationQuestions: item.clarification_questions,
-  };
 }
 
 export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false }: BulkUploadProps = {}) {
@@ -75,47 +189,11 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [showFilters, setShowFilters] = useState(false);
   const [supportingFiles, setSupportingFiles] = useState<File[]>(initialSupportingFiles);
   const [uploadedMainFile, setUploadedMainFile] = useState<File | null>(initialFile);
-  const [aiChatOpen, setAiChatOpen] = useState(true);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  const [bulkRunId, setBulkRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
-
-  // Polling logic with backoff
-  const pollStatus = useCallback(async (runId: string, attempt: number = 0) => {
-    const data = await getBulkClassificationStatus(runId);
-    if (!data) {
-      setErrorMessage('Failed to get classification status');
-      setProcessing(false);
-      return;
-    }
-
-    setProgressCurrent(data.progress_current);
-    setProgressTotal(data.progress_total);
-
-    if (data.items && data.items.length > 0) {
-      setItems(data.items.map(mapBulkItemToUI));
-    }
-
-    // Capture file metadata from polling response (if not already set)
-    if (data.file_metadata && !fileMetadata) {
-      setFileMetadata(data.file_metadata);
-    }
-
-    if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
-      setProcessing(false);
-      if (data.status === 'failed') {
-        setErrorMessage(data.error_message || 'Classification failed');
-      }
-      return;
-    }
-
-    // Continue polling with backoff: 1s, 1.5s, 2s, ... max 5s
-    const delay = Math.min(1000 + attempt * 500, 5000);
-    pollingRef.current = setTimeout(() => pollStatus(runId, attempt + 1), delay);
-  }, []);
+  const cancelledRef = useRef(false);
 
   // Auto-start classification if initial file is provided
   React.useEffect(() => {
@@ -123,13 +201,6 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       startClassification();
     }
   }, [initialFile, autoStart]);
-
-  // Cleanup polling on unmount
-  React.useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-    };
-  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -172,34 +243,210 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setProgressCurrent(0);
     setProgressTotal(0);
     setFileMetadata(null);
+    cancelledRef.current = false;
 
-    // TODO: Replace with actual user_id from auth context
-    const userId = 'anonymous';
-
-    const result = await startBulkClassification(fileToUpload, userId);
-
-    if (!result) {
-      setErrorMessage('Failed to start bulk classification. Please try again.');
+    // Validate file type
+    const ext = fileToUpload.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'csv') {
+      setErrorMessage('Currently only CSV files are supported for bulk classification. XLSX support coming soon.');
       setProcessing(false);
       return;
     }
 
-    setBulkRunId(result.run_id);
-    setProgressTotal(result.total_items);
-    if (result.file_metadata) {
-      setFileMetadata(result.file_metadata);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErrorMessage('You must be logged in to classify products.');
+      setProcessing(false);
+      return;
     }
 
-    // Start polling
-    pollStatus(result.run_id);
+    // Pre-fetch the user's confidence threshold ONCE before the loop.
+    // This avoids N redundant getUserMetadata calls (one per item) and
+    // prevents concurrent Supabase queries from causing failures.
+    let confidenceThreshold = 0.75;
+    try {
+      const userMeta = await getUserMetadata(user.id);
+      confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+    } catch (err) {
+      console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
+    }
+
+    // Parse CSV locally
+    let text: string;
+    try {
+      text = await fileToUpload.text();
+    } catch {
+      setErrorMessage('Failed to read file.');
+      setProcessing(false);
+      return;
+    }
+
+    const { headers, rows } = parseCSV(text);
+    if (rows.length === 0) {
+      setErrorMessage('No data rows found in the file. Make sure the first row contains headers.');
+      setProcessing(false);
+      return;
+    }
+
+    // Detect column mapping
+    const colMap = detectColumns(headers);
+    setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
+    setProgressTotal(rows.length);
+
+    // Build initial items from parsed rows
+    const initialItems: BulkItem[] = rows.map((row, idx) => ({
+      id: idx + 1,
+      productName: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
+      description: (colMap.description ? row[colMap.description] : '') || '',
+      origin: (colMap.origin ? row[colMap.origin] : '') || '',
+      materials: (colMap.materials ? row[colMap.materials] : '') || '',
+      cost: (colMap.cost ? row[colMap.cost] : '') || '',
+      status: 'pending' as const,
+    }));
+    setItems(initialItems);
+
+    // Classify each row using the working single-product pipeline.
+    // Each call is fully STATELESS — a fresh messages array (system + user
+    // prompt only) is sent per product. No prior conversation history or
+    // tool_use blocks are replayed, which avoids duplicate ID errors.
+    let completed = 0;
+
+    const tasks = rows.map((row, idx) => async () => {
+      if (cancelledRef.current) return;
+
+      // Build a clean product description using detected column mapping,
+      // mirroring what the single-item ClassificationView sends.
+      const description = buildProductDescription(row, colMap);
+
+      if (!description.trim()) {
+        completed++;
+        setProgressCurrent(completed);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: 'No product description available' }
+            : item
+        ));
+        return;
+      }
+
+      try {
+        // Each call is independent — pass pre-fetched threshold so
+        // classifyProduct does NOT re-fetch user metadata per item.
+        // classifyProduct returns null on failure, so wrap to throw for retry.
+        const result = await retryWithBackoff(
+          async () => {
+            const res = await classifyProduct(description, user.id, confidenceThreshold);
+            if (res === null) throw new Error('Classification returned null (edge function or backend error)');
+            return res;
+          },
+          2,   // up to 2 retries
+          1500, // 1.5s base delay with exponential backoff
+        ).catch(() => null); // After retries exhausted, treat as null
+        completed++;
+        setProgressCurrent(completed);
+
+        if (cancelledRef.current) return;
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== idx + 1) return item;
+
+          if (!result) {
+            return { ...item, status: 'exception' as const, error: 'Classification returned no result' };
+          }
+
+          // Handle clarification needed
+          if (result.type === 'clarify' || result.needs_clarification) {
+            const questions = (result.clarifications || result.questions || []).map((c: any) => ({
+              question: typeof c === 'string' ? c : c.question || c,
+              options: typeof c === 'string' ? [] : c.options || [],
+            }));
+            return { ...item, status: 'exception' as const, clarificationQuestions: questions };
+          }
+
+          // Handle explicit exception from backend (e.g. LOW_CONFIDENCE)
+          if (result.type === 'exception') {
+            const exceptionData = result.data;
+            const exceptionRules = exceptionData?.matched_rules || [];
+            const topExRule = exceptionRules[0];
+            return {
+              ...item,
+              status: 'exception' as const,
+              hts: topExRule?.hts || '',
+              confidence: Math.round((result.confidence || 0) * 100),
+              error: result.reason || 'Low confidence',
+            };
+          }
+
+          // Extract matched rules — mirroring ClassificationView logic
+          let matchedRules: any[] = [];
+          if (result.type === 'answer' && result.matches) {
+            if (Array.isArray(result.matches)) {
+              matchedRules = result.matches;
+            } else if (result.matches.matched_rules && Array.isArray(result.matches.matched_rules)) {
+              matchedRules = result.matches.matched_rules;
+            }
+          } else if (result.candidates) {
+            matchedRules = result.candidates;
+          }
+
+          // Sort by confidence descending (matching ClassificationView)
+          const sortedMatches = [...matchedRules].sort((a: any, b: any) => {
+            const aConf = a.confidence || a.score || 0;
+            const bConf = b.confidence || b.score || 0;
+            return bConf - aConf;
+          });
+
+          const topRule = sortedMatches[0];
+
+          // Confidence cascade: try rule confidence, then similarity score,
+          // then the response-level max_confidence. This matches the backend
+          // pipeline where generate_rationale sets confidence on each rule.
+          const rawConf = topRule
+            ? (topRule.confidence || topRule.score || 0)
+            : 0;
+          const maxConf = rawConf > 0
+            ? Math.round(rawConf * 100)
+            : Math.round((result.max_confidence || 0) * 100);
+
+          if (!topRule || maxConf === 0) {
+            return {
+              ...item,
+              status: 'exception' as const,
+              error: 'No HTS match found or 0% confidence',
+            };
+          }
+
+          return {
+            ...item,
+            status: 'complete' as const,
+            hts: topRule.hts || '',
+            confidence: maxConf,
+            tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+          };
+        }));
+      } catch (err: any) {
+        completed++;
+        setProgressCurrent(completed);
+        const errorMsg = err?.message || String(err);
+        console.error(`Error classifying row ${idx + 1}:`, errorMsg);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: `Classification failed: ${errorMsg}` }
+            : item
+        ));
+      }
+    });
+
+    // Process 2 at a time — each classification triggers 3+ LLM calls on the
+    // backend (preprocess, rule engine, rationale), so lower concurrency
+    // prevents rate-limit / timeout cascades that cause blanket failures.
+    await runWithConcurrency(tasks, 2, () => cancelledRef.current);
+    setProcessing(false);
   };
 
-  const handleCancelClassification = async () => {
-    if (bulkRunId) {
-      await cancelBulkClassification(bulkRunId);
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-      setProcessing(false);
-    }
+  const handleCancelClassification = () => {
+    cancelledRef.current = true;
+    setProcessing(false);
   };
 
   const handleSort = (field: SortField) => {
@@ -808,7 +1055,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                           {item.status === 'exception' && (
                             <div className="flex items-center gap-2 text-red-600">
                               <AlertCircle className="w-5 h-5" />
-                              <span className="text-sm">Exception</span>
+                              <div>
+                                <span className="text-sm">Exception</span>
+                                {item.error && (
+                                  <p className="text-xs text-red-400 mt-0.5 max-w-[200px] truncate" title={item.error}>{item.error}</p>
+                                )}
+                              </div>
                             </div>
                           )}
                           {item.status === 'pending' && (
@@ -823,25 +1075,29 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                         <td className="px-6 py-4 text-slate-900 text-sm">{item.origin}</td>
                         <td className="px-6 py-4 text-slate-900">{item.hts}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm ${
-                              (item.confidence || 0) >= 90 ? 'text-green-600' : 
-                              (item.confidence || 0) >= 75 ? 'text-amber-600' : 
-                              'text-red-600'
-                            }`}>
-                              {item.confidence}%
-                            </span>
-                            <div className="w-16 h-1.5 bg-slate-200 rounded-full">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  (item.confidence || 0) >= 90 ? 'bg-green-500' : 
-                                  (item.confidence || 0) >= 75 ? 'bg-amber-500' : 
-                                  'bg-red-500'
-                                }`}
-                                style={{ width: `${item.confidence}%` }}
-                              />
+                          {item.confidence != null && item.confidence > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm ${
+                                item.confidence >= 90 ? 'text-green-600' :
+                                item.confidence >= 75 ? 'text-amber-600' :
+                                'text-red-600'
+                              }`}>
+                                {item.confidence}%
+                              </span>
+                              <div className="w-16 h-1.5 bg-slate-200 rounded-full">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    item.confidence >= 90 ? 'bg-green-500' :
+                                    item.confidence >= 75 ? 'bg-amber-500' :
+                                    'bg-red-500'
+                                  }`}
+                                  style={{ width: `${item.confidence}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <span className="text-sm text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-slate-900">{item.tariff}</td>
                       </tr>
@@ -878,7 +1134,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             origin: exceptionItem.origin || 'China',
             reason: 'Low confidence score - Multiple possible classifications detected'
           }}
-          bulkRunId={bulkRunId || undefined}
+          bulkRunId={undefined}
           bulkItemId={exceptionItem.bulkItemId || undefined}
           clarificationQuestions={exceptionItem.clarificationQuestions}
           onClose={() => setExceptionItem(null)}

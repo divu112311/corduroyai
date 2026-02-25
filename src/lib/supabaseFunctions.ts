@@ -204,11 +204,20 @@ export interface BulkClassificationRun {
 /**
  * Helper: parse a Supabase edge function response that may be a string or object.
  */
-function parseEdgeFunctionResponse(response: any): any | null {
+async function parseEdgeFunctionResponse(response: any): Promise<any | null> {
   if (response == null) return null;
   if (typeof response === 'string') {
     try {
       return JSON.parse(response);
+    } catch {
+      return null;
+    }
+  }
+  // Supabase JS may return a Blob when the request uses FormData
+  if (response instanceof Blob) {
+    try {
+      const text = await response.text();
+      return JSON.parse(text);
     } catch {
       return null;
     }
@@ -246,14 +255,45 @@ export async function startBulkClassification(
     console.log('Bulk classification start response:', { data, error });
 
     if (error) {
-      console.error('Edge function error (bulk-classify):', error);
-      return null;
+      // Try to extract detailed error from the response context
+      let detail = '';
+      try {
+        const ctx = (error as any).context;
+        if (ctx) {
+          if (typeof ctx.json === 'function') {
+            try {
+              const body = await ctx.json();
+              detail = body?.detail || body?.message || JSON.stringify(body);
+            } catch {
+              // JSON parse failed, try text
+              if (typeof ctx.text === 'function') {
+                detail = await ctx.text();
+              }
+            }
+          } else if (typeof ctx.text === 'function') {
+            detail = await ctx.text();
+          }
+        }
+      } catch { /* ignore parse errors */ }
+      // Also check the error message itself
+      const errorMsg = detail || (error as any)?.message || String(error);
+      console.error('Edge function error (bulk-classify):', error, 'detail:', errorMsg);
+      throw new Error(errorMsg || 'Edge function returned an error');
     }
 
-    return parseEdgeFunctionResponse(data);
+    const parsed = await parseEdgeFunctionResponse(data);
+    if (!parsed) {
+      console.error('Bulk classification response could not be parsed. Raw data:', data);
+      throw new Error(
+        typeof data === 'string'
+          ? `Backend error: ${data.slice(0, 200)}`
+          : 'Backend returned an unparseable response'
+      );
+    }
+    return parsed;
   } catch (err) {
     console.error('Error starting bulk classification:', err);
-    return null;
+    throw err;
   }
 }
 
@@ -338,7 +378,7 @@ export async function cancelBulkClassification(
       return false;
     }
 
-    const result = parseEdgeFunctionResponse(data);
+    const result = await parseEdgeFunctionResponse(data);
     return result?.success === true;
   } catch (err) {
     console.error('Error cancelling bulk classification:', err);
