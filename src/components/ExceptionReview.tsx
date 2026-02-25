@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { AlertCircle, CheckCircle, X, ArrowLeft, Sparkles, ThumbsUp, ThumbsDown, MessageSquare, Upload, FileText, Send, Lightbulb, Info, Plus, Loader2 } from 'lucide-react';
 import { getClassificationRun, addClarificationMessage, ClarificationMessage } from '../lib/classificationService';
-import { classifyProduct } from '../lib/supabaseFunctions';
+import { classifyProduct, clarifyBulkItem } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
 
 interface AlternateClassification {
@@ -15,7 +15,7 @@ interface AlternateClassification {
 
 interface ExceptionReviewProps {
   product: {
-    id: number;
+    id: number | string;
     productName: string;
     description: string;
     hts: string;
@@ -37,8 +37,11 @@ interface ExceptionReviewProps {
     classification_run_id?: number;
   };
   readOnly?: boolean;
+  bulkRunId?: string;
+  bulkItemId?: string;
+  clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
   onClose: () => void;
-  onApprove: () => void;
+  onApprove: (updatedProduct?: any) => void;
   onReject: () => void;
 }
 
@@ -48,7 +51,7 @@ interface ChatMessage {
   timestamp?: string;
 }
 
-export function ExceptionReview({ product, readOnly, onClose, onApprove, onReject }: ExceptionReviewProps) {
+export function ExceptionReview({ product, readOnly, bulkRunId, bulkItemId, clarificationQuestions, onClose, onApprove, onReject }: ExceptionReviewProps) {
   const [selectedHts, setSelectedHts] = useState(product.hts);
   const [notes, setNotes] = useState('');
   const [currentConfidence, setCurrentConfidence] = useState(product.confidence);
@@ -74,12 +77,28 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
           text: `I see you're reviewing "${product.productName}". I've flagged this with ${product.confidence}% confidence because of some ambiguity in the classification. Let me walk you through what I found and how we can resolve this together.`,
           timestamp: 'Just now'
         },
-        {
+      ];
+
+      // If bulk clarification questions are available, show them
+      if (clarificationQuestions && clarificationQuestions.length > 0) {
+        const questionLines = clarificationQuestions.map((q, i) => {
+          const optionsText = q.options && q.options.length > 0
+            ? `\n   Options: ${q.options.join(', ')}`
+            : '';
+          return `${i + 1}. ${q.question}${optionsText}`;
+        }).join('\n');
+        introMessages.push({
+          role: 'assistant',
+          text: `To improve the classification, I need some additional information:\n\n${questionLines}\n\nPlease answer these questions in the chat, or upload supporting documents.`,
+          timestamp: 'Just now'
+        });
+      } else {
+        introMessages.push({
           role: 'assistant',
           text: `The main challenge here is determining the product's primary function. I've suggested HTS ${product.hts}, but there are a few other possibilities depending on specific details. Feel free to ask me questions or upload any supporting documents you have!`,
           timestamp: 'Just now'
-        }
-      ];
+        });
+      }
 
       if (!product.classification_run_id) {
         setChatMessages(introMessages);
@@ -269,6 +288,79 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
       updateConfidenceScore(newIssuesResolved);
     }
 
+    // If this is a bulk classification item with a backend run, call the clarification endpoint
+    if (bulkRunId && bulkItemId) {
+      setIsSendingMessage(true);
+
+      // Build answers object from user input mapped to clarification questions
+      const answers: Record<string, string> = {};
+      if (clarificationQuestions && clarificationQuestions.length > 0) {
+        clarificationQuestions.forEach((q, idx) => {
+          answers[`q${idx}`] = userInput;
+        });
+      } else {
+        answers['clarification'] = userInput;
+      }
+
+      try {
+        const result = await clarifyBulkItem(bulkRunId, bulkItemId, answers);
+
+        if (result && result.status === 'completed') {
+          const matchedRules = result.classification_result?.matched_rules || [];
+          const topRule = matchedRules[0];
+          const newConfidence = matchedRules.length > 0
+            ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
+            : currentConfidence;
+
+          setPreviousConfidence(currentConfidence);
+          setCurrentConfidence(newConfidence);
+
+          if (topRule?.hts) {
+            setSelectedHts(topRule.hts);
+          }
+
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: `Thanks for the clarification! I've re-classified this product with the additional context you provided.\n\n${topRule ? `📋 Updated HTS: ${topRule.hts}\n📊 Confidence: ${newConfidence}%\n💰 Tariff: ${topRule.tariff_rate ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : 'N/A'}` : ''}${newConfidence >= 85 ? '\n\n✅ This classification is now high confidence and ready for approval!' : '\n\nYou can provide more details to further improve the confidence score.'}`,
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else if (result && result.status === 'exception') {
+          const newQuestions = result.clarification_questions || [];
+          const questionText = newQuestions.length > 0
+            ? newQuestions.map((q: any, i: number) => `${i + 1}. ${q.question}`).join('\n')
+            : 'Could you provide more specific details about this product?';
+
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: `Thank you for that information. I still need a bit more to finalize the classification:\n\n${questionText}`,
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        } else {
+          const assistantMessage: ChatMessage = {
+            role: 'assistant',
+            text: 'I received your input but had trouble processing the re-classification. You can try providing more specific details or upload a supporting document.',
+            timestamp: 'Just now'
+          };
+          setChatMessages(prev => [...prev, assistantMessage]);
+        }
+      } catch (err) {
+        const assistantMessage: ChatMessage = {
+          role: 'assistant',
+          text: 'Sorry, there was an error processing your clarification. Please try again.',
+          timestamp: 'Just now'
+        };
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } finally {
+        setIsSendingMessage(false);
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+      return;
+    }
+
     // Save user message to classification run conversations if we have a run ID
     if (product.classification_run_id) {
       try {
@@ -290,7 +382,6 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Build a description that includes context for the API
       const contextDescription = `${product.productName}. ${product.description || ''}. Additional info from user: ${userInput}`;
 
       const response = await classifyProduct(
@@ -306,13 +397,11 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
       let aiResponse = '';
 
       if (response) {
-        // If the API returned clarification questions, use those
         if (response.needs_clarification && response.questions && response.questions.length > 0) {
           aiResponse = `Based on your input, I have a few follow-up questions:\n\n${response.questions.map((q: string, i: number) => `${i + 1}. ${q}`).join('\n')}\n\nPlease provide any details you can.`;
         } else if (response.clarifications && response.clarifications.length > 0) {
           aiResponse = `Thank you for the information! I'd like to clarify:\n\n${response.clarifications.map((c: string, i: number) => `${i + 1}. ${c}`).join('\n')}`;
         } else if (response.matches) {
-          // API returned updated classification matches
           const matchesArray = Array.isArray(response.matches)
             ? response.matches
             : (response.matches as any)?.matched_rules || [];
@@ -496,7 +585,12 @@ export function ExceptionReview({ product, readOnly, onClose, onApprove, onRejec
 
   const handleApprove = () => {
     console.log('Approved:', selectedHts, notes);
-    onApprove();
+    onApprove({
+      hts: selectedHts,
+      confidence: currentConfidence,
+      tariff: product.tariff,
+      notes,
+    });
   };
 
   return (

@@ -6,3 +6,6 @@ openai
 supabase
 google-cloud-secret-manager
 google-cloud-storage
+openpyxl
+pdfplumber
+python-multipart
