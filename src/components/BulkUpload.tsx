@@ -181,7 +181,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       return;
     }
 
-    const result = await startBulkClassification(fileToUpload, user.id);
+    let result;
+    try {
+      result = await startBulkClassification(fileToUpload, user.id);
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Failed to start bulk classification. Please try again.');
+      setProcessing(false);
+      return;
+    }
 
     if (!result) {
       setErrorMessage('Failed to start bulk classification. Please try again.');
