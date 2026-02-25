@@ -30,9 +30,6 @@ def embed_query(text: str) -> List[float]:
                 timeout=30,
                 
             )
-             # --- PRINT FULL RESPONSE FOR DEBUG ---
-            print("OpenAI API Response (raw):")
-            print(resp.json())  # prints the full JSON response
             if resp.status_code == 200:
                 return resp.json()["data"][0]["embedding"]
             
@@ -62,8 +59,8 @@ def query_pinecone(vector: List[float]) -> List[Dict]:
     Each match includes 'id', 'score', 'metadata'.
     """
     api_key = os.getenv("PINECONE_API_KEY")
-    host = "https://hts-embeddings-wsprb2o.svc.aped-4627-b74a.pinecone.io"
-    namespace = "hts-embeddings"
+    host = os.getenv("PINECONE_HOST_V5")
+    namespace = os.getenv("PINECONE_NAMESPACE_V5", "hts-v5")
     top_k = 10
 
     if not api_key or not host:
@@ -86,14 +83,6 @@ def query_pinecone(vector: List[float]) -> List[Dict]:
         )
         resp.raise_for_status()
         matches = resp.json().get("matches", [])
-
-        # Debug: print all matches for inspection
-        print("PINECONE RAW MATCHES:")
-        for i, match in enumerate(matches):
-            print(f"Match {i+1}:")
-            #for k, v in match.items():
-            #   print(f"  {k}: {v}")
-
         return matches
 
     except requests.RequestException as e:

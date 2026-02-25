@@ -10,7 +10,8 @@ import { ResetPasswordForm } from './components/auth/ResetPasswordForm';
 import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
-import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
+import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon, Sparkles } from 'lucide-react';
+import { ChatPanel } from './components/ChatPanel';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
 import { getUserMetadata, updateLastLogin, createOrUpdateUserMetadata } from './lib/userService';
@@ -38,6 +39,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -418,6 +420,23 @@ export default function App() {
             <SettingsIcon className="w-5 h-5" />
             <span>Settings</span>
           </button>
+
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <button
+              onClick={() => setIsChatOpen(!isChatOpen)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                isChatOpen
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 border border-blue-200'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Sparkles className="w-5 h-5" />
+              <span>AI Chat</span>
+              {!isChatOpen && (
+                <span className="ml-auto w-2 h-2 bg-green-500 rounded-full"></span>
+              )}
+            </button>
+          </div>
         </nav>
         
         {/* User Profile Section */}
@@ -477,6 +496,9 @@ export default function App() {
         {currentView === 'activity' && <Activity />}
         {currentView === 'settings' && <Settings />}
       </main>
+
+      {/* Chat Panel — right sidebar */}
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 }
