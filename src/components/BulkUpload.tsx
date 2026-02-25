@@ -274,27 +274,40 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             return { ...item, status: 'exception' as const, clarificationQuestions: questions };
           }
 
-          // Extract matched rules from response
+          // Extract matched rules — mirroring ClassificationView logic
           let matchedRules: any[] = [];
-          if (result.matches) {
+          if (result.type === 'answer' && result.matches) {
             if (Array.isArray(result.matches)) {
               matchedRules = result.matches;
-            } else if (result.matches.matched_rules) {
+            } else if (result.matches.matched_rules && Array.isArray(result.matches.matched_rules)) {
               matchedRules = result.matches.matched_rules;
             }
+          } else if (result.candidates) {
+            matchedRules = result.candidates;
           }
 
-          const topRule = matchedRules[0];
-          const maxConf = matchedRules.length > 0
-            ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
+          // Sort by confidence descending (matching ClassificationView)
+          const sortedMatches = [...matchedRules].sort((a: any, b: any) => {
+            const aConf = a.confidence || a.score || 0;
+            const bConf = b.confidence || b.score || 0;
+            return bConf - aConf;
+          });
+
+          const topRule = sortedMatches[0];
+          const maxConf = topRule
+            ? Math.round((topRule.confidence || topRule.score || result.max_confidence || 0) * 100)
             : 0;
+
+          if (!topRule || maxConf === 0) {
+            return { ...item, status: 'exception' as const };
+          }
 
           return {
             ...item,
             status: 'complete' as const,
-            hts: topRule?.hts || '',
+            hts: topRule.hts || '',
             confidence: maxConf,
-            tariff: topRule?.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+            tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
           };
         }));
       } catch (err) {
