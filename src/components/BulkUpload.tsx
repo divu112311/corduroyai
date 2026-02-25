@@ -3,14 +3,100 @@ import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Fil
 import { BulkItemDetail } from './BulkItemDetail';
 import { ExceptionReview } from './ExceptionReview';
 import {
-  startBulkClassification,
-  getBulkClassificationStatus,
-  cancelBulkClassification,
-  type BulkClassificationItem,
+  classifyProduct,
   type FileMetadata,
 } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
 import React from 'react';
+
+// ── CSV parsing ──────────────────────────────────────────────────────────────
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { result.push(current.trim()); current = ''; }
+      else current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
+  // Handle BOM
+  const clean = text.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  const headers = parseCSVLine(lines[0]);
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseCSVLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
+// ── Column detection ─────────────────────────────────────────────────────────
+
+const COLUMN_SYNONYMS: Record<string, string[]> = {
+  product_name: ['product', 'product name', 'product_name', 'item', 'item name', 'name', 'sku', 'sku name', 'part', 'part name', 'article'],
+  description:  ['description', 'desc', 'product description', 'details', 'product details', 'item description'],
+  origin:       ['origin', 'country', 'country of origin', 'coo', 'source', 'made in', 'country_of_origin'],
+  materials:    ['material', 'materials', 'fabric', 'composition', 'material composition', 'component'],
+  cost:         ['cost', 'value', 'price', 'unit value', 'unit_value', 'unit cost', 'unit price', 'fob', 'declared value'],
+};
+
+function detectColumns(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+
+  for (const [field, synonyms] of Object.entries(COLUMN_SYNONYMS)) {
+    for (const syn of synonyms) {
+      const idx = lowerHeaders.indexOf(syn);
+      if (idx !== -1 && !Object.values(mapping).includes(headers[idx])) {
+        mapping[field] = headers[idx];
+        break;
+      }
+    }
+  }
+  // Fallback: first column = product_name if not detected
+  if (!mapping.product_name && headers.length > 0) mapping.product_name = headers[0];
+  if (!mapping.description && headers.length > 1 && !Object.values(mapping).includes(headers[1])) {
+    mapping.description = headers[1];
+  }
+  return mapping;
+}
+
+// ── Concurrency helper ───────────────────────────────────────────────────────
+
+async function runWithConcurrency(
+  tasks: (() => Promise<void>)[],
+  limit: number,
+  shouldCancel: () => boolean,
+): Promise<void> {
+  let idx = 0;
+  async function worker() {
+    while (idx < tasks.length && !shouldCancel()) {
+      const i = idx++;
+      if (i < tasks.length) await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
+}
 
 interface BulkItem {
   id: number | string;
@@ -36,34 +122,6 @@ interface BulkUploadProps {
   autoStart?: boolean;
 }
 
-function mapBulkItemToUI(item: BulkClassificationItem): BulkItem {
-  const result = item.classification_result;
-  const matchedRules = result?.matched_rules || [];
-  const topRule = matchedRules[0];
-  const maxConf = matchedRules.length > 0
-    ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
-    : 0;
-
-  let status: 'pending' | 'complete' | 'exception' = 'pending';
-  if (item.status === 'completed') status = 'complete';
-  else if (item.status === 'exception' || item.status === 'error') status = 'exception';
-
-  return {
-    id: item.row_number,
-    productName: item.extracted_data.product_name || item.extracted_data.description || 'Unknown',
-    description: item.extracted_data.description || '',
-    status,
-    hts: topRule?.hts || '',
-    confidence: maxConf,
-    tariff: topRule?.tariff_rate ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
-    origin: item.extracted_data.country_of_origin || '',
-    materials: item.extracted_data.materials || '',
-    cost: item.extracted_data.unit_value || '',
-    bulkItemId: item.id,
-    clarificationQuestions: item.clarification_questions,
-  };
-}
-
 export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false }: BulkUploadProps = {}) {
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -76,47 +134,11 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [showFilters, setShowFilters] = useState(false);
   const [supportingFiles, setSupportingFiles] = useState<File[]>(initialSupportingFiles);
   const [uploadedMainFile, setUploadedMainFile] = useState<File | null>(initialFile);
-  const [aiChatOpen, setAiChatOpen] = useState(true);
   const [progressCurrent, setProgressCurrent] = useState(0);
   const [progressTotal, setProgressTotal] = useState(0);
-  const [bulkRunId, setBulkRunId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
-
-  // Polling logic with backoff
-  const pollStatus = useCallback(async (runId: string, attempt: number = 0) => {
-    const data = await getBulkClassificationStatus(runId);
-    if (!data) {
-      setErrorMessage('Failed to get classification status');
-      setProcessing(false);
-      return;
-    }
-
-    setProgressCurrent(data.progress_current);
-    setProgressTotal(data.progress_total);
-
-    if (data.items && data.items.length > 0) {
-      setItems(data.items.map(mapBulkItemToUI));
-    }
-
-    // Capture file metadata from polling response (if not already set)
-    if (data.file_metadata && !fileMetadata) {
-      setFileMetadata(data.file_metadata);
-    }
-
-    if (data.status === 'completed' || data.status === 'failed' || data.status === 'cancelled') {
-      setProcessing(false);
-      if (data.status === 'failed') {
-        setErrorMessage(data.error_message || 'Classification failed');
-      }
-      return;
-    }
-
-    // Continue polling with backoff: 1s, 1.5s, 2s, ... max 5s
-    const delay = Math.min(1000 + attempt * 500, 5000);
-    pollingRef.current = setTimeout(() => pollStatus(runId, attempt + 1), delay);
-  }, []);
+  const cancelledRef = useRef(false);
 
   // Auto-start classification if initial file is provided
   React.useEffect(() => {
@@ -124,13 +146,6 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       startClassification();
     }
   }, [initialFile, autoStart]);
-
-  // Cleanup polling on unmount
-  React.useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-    };
-  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -173,6 +188,15 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setProgressCurrent(0);
     setProgressTotal(0);
     setFileMetadata(null);
+    cancelledRef.current = false;
+
+    // Validate file type
+    const ext = fileToUpload.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'csv') {
+      setErrorMessage('Currently only CSV files are supported for bulk classification. XLSX support coming soon.');
+      setProcessing(false);
+      return;
+    }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -181,39 +205,116 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       return;
     }
 
-    let result;
+    // Parse CSV locally
+    let text: string;
     try {
-      result = await startBulkClassification(fileToUpload, user.id);
-    } catch (err: any) {
-      const msg = err?.message || 'Unknown error';
-      console.error('Bulk classification error:', msg);
-      setErrorMessage(`Classification failed: ${msg}`);
+      text = await fileToUpload.text();
+    } catch {
+      setErrorMessage('Failed to read file.');
       setProcessing(false);
       return;
     }
 
-    if (!result) {
-      setErrorMessage('No response from classification service. Check that the backend is running.');
+    const { headers, rows } = parseCSV(text);
+    if (rows.length === 0) {
+      setErrorMessage('No data rows found in the file. Make sure the first row contains headers.');
       setProcessing(false);
       return;
     }
 
-    setBulkRunId(result.run_id);
-    setProgressTotal(result.total_items);
-    if (result.file_metadata) {
-      setFileMetadata(result.file_metadata);
-    }
+    // Detect column mapping
+    const colMap = detectColumns(headers);
+    setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
+    setProgressTotal(rows.length);
 
-    // Start polling
-    pollStatus(result.run_id);
+    // Build initial items from parsed rows
+    const initialItems: BulkItem[] = rows.map((row, idx) => ({
+      id: idx + 1,
+      productName: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
+      description: (colMap.description ? row[colMap.description] : '') || '',
+      origin: (colMap.origin ? row[colMap.origin] : '') || '',
+      materials: (colMap.materials ? row[colMap.materials] : '') || '',
+      cost: (colMap.cost ? row[colMap.cost] : '') || '',
+      status: 'pending' as const,
+    }));
+    setItems(initialItems);
+
+    // Classify each row using the working single-product pipeline
+    let completed = 0;
+
+    const tasks = rows.map((row, idx) => async () => {
+      if (cancelledRef.current) return;
+
+      // Build a rich description from all row fields for the classifier
+      const description = Object.entries(row)
+        .filter(([_, v]) => v)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ');
+
+      try {
+        const result = await classifyProduct(description, user.id);
+        completed++;
+        setProgressCurrent(completed);
+
+        if (cancelledRef.current) return;
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== idx + 1) return item;
+
+          if (!result) {
+            return { ...item, status: 'exception' as const };
+          }
+
+          // Handle clarification needed
+          if (result.type === 'clarify' || result.needs_clarification) {
+            const questions = (result.clarifications || result.questions || []).map((c: any) => ({
+              question: typeof c === 'string' ? c : c.question || c,
+              options: typeof c === 'string' ? [] : c.options || [],
+            }));
+            return { ...item, status: 'exception' as const, clarificationQuestions: questions };
+          }
+
+          // Extract matched rules from response
+          let matchedRules: any[] = [];
+          if (result.matches) {
+            if (Array.isArray(result.matches)) {
+              matchedRules = result.matches;
+            } else if (result.matches.matched_rules) {
+              matchedRules = result.matches.matched_rules;
+            }
+          }
+
+          const topRule = matchedRules[0];
+          const maxConf = matchedRules.length > 0
+            ? Math.round(Math.max(...matchedRules.map((r: any) => r.confidence || 0)) * 100)
+            : 0;
+
+          return {
+            ...item,
+            status: 'complete' as const,
+            hts: topRule?.hts || '',
+            confidence: maxConf,
+            tariff: topRule?.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+          };
+        }));
+      } catch (err) {
+        completed++;
+        setProgressCurrent(completed);
+        console.error(`Error classifying row ${idx + 1}:`, err);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1 ? { ...item, status: 'exception' as const } : item
+        ));
+      }
+    });
+
+    // Process 3 at a time
+    await runWithConcurrency(tasks, 3, () => cancelledRef.current);
+    setProcessing(false);
   };
 
-  const handleCancelClassification = async () => {
-    if (bulkRunId) {
-      await cancelBulkClassification(bulkRunId);
-      if (pollingRef.current) clearTimeout(pollingRef.current);
-      setProcessing(false);
-    }
+  const handleCancelClassification = () => {
+    cancelledRef.current = true;
+    setProcessing(false);
   };
 
   const handleSort = (field: SortField) => {
@@ -892,7 +993,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             origin: exceptionItem.origin || 'China',
             reason: 'Low confidence score - Multiple possible classifications detected'
           }}
-          bulkRunId={bulkRunId || undefined}
+          bulkRunId={undefined}
           bulkItemId={exceptionItem.bulkItemId || undefined}
           clarificationQuestions={exceptionItem.clarificationQuestions}
           onClose={() => setExceptionItem(null)}
