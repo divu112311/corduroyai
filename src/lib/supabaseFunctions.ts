@@ -259,18 +259,38 @@ export async function startBulkClassification(
       let detail = '';
       try {
         const ctx = (error as any).context;
-        if (ctx && typeof ctx.json === 'function') {
-          const body = await ctx.json();
-          detail = body?.detail || '';
+        if (ctx) {
+          if (typeof ctx.json === 'function') {
+            try {
+              const body = await ctx.json();
+              detail = body?.detail || body?.message || JSON.stringify(body);
+            } catch {
+              // JSON parse failed, try text
+              if (typeof ctx.text === 'function') {
+                detail = await ctx.text();
+              }
+            }
+          } else if (typeof ctx.text === 'function') {
+            detail = await ctx.text();
+          }
         }
       } catch { /* ignore parse errors */ }
-      console.error('Edge function error (bulk-classify):', error, 'detail:', detail);
-      // Throw with detail so the caller can show a meaningful message
-      if (detail) throw new Error(detail);
-      return null;
+      // Also check the error message itself
+      const errorMsg = detail || (error as any)?.message || String(error);
+      console.error('Edge function error (bulk-classify):', error, 'detail:', errorMsg);
+      throw new Error(errorMsg || 'Edge function returned an error');
     }
 
-    return parseEdgeFunctionResponse(data);
+    const parsed = await parseEdgeFunctionResponse(data);
+    if (!parsed) {
+      console.error('Bulk classification response could not be parsed. Raw data:', data);
+      throw new Error(
+        typeof data === 'string'
+          ? `Backend error: ${data.slice(0, 200)}`
+          : 'Backend returned an unparseable response'
+      );
+    }
+    return parsed;
   } catch (err) {
     console.error('Error starting bulk classification:', err);
     throw err;

@@ -185,13 +185,15 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     try {
       result = await startBulkClassification(fileToUpload, user.id);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Failed to start bulk classification. Please try again.');
+      const msg = err?.message || 'Unknown error';
+      console.error('Bulk classification error:', msg);
+      setErrorMessage(`Classification failed: ${msg}`);
       setProcessing(false);
       return;
     }
 
     if (!result) {
-      setErrorMessage('Failed to start bulk classification. Please try again.');
+      setErrorMessage('No response from classification service. Check that the backend is running.');
       setProcessing(false);
       return;
     }
