@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, Sparkles, User, RotateCcw, Wand2, BookOpen, FileSearch, BarChart3 } from 'lucide-react';
+import { Send, X, RotateCcw, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'assistant';
+  role: 'user' | 'assistant';
   content: string;
-  timestamp: Date;
 }
 
 interface ChatPanelProps {
@@ -16,48 +15,48 @@ interface ChatPanelProps {
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isThinking, setIsThinking] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll on new messages
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
+  }, [messages, isThinking]);
 
+  // Focus input when panel opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 350);
+      setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [isOpen]);
 
-  const addMessage = (type: 'user' | 'assistant', content: string) => {
+  const addMessage = (role: 'user' | 'assistant', content: string) => {
     setMessages(prev => [...prev, {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      type,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      role,
       content,
-      timestamp: new Date(),
     }]);
   };
 
   const handleSend = () => {
-    if (!input.trim() || isTyping) return;
+    if (!input.trim() || isThinking) return;
     const text = input.trim();
     setInput('');
     addMessage('user', text);
 
-    setIsTyping(true);
+    setIsThinking(true);
     setTimeout(() => {
-      setIsTyping(false);
+      setIsThinking(false);
       addMessage('assistant',
-        `I received: "${text}"\n\nBackend integration coming soon. This chat will classify products, handle clarifications, and show HTS results inline.`
+        `I received your message about "${text}". Backend integration is coming soon — this chat will classify products, handle clarifications, and show HTS results inline.`
       );
-    }, 800);
+    }, 900);
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleSuggestion = (action: string) => {
     const prompts: Record<string, string> = {
       classify: 'Describe the product you want to classify — include material, intended use, and any relevant details.',
       explain: 'I can explain any HTS code. Type the code (e.g. "6109.10") or describe the product category.',
@@ -70,7 +69,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const handleNewChat = () => {
     setMessages([]);
     setInput('');
-    setIsTyping(false);
+    setIsThinking(false);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
@@ -81,169 +80,157 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/10 z-40 lg:hidden" onClick={onClose} />
-      )}
+    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
 
-      {/* Panel */}
-      <div
-        className={`fixed top-0 right-0 h-screen w-[420px] bg-white border-l border-slate-200 shadow-xl flex flex-col z-50 transition-transform duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        {/* Header — clean, like Notion */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-[15px] font-semibold text-slate-900">New AI chat</span>
-          </div>
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={handleNewChat}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="New chat"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-              title="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 h-[52px] border-b border-slate-200 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-slate-500" />
+          <span className="text-[14px] font-medium text-slate-700">AI Chat</span>
         </div>
-
-        {/* Scrollable content */}
-        <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-          {messages.length === 0 ? (
-            /* Empty state — Notion style */
-            <div className="flex flex-col items-center px-8 pt-16 pb-6">
-              {/* AI Avatar */}
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-5 shadow-lg shadow-blue-200/50">
-                <Sparkles className="w-7 h-7 text-white" />
-              </div>
-
-              <h3 className="text-[17px] font-semibold text-slate-900 mb-1">Corduroy AI</h3>
-              <p className="text-sm text-slate-500 text-center mb-8">
-                Your trade classification assistant
-              </p>
-
-              {/* Quick action chips — horizontal wrap like Notion */}
-              <div className="flex flex-wrap gap-2 justify-center w-full">
-                <button
-                  onClick={() => handleQuickAction('classify')}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-full text-sm text-slate-700 hover:text-blue-700 transition-all"
-                >
-                  <Wand2 className="w-3.5 h-3.5" />
-                  Classify
-                </button>
-                <button
-                  onClick={() => handleQuickAction('explain')}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-purple-50 border border-slate-200 hover:border-purple-200 rounded-full text-sm text-slate-700 hover:text-purple-700 transition-all"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  Explain code
-                </button>
-                <button
-                  onClick={() => handleQuickAction('analyze')}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 rounded-full text-sm text-slate-700 hover:text-emerald-700 transition-all"
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  Analyze
-                </button>
-                <button
-                  onClick={() => handleQuickAction('review')}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-200 rounded-full text-sm text-slate-700 hover:text-amber-700 transition-all"
-                >
-                  <FileSearch className="w-3.5 h-3.5" />
-                  Review exceptions
-                </button>
-              </div>
-            </div>
-          ) : (
-            /* Messages */
-            <div className="px-5 py-5 space-y-5">
-              {messages.map((message) => (
-                <div key={message.id} className={`flex gap-3 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-                  {/* Avatar */}
-                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.type === 'assistant'
-                      ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                      : 'bg-slate-200'
-                  }`}>
-                    {message.type === 'assistant'
-                      ? <Sparkles className="w-4 h-4 text-white" />
-                      : <User className="w-4 h-4 text-slate-500" />
-                    }
-                  </div>
-
-                  {/* Content */}
-                  <div className={`flex-1 min-w-0 ${message.type === 'user' ? 'flex flex-col items-end' : ''}`}>
-                    <div className={`px-4 py-3 text-[14px] leading-relaxed rounded-2xl max-w-[88%] ${
-                      message.type === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-md'
-                        : 'bg-slate-50 text-slate-800 border border-slate-100 rounded-tl-md'
-                    }`}>
-                      <div className="whitespace-pre-wrap break-words">{message.content}</div>
-                    </div>
-                    <span className="text-[10px] text-slate-400 mt-1 px-1">
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                </div>
-              ))}
-
-              {/* Typing */}
-              {isTyping && (
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="bg-slate-50 border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-md">
-                    <div className="flex gap-1.5 items-center h-5">
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Input — clean bottom bar */}
-        <div className="px-4 py-3 border-t border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-4 py-1 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent focus-within:bg-white transition-all">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Do anything with AI..."
-              disabled={isTyping}
-              className="flex-1 py-2.5 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isTyping}
-              className="p-1.5 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={handleNewChat}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            title="New chat"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            title="Close"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
-    </>
+
+      {/* ── Content area ── */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+
+        {messages.length === 0 ? (
+          /* ── Empty state ── */
+          <div className="px-4 pt-12 pb-6">
+            <div className="mb-8 px-2">
+              <h3 className="text-[15px] font-medium text-slate-800 mb-1">Corduroy AI</h3>
+              <p className="text-[13px] text-slate-500 leading-relaxed">
+                Your trade classification assistant. Ask me to classify products, explain HTS codes, or review exceptions.
+              </p>
+            </div>
+
+            {/* Suggestion rows */}
+            <div className="space-y-0.5">
+              <button
+                onClick={() => handleSuggestion('classify')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+              >
+                <Wand2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <div>
+                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Classify a product</span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSuggestion('explain')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+              >
+                <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <div>
+                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Explain an HTS code</span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Look up what a code covers</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSuggestion('analyze')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+              >
+                <BarChart3 className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <div>
+                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Analyze classifications</span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Review patterns and common issues</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => handleSuggestion('review')}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+              >
+                <FileSearch className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <div>
+                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Review exceptions</span>
+                  <p className="text-[11px] text-slate-400 mt-0.5">Pull up items that need attention</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+        ) : (
+          /* ── Messages ── */
+          <div className="px-4 py-4 space-y-4">
+            {messages.map((msg) => (
+              <div key={msg.id}>
+                {msg.role === 'user' ? (
+                  <div className="flex justify-end">
+                    <div className="bg-slate-100 text-slate-800 text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-md max-w-[85%]">
+                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5">AI</p>
+                    <div className="text-[13px] leading-relaxed text-slate-700">
+                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Thinking indicator */}
+            {isThinking && (
+              <div>
+                <p className="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5">AI</p>
+                <div className="flex items-center gap-1.5 h-5 px-0.5">
+                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Input ── */}
+      <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+        <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-0.5 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask AI anything..."
+            disabled={isThinking}
+            className="flex-1 py-2 bg-transparent text-[13px] text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
+          />
+          {input.trim() && (
+            <button
+              onClick={handleSend}
+              disabled={isThinking}
+              className="p-1 text-blue-600 hover:text-blue-700 disabled:opacity-40 transition-colors"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

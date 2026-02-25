@@ -367,11 +367,11 @@ export default function App() {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
+      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col flex-shrink-0">
         <div className="mb-8">
           <img src={logo} alt="Corduroy AI" className="w-full max-w-[200px]" />
         </div>
-        
+
         <nav className="flex-1 space-y-2">
           <button
             onClick={() => setCurrentView('dashboard')}
@@ -384,7 +384,7 @@ export default function App() {
             <LayoutDashboard className="w-5 h-5" />
             <span>Dashboard</span>
           </button>
-          
+
           <button
             onClick={() => setCurrentView('classify')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -396,7 +396,7 @@ export default function App() {
             <Package className="w-5 h-5" />
             <span>Classify Product</span>
           </button>
-          
+
           <button
             onClick={() => setCurrentView('profile')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -408,7 +408,7 @@ export default function App() {
             <FileText className="w-5 h-5" />
             <span>Product Profiles</span>
           </button>
-          
+
           <button
             onClick={() => setCurrentView('settings')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
@@ -422,7 +422,20 @@ export default function App() {
           </button>
 
         </nav>
-        
+
+        {/* AI Chat toggle — in sidebar, above user profile */}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors mb-4 ${
+            isChatOpen
+              ? 'bg-blue-50 text-blue-600'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <Sparkles className="w-5 h-5" />
+          <span>AI Chat</span>
+        </button>
+
         {/* User Profile Section */}
         <div className="mt-auto pt-6 border-t border-slate-200">
           <div className="relative">
@@ -472,8 +485,8 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      {/* Main Content — shrinks when chat panel is open */}
+      <main className="flex-1 min-w-0 overflow-auto transition-all duration-300">
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'classify' && <UnifiedClassification />}
         {currentView === 'profile' && <ProductProfile />}
@@ -481,19 +494,7 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
 
-      {/* AI Chat toggle — right edge */}
-      {!isChatOpen && (
-        <button
-          onClick={() => setIsChatOpen(true)}
-          className="fixed top-4 right-4 z-40 bg-gradient-to-br from-blue-600 to-indigo-600 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all"
-          title="Open AI Chat"
-        >
-          <Sparkles className="w-5 h-5" />
-          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white"></span>
-        </button>
-      )}
-
-      {/* Chat Panel — right sidebar */}
+      {/* Chat Panel — flex child, not floating */}
       <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
