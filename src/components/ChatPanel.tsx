@@ -75,7 +75,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 shadow-[-2px_0_8px_rgba(0,0,0,0.04)] flex flex-col" style={{ height: '100vh' }}>
+    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col" style={{ height: '100vh' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 h-[48px] border-b border-slate-200 flex-shrink-0">
