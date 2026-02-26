@@ -431,6 +431,16 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             : (result.max_confidence || 0);
           const maxConfPercent = Math.round(maxConfDecimal * 100);
 
+          console.log(`Item ${idx + 1} processing:`, {
+            rawConf,
+            maxConfDecimal,
+            maxConfPercent,
+            confidenceThreshold,
+            thresholdPercent: Math.round(confidenceThreshold * 100),
+            comparison: `${maxConfDecimal} < ${confidenceThreshold}?`,
+            isBelowThreshold: maxConfDecimal < confidenceThreshold
+          });
+
           if (!topRule || maxConfPercent === 0) {
             return {
               ...item,
