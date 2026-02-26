@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, AlertCircle, Sparkles } from 'lucide-react';
+import { Send, X, AlertCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { cn } from './ui/utils';
 import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
@@ -328,7 +328,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   >
                     <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
                          style={{ background: GRADIENT }}>
-                      <Sparkles className="text-white" style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                      <img src={logo} alt="AI" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                     </div>
                     <div>
                       <div
@@ -356,7 +356,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                 <div className="flex items-start" style={{ alignSelf: 'flex-start', gap: 10 }}>
                   <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
                        style={{ background: GRADIENT, opacity: 0.6 }}>
-                    <Sparkles className="text-white" style={{ width: 16, height: 16 }} strokeWidth={1.5} />
+                    <img src={logo} alt="AI" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                   </div>
                   <div className="chat-typing-dots flex items-center h-8 rounded-2xl" style={{ gap: 6, paddingLeft: 12, paddingRight: 12 }}>
                     <div className="chat-dot rounded-full chat-dot-fade chat-dot-delay-0" style={{ width: 6, height: 6 }} />
@@ -371,7 +371,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
 
         {/* Input section */}
         <div className="px-4 py-3 flex-shrink-0 border-t" style={{ borderColor: 'var(--chat-panel-border)', background: 'var(--chat-panel-bg)' }}>
-          <div className="chat-input-wrap flex items-end rounded-xl" style={{ gap: 8, padding: '10px 14px' }}>
+          <div className="chat-input-wrap flex items-center rounded-xl" style={{ gap: 8, padding: '8px 14px' }}>
             <textarea
               ref={inputRef}
               value={input}

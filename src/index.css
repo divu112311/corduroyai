@@ -2455,6 +2455,8 @@
   --sidebar-accent-foreground: oklch(.205 0 0);
   --sidebar-border: oklch(.922 0 0);
   --sidebar-ring: oklch(.708 0 0);
+  --chat-panel-bg: #ffffff;
+  --chat-panel-border: #e2e8f0;
 }
 
 .dark {
@@ -2968,6 +2970,8 @@ html, body, #root {
   background: transparent;
   min-height: 24px;
   max-height: 120px;
+  line-height: 24px;
+  padding: 0;
   color: #1A1A2E;
 }
 .chat-textarea::placeholder {
