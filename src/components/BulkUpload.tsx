@@ -276,6 +276,11 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     try {
       const userMeta = await getUserMetadata(user.id);
       confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+      console.log('Loaded user confidence threshold:', {
+        threshold: confidenceThreshold,
+        asPercent: `${Math.round(confidenceThreshold * 100)}%`,
+        userMeta
+      });
     } catch (err) {
       console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
     }
@@ -436,6 +441,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
           // Check if confidence meets threshold — if not, flag as exception for review
           if (maxConfDecimal < confidenceThreshold) {
+            console.log(`Item ${idx + 1} below threshold: ${maxConfPercent}% < ${Math.round(confidenceThreshold * 100)}%`);
             return {
               ...item,
               status: 'exception' as const,
