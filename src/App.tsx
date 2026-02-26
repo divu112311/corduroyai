@@ -472,8 +472,8 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content — adds right margin when chat panel is open */}
-      <main className={`flex-1 min-w-0 overflow-auto transition-all duration-300 ${isChatOpen ? 'mr-[400px]' : ''}`}>
+      {/* Main Content — shrinks when chat panel opens */}
+      <main className="flex-1 min-w-0 overflow-auto">
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'classify' && <UnifiedClassification />}
         {currentView === 'profile' && <ProductProfile />}

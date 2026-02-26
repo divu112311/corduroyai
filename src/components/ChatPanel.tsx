@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, Pin, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
+import { Send, ChevronsRight, Pin, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -82,17 +82,16 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   if (!isOpen) return null;
 
-  /* ── Expanded panel ── */
   return (
-    <div className="fixed top-0 right-0 h-screen w-[400px] z-40 bg-white border-l border-slate-200 flex flex-col">
+    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 h-[52px] border-b border-slate-200 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-slate-500" />
+          <Sparkles className="w-4 h-4 text-slate-400" />
           <span className="text-[14px] font-medium text-slate-700">AI Chat</span>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <button
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
             title="Pin chat"
@@ -102,9 +101,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           <button
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
-            title="Close"
+            title="Close sidebar"
           >
-            <X className="w-3.5 h-3.5" />
+            <ChevronsRight className="w-4 h-4" />
           </button>
         </div>
       </div>
