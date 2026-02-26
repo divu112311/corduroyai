@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, Upload, FileText, Sparkles, CheckCircle, ArrowRight, LayoutDashboard, AlertTriangle } from 'lucide-react';
-import logo from '../../assets/corduroy-logo.jpg';
+import logo from '../../assets/corduroy-logo.png';
 
 interface OnboardingFlowProps {
   userName: string;

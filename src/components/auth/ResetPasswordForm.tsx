@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Mail, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
-import logo from '../../assets/corduroy-logo.jpg';
+import logo from '../../assets/corduroy-logo.png';
 import { supabase, siteUrl } from '../../lib/supabase';
 
 interface ResetPasswordFormProps {
