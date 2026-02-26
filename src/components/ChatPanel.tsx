@@ -216,9 +216,10 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
       >
         <div className="chat-panel-inner">
         {/* Header */}
-        <div className="h-14 px-4 flex items-center justify-between flex-shrink-0
-                        border-b border-black/[0.06] dark:border-white/[0.06]">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        <div className="h-[56px] px-5 flex items-center justify-between flex-shrink-0
+                        border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1C1C1E]">
+          <span className="text-gray-900 dark:text-gray-100"
+                style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '15px', lineHeight: 1.3 }}>
             AI Chat
           </span>
           <button
