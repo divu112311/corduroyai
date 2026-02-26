@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, RotateCcw, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
+import { Send, X, Pin, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -94,11 +94,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         </div>
         <div className="flex items-center gap-0.5">
           <button
-            onClick={handleNewChat}
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
-            title="New chat"
+            title="Pin chat"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <Pin className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onClose}
@@ -117,9 +116,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           /* ── Empty state ── */
           <div className="px-4 pt-12 pb-6">
             <div className="mb-8 px-2">
-              <h3 className="text-[15px] font-medium text-slate-800 mb-1">Corduroy AI</h3>
+              <h3 className="text-[15px] font-medium text-slate-800 mb-1">Your personal customs expert</h3>
               <p className="text-[13px] text-slate-500 leading-relaxed">
-                Your trade classification assistant. Ask me to classify products, explain HTS codes, or review exceptions.
+                What do you want to do today?
               </p>
             </div>
 
