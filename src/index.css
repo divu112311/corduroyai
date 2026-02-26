@@ -2890,6 +2890,8 @@ html, body, #root {
   flex-direction: column;
   background: #F8F9FB;
   box-shadow: -4px 0 12px rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .dark .chat-panel-inner {

@@ -84,12 +84,12 @@ function StructuredContent({ sections }: { sections: MessageSection[] }) {
             </h4>
           )}
           {section.content && (
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.5]">{section.content}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6]">{section.content}</p>
           )}
           {section.bullets && (
             <ul className="space-y-2 mt-2">
               {section.bullets.map((bullet, j) => (
-                <li key={j} className="text-sm text-gray-700 dark:text-gray-300 leading-[1.5] flex gap-2">
+                <li key={j} className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6] flex gap-2">
                   <span className="text-gray-400 mt-0.5 flex-shrink-0">&bull;</span>
                   <span>{bullet}</span>
                 </li>
@@ -226,13 +226,14 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
       >
         <div className="chat-panel-inner">
         {/* Header — branded */}
-        <div className="h-[56px] px-5 flex items-center justify-between flex-shrink-0
-                        border-b border-black/[0.06] dark:border-white/[0.06]">
+        <div className="px-4 py-4 flex items-center justify-between flex-shrink-0"
+             style={{ borderBottom: '1px solid #E5E7EB' }}>
           <div className="flex items-center gap-2.5">
             <img src={logo} alt="" className="w-5 h-5" />
-            <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">
+            <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
               Corduroy
             </span>
+            <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
           </div>
           <button
             onClick={onClose}
@@ -292,7 +293,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   >
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-                      <p className="text-sm leading-[1.5]">{msg.content}</p>
+                      <p className="text-sm leading-[1.6]">{msg.content}</p>
                     </div>
                     <button
                       onClick={() => handleRetry(msg)}
@@ -308,7 +309,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                     key={msg.id}
                     className="self-end max-w-[85%] chat-msg-enter"
                   >
-                    <div className="px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.5]"
+                    <div className="px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.6]"
                          style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
@@ -329,7 +330,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                     <div>
                       <div className="px-3.5 py-3 rounded-xl bg-white dark:bg-[#2C2C2E]
                                       shadow-[0_1px_4px_rgba(0,0,0,0.08)]
-                                      text-[14px] text-[#1A1A2E] dark:text-gray-300 leading-[1.5]">
+                                      text-[14px] text-[#1A1A2E] dark:text-gray-300 leading-[1.6]">
                         <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                         {msg.confidence !== undefined && (
                           <ConfidenceBar confidence={msg.confidence} />
