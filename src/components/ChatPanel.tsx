@@ -249,7 +249,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         {/* Scrollable messages */}
         <div
           ref={scrollRef}
-          className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col gap-3 chat-scrollbar-hidden"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 flex flex-col gap-3 chat-scrollbar-hidden"
         >
           {/* Loading skeleton */}
           {isLoading && (
