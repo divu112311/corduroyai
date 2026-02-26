@@ -2871,3 +2871,25 @@ html, body, #root {
   right: 24px;
   z-index: 9999;
 }
+
+/* ── Reusable component styles ─────────────────────────────────── */
+
+/* Gradient accent strip (chat header) */
+.gradient-accent-strip {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+}
+
+/* Dynamic progress / confidence bars – set --bar-width on the element */
+.dynamic-bar {
+  width: var(--bar-width, 0%);
+}
+
+/* When the bar also needs a dynamic color – set --bar-color on the element */
+.dynamic-bar-color {
+  background-color: var(--bar-color);
+}
+
+/* Staggered bounce-dot animation delays */
+.bounce-delay-0 { animation-delay: 0ms; }
+.bounce-delay-1 { animation-delay: 150ms; }
+.bounce-delay-2 { animation-delay: 300ms; }

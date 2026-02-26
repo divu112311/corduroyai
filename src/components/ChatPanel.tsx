@@ -52,8 +52,8 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
       </div>
       <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${confidence}%`, backgroundColor: color }}
+          className="h-full rounded-full transition-all duration-300 dynamic-bar dynamic-bar-color"
+          style={{ '--bar-width': `${confidence}%`, '--bar-color': color } as React.CSSProperties}
         />
       </div>
     </div>
@@ -168,8 +168,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       <div className="flex items-center gap-3 px-5 py-4 flex-shrink-0">
         {/* 3px gradient accent strip */}
         <div
-          className="w-[3px] self-stretch rounded-full flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+          className="w-[3px] self-stretch rounded-full flex-shrink-0 gradient-accent-strip"
         />
         <div className="flex-1 min-w-0">
           <h2 className="text-lg font-semibold text-gray-900 leading-[1.3]">
@@ -285,9 +284,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               <div className="flex justify-start">
                 <div className="bg-gray-100 px-4 py-3 rounded-2xl">
                   <div className="flex items-center gap-1.5 h-5">
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce bounce-delay-0" />
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce bounce-delay-1" />
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce bounce-delay-2" />
                   </div>
                 </div>
               </div>

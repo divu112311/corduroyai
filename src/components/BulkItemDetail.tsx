@@ -395,8 +395,8 @@ export function BulkItemDetail({ item, onClose, onSave, bulkRunId }: BulkItemDet
                               <span className="text-slate-600 text-sm">Confidence: {(alt.confidence * 100).toFixed(0)}%</span>
                               <div className="w-20 h-2 bg-slate-200 rounded-full">
                                 <div
-                                  className="h-full bg-amber-500 rounded-full"
-                                  style={{ width: `${Math.min((alt.confidence * 100), 100)}%` }}
+                                  className="h-full bg-amber-500 rounded-full dynamic-bar"
+                                  style={{ '--bar-width': `${Math.min((alt.confidence * 100), 100)}%` } as React.CSSProperties}
                                 />
                               </div>
                             </div>
