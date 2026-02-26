@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, TrendingUp, MessageSquare, Sparkles, ChevronRight, Package, X, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle, TrendingUp, ChevronRight, Package, X, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ExceptionReview } from './ExceptionReview';
 import { supabase } from '../lib/supabase';
@@ -19,7 +19,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   const [selectedException, setSelectedException] = useState<any>(null);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showAllReviewModal, setShowAllReviewModal] = useState(false);
   const [sortBy, setSortBy] = useState<'priority' | 'product'>('priority');
   const [filterBy, setFilterBy] = useState<'all' | 'lowConfidence' | 'missingDoc' | 'multipleHTS' | 'materialIssues'>('all');
@@ -28,8 +27,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   const [lastResolvedItem, setLastResolvedItem] = useState<any>(null);
   const [activeExceptions, setActiveExceptions] = useState<any[]>([]);
   const [isLoadingExceptions, setIsLoadingExceptions] = useState(true);
-  const [aiMessages, setAiMessages] = useState<any[]>([]);
-  const [aiInput, setAiInput] = useState('');
   const [stats, setStats] = useState([
     { label: 'Exceptions', value: '0', subtext: 'Need Review', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-50' },
     { label: 'Classified', value: '0', subtext: 'This Month', icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
@@ -68,17 +65,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
         setActiveExceptions(exceptions);
 
-        // Update AI message based on exception count
-        if (exceptions.length > 0) {
-          setAiMessages([
-            { role: 'assistant', text: `Hi! I noticed you have ${exceptions.length} exception${exceptions.length > 1 ? 's' : ''} requiring review. Would you like me to help you resolve them?` }
-          ]);
-        } else {
-          setAiMessages([
-            { role: 'assistant', text: "Hi! You're all caught up - no exceptions requiring review at the moment." }
-          ]);
-        }
-
         setRecentClassifications(recentActivity);
 
         setIsLoadingExceptions(false);
@@ -99,31 +85,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   const [recentClassifications, setRecentClassifications] = useState<any[]>([]);
   const [isLoadingRecentActivity, setIsLoadingRecentActivity] = useState(true);
-
-  const handleSendMessage = () => {
-    if (!aiInput.trim()) return;
-
-    setAiMessages(prev => [...prev, { role: 'user', text: aiInput }]);
-
-    // Generate contextual response based on current exceptions
-    setTimeout(() => {
-      const lowerInput = aiInput.toLowerCase();
-      let responseText = '';
-
-      if (activeExceptions.length > 0 && (lowerInput.includes('help') || lowerInput.includes('exception') || lowerInput.includes('review'))) {
-        const topException = activeExceptions[0];
-        responseText = `You have ${activeExceptions.length} exception${activeExceptions.length > 1 ? 's' : ''} to review. The highest priority is "${topException.product}" (HTS: ${topException.hts}). Click on it in the Actions Required section to start reviewing.`;
-      } else if (lowerInput.includes('classify') || lowerInput.includes('product')) {
-        responseText = `To classify a new product, go to the "Classify Product" section in the sidebar. You can enter product details and I'll suggest the best HTS code with confidence scoring.`;
-      } else {
-        responseText = `I can help you with:\n• Reviewing exceptions in your queue\n• Classifying new products\n• Understanding HTS codes and tariff rates\n\nWhat would you like to do?`;
-      }
-
-      setAiMessages(prev => [...prev, { role: 'assistant', text: responseText }]);
-    }, 800);
-
-    setAiInput('');
-  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -649,90 +610,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         </div>
       )}
 
-      {/* Floating AI Assistant */}
-      {!showAIAssistant ? (
-        <button
-          onClick={() => setShowAIAssistant(true)}
-          className="fixed bottom-6 right-6 bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all group"
-        >
-          <Sparkles className="w-6 h-6" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-          <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-slate-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            Need help? Ask me anything!
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 rotate-45 w-2 h-2 bg-slate-900"></div>
-          </div>
-        </button>
-      ) : (
-        <div className="fixed bottom-6 right-6 w-[400px] bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4">
-          <div className="bg-white/10 backdrop-blur-sm px-5 py-4 flex items-center justify-between border-b border-white/20">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg relative">
-                <Sparkles className="w-5 h-5 text-white" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-              </div>
-              <div>
-                <h3 className="text-white">AI Assistant</h3>
-                <p className="text-indigo-100 text-xs">Online • Ready to help</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowAIAssistant(false)}
-              className="text-white/70 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="p-5 bg-white max-h-[500px] flex flex-col">
-            <div className="space-y-4 mb-4 overflow-y-auto flex-1">
-              {aiMessages.map((message, idx) => (
-                <div
-                  key={idx}
-                  className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                  <div
-                    className={`rounded-2xl px-4 py-3 max-w-[85%] text-sm ${
-                      message.role === 'user'
-                        ? 'bg-blue-600 text-white rounded-tr-sm'
-                        : 'bg-slate-100 text-slate-900 rounded-tl-sm'
-                    }`}
-                  >
-                    {message.text}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2 pt-3 border-t border-slate-200">
-              <input
-                type="text"
-                value={aiInput}
-                onChange={(e) => setAiInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Ask me anything..."
-                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                onClick={handleSendMessage}
-                className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                <MessageSquare className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="px-5 py-3 bg-indigo-50 border-t border-indigo-100">
-            <p className="text-indigo-700 text-xs">
-              💡 Try: "Help me classify the smart watch" or "What documents do I need?"
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
