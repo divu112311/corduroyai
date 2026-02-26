@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, X, RotateCcw, Wand2, BookOpen, FileSearch, BarChart3, Sparkles, PanelRightOpen } from 'lucide-react';
+import { Send, X, RotateCcw, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -10,10 +10,9 @@ interface ChatMessage {
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpen: () => void;
 }
 
-export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
+export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -81,20 +80,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
     }
   };
 
-  /* ── Collapsed state: slim toggle tab ── */
-  if (!isOpen) {
-    return (
-      <div className="flex-shrink-0 border-l border-slate-200 bg-white flex flex-col items-center py-4 w-11">
-        <button
-          onClick={onOpen}
-          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition-colors"
-          title="Open AI Chat"
-        >
-          <Sparkles className="w-4.5 h-4.5" />
-        </button>
-      </div>
-    );
-  }
+  if (!isOpen) return null;
 
   /* ── Expanded panel ── */
   return (
