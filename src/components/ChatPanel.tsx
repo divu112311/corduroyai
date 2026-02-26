@@ -306,14 +306,13 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   /* User bubble */
                   <div
                     key={msg.id}
-                    className="self-end max-w-[75%] chat-msg-enter"
+                    className="self-end max-w-[85%] chat-msg-enter"
                   >
-                    <div className="px-3.5 py-2.5 rounded-2xl
-                                    bg-[#F2F2F7] dark:bg-[#2C2C2E]
-                                    text-sm text-gray-900 dark:text-gray-100">
+                    <div className="px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.5]"
+                         style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
-                    <p className="text-gray-400 mt-1 text-right mr-1" style={{ fontSize: '11px', lineHeight: 1 }}>
+                    <p className="mt-1.5 text-right mr-1" style={{ fontSize: '11px', lineHeight: 1, color: '#9CA3AF' }}>
                       {formatTime(msg.timestamp)}
                     </p>
                   </div>
@@ -328,8 +327,9 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                       <img src={logo} alt="" className="w-4 h-4 brightness-0 invert" />
                     </div>
                     <div>
-                      <div className="px-3.5 py-2.5 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]
-                                      text-sm text-gray-700 dark:text-gray-300 leading-[1.5]">
+                      <div className="px-3.5 py-3 rounded-xl bg-white dark:bg-[#2C2C2E]
+                                      shadow-[0_1px_4px_rgba(0,0,0,0.08)]
+                                      text-[14px] text-[#1A1A2E] dark:text-gray-300 leading-[1.5]">
                         <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                         {msg.confidence !== undefined && (
                           <ConfidenceBar confidence={msg.confidence} />
@@ -338,7 +338,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                           <StructuredContent sections={msg.sections} />
                         )}
                       </div>
-                      <p className="text-gray-400 mt-1 ml-1" style={{ fontSize: '11px', lineHeight: 1 }}>
+                      <p className="mt-1.5 ml-1" style={{ fontSize: '11px', lineHeight: 1, color: '#9CA3AF' }}>
                         {formatTime(msg.timestamp)}
                       </p>
                     </div>
@@ -365,9 +365,11 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         </div>
 
         {/* Input section */}
-        <div className="px-5 py-3 flex-shrink-0 bg-[#F5F5F5] dark:bg-[#2C2C2E]
-                        border-t border-black/[0.06] dark:border-white/[0.06]">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-3 flex-shrink-0">
+          <div className="flex items-end gap-2 bg-white dark:bg-[#1C1C1E]
+                          rounded-xl border-[1.5px] border-[#E5E7EB] dark:border-white/10
+                          focus-within:border-[#06B6D4] dark:focus-within:border-[#06B6D4]
+                          transition-colors duration-150 px-3.5 py-2.5">
             <textarea
               ref={inputRef}
               value={input}
@@ -377,32 +379,28 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
               disabled={isThinking}
               rows={1}
               className={cn(
-                'flex-1 min-h-[40px] max-h-[120px] resize-none',
-                'border-none outline-none',
-                'bg-white dark:bg-[#1C1C1E]',
-                'rounded-[14px] px-4 py-2.5 text-sm',
-                'text-gray-900 dark:text-gray-100',
+                'flex-1 min-h-[24px] max-h-[120px] resize-none',
+                'border-none outline-none bg-transparent',
+                'text-[14px] text-[#1A1A2E] dark:text-gray-100',
                 'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-                'focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)]',
-                'disabled:opacity-50',
-                'transition-shadow duration-150'
+                'disabled:opacity-50'
               )}
             />
             <button
               onClick={handleSend}
               disabled={isThinking || !input.trim()}
               className={cn(
-                'w-9 h-9 flex-shrink-0 rounded-full',
-                'bg-blue-500 text-white',
+                'w-8 h-8 flex-shrink-0 rounded-lg',
+                'text-[#06B6D4]',
                 'flex items-center justify-center',
-                'hover:bg-blue-600',
-                'disabled:opacity-40 disabled:pointer-events-none',
-                'active:scale-[0.97] active:duration-[80ms]',
+                'hover:bg-[#06B6D4]/10',
+                'disabled:opacity-30 disabled:pointer-events-none',
+                'active:scale-[0.95] active:duration-[80ms]',
                 'transition-all duration-150'
               )}
               aria-label="Send message"
             >
-              <Send className="w-4 h-4" strokeWidth={1.5} />
+              <Send className="w-[18px] h-[18px]" strokeWidth={1.5} />
             </button>
           </div>
         </div>
