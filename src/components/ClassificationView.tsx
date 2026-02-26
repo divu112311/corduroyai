@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Search, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, MessageSquare, Plus, X, Upload, FileText, File, Package, MapPin, DollarSign, Calendar, Edit2, Loader2 } from 'lucide-react';
-import { LLMAssistant } from './LLMAssistant';
 import { ClarificationChatbot } from './ClarificationChatbot';
 import { ClassificationResults, ClassificationResultData } from './ClassificationResults';
 import { classifyProduct } from '../lib/supabaseFunctions';
@@ -38,7 +37,6 @@ export function ClassificationView() {
   const [result, setResult] = useState<ClassificationResultData | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAlternatives, setShowAlternatives] = useState(false);
-  const [showAssistant, setShowAssistant] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [materials, setMaterials] = useState<MaterialComposition[]>([]);
   const [newMaterial, setNewMaterial] = useState({ material: '', percentage: 0 });
@@ -993,19 +991,6 @@ export function ClassificationView() {
             <h3 className="text-slate-900 mb-2">Ready to Classify</h3>
             <p className="text-slate-600">Enter a product description above to get AI-powered HS/HTS classification with confidence scoring and tariff information.</p>
           </div>
-        )}
-
-        {/* AI Assistant */}
-        {showAssistant && (
-          <LLMAssistant
-            productContext={result && query ? {
-              name: query,
-              description: query,
-              hts: result.hts,
-              origin: originCountry
-            } : undefined}
-            onClose={() => setShowAssistant(false)}
-          />
         )}
 
         {/* Review Later Confirmation Toast */}

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, MapPin, DollarSign, Package, FileText, Filter, X, ChevronDown, ExternalLink } from 'lucide-react';
 import { AddProductModal } from './AddProductModal';
-import { LLMAssistant } from './LLMAssistant';
 import { ProductDetailsModal } from './ProductDetailsModal';
 import { supabase } from '../lib/supabase';
 import { getProductProfiles } from '../lib/dashboardService';
@@ -43,7 +42,6 @@ export function ProductProfile() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [showAssistant, setShowAssistant] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [isMobileView, setIsMobileView] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -203,13 +201,7 @@ export function ProductProfile() {
             <p className="text-slate-600">Manage product data, materials, origin, and vendor information</p>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setShowAssistant(!showAssistant)}
-              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              Ask AI Assistant
-            </button>
-            <button 
+            <button
               onClick={() => {
                 setEditingProduct(null);
                 setShowAddModal(true);
@@ -709,19 +701,6 @@ export function ProductProfile() {
           }}
           onSave={handleSaveProduct}
           editingProduct={editingProduct}
-        />
-      )}
-
-      {/* AI Assistant */}
-      {showAssistant && (
-        <LLMAssistant
-          productContext={selectedProduct ? {
-            name: selectedProduct.name,
-            description: `${selectedProduct.materials} from ${selectedProduct.origin}`,
-            hts: selectedProduct.hts,
-            origin: selectedProduct.origin
-          } : undefined}
-          onClose={() => setShowAssistant(false)}
         />
       )}
 

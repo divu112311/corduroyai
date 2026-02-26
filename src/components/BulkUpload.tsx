@@ -756,8 +756,8 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                 <div className="mt-4 max-w-md mx-auto">
                   <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
-                      style={{ width: `${(progressCurrent / progressTotal) * 100}%` }}
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500 dynamic-bar"
+                      style={{ '--bar-width': `${(progressCurrent / progressTotal) * 100}%` } as React.CSSProperties}
                     />
                   </div>
                   <p className="text-slate-500 text-sm mt-2">
@@ -1103,12 +1103,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                               </span>
                               <div className="w-16 h-1.5 bg-slate-200 rounded-full">
                                 <div
-                                  className={`h-full rounded-full ${
+                                  className={`h-full rounded-full dynamic-bar ${
                                     item.confidence >= 90 ? 'bg-green-500' :
                                     item.confidence >= 75 ? 'bg-amber-500' :
                                     'bg-red-500'
                                   }`}
-                                  style={{ width: `${item.confidence}%` }}
+                                  style={{ '--bar-width': `${item.confidence}%` } as React.CSSProperties}
                                 />
                               </div>
                             </div>

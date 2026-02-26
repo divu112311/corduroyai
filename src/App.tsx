@@ -11,6 +11,7 @@ import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
 import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
+import { ChatPanel } from './components/ChatPanel';
 import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
 import logo from './assets/corduroy-logo.jpg';
 import { supabase } from './lib/supabase';
@@ -44,6 +45,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Refs to avoid stale closures in onAuthStateChange callback (Fix #1)
   const isAuthenticatedRef = useRef(isAuthenticated);
@@ -444,9 +446,9 @@ export default function App() {
         onLogout={handleLogout}
       />
     )}
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
+    <div className="app-shell bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
+      <aside className="app-sidebar bg-white border-r border-slate-200 p-6 flex flex-col">
         <div className="mb-8">
           <img src={logo} alt="Corduroy AI" className="w-full max-w-[200px]" />
         </div>
@@ -551,13 +553,16 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="app-main">
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'classify' && <UnifiedClassification />}
         {currentView === 'profile' && <ProductProfile />}
         {currentView === 'activity' && <Activity />}
         {currentView === 'settings' && <Settings />}
       </main>
+
+      {/* Chat panel — docked right sidebar, always mounted for animation */}
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
     </div>
     </>
   );
