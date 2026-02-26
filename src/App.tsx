@@ -490,9 +490,9 @@ export default function App() {
           onClick={() => setIsChatOpen(true)}
           title="Corduroy AI"
           style={{ position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999 }}
-          className="w-11 h-11 rounded-full bg-white border border-slate-200 shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
+          className="w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
         >
-          <img src={logo} alt="Corduroy AI" className="w-7 h-7 object-contain" />
+          <img src={logo} alt="Corduroy AI" className="w-6 h-6" />
         </button>
       )}
     </div>
