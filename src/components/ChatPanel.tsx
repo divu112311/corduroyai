@@ -230,16 +230,16 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                         border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1C1C1E]">
           <div className="flex items-center gap-2.5">
             <img src={logo} alt="" className="w-5 h-5" />
-            <span className="text-gray-900 dark:text-gray-100"
-                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '15px', lineHeight: 1.3 }}>
+            <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">
               Corduroy
             </span>
           </div>
           <button
             onClick={onClose}
-            className="min-h-[44px] min-w-[44px] flex items-center justify-center
+            className="w-8 h-8 flex items-center justify-center
                        text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300
-                       rounded-lg transition-colors duration-150"
+                       rounded-full hover:bg-gray-100 dark:hover:bg-gray-800
+                       transition-colors duration-150"
             aria-label="Close chat panel"
           >
             <X className="w-4 h-4" strokeWidth={1.5} />
@@ -313,7 +313,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                                     text-sm text-gray-900 dark:text-gray-100">
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-1 text-right mr-1">
+                    <p className="text-gray-400 mt-1 text-right mr-1" style={{ fontSize: '11px', lineHeight: 1 }}>
                       {formatTime(msg.timestamp)}
                     </p>
                   </div>
@@ -335,7 +335,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                           <StructuredContent sections={msg.sections} />
                         )}
                       </div>
-                      <p className="text-[11px] text-gray-400 mt-1 ml-1">
+                      <p className="text-gray-400 mt-1 ml-1" style={{ fontSize: '11px', lineHeight: 1 }}>
                         {formatTime(msg.timestamp)}
                       </p>
                     </div>
@@ -361,7 +361,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         {/* Input section */}
         <div className="px-5 py-3 flex-shrink-0 bg-[#F5F5F5] dark:bg-[#2C2C2E]
                         border-t border-black/[0.06] dark:border-white/[0.06]">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <textarea
               ref={inputRef}
               value={input}
@@ -374,7 +374,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                 'flex-1 min-h-[40px] max-h-[120px] resize-none',
                 'border-none outline-none',
                 'bg-white dark:bg-[#1C1C1E]',
-                'rounded-[14px] px-3.5 py-2.5 text-sm',
+                'rounded-[14px] px-4 py-2.5 text-sm',
                 'text-gray-900 dark:text-gray-100',
                 'placeholder:text-gray-400 dark:placeholder:text-gray-500',
                 'focus:shadow-[0_0_0_2px_rgba(0,122,255,0.25)]',
