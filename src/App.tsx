@@ -367,7 +367,7 @@ export default function App() {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col flex-shrink-0">
+      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col flex-shrink-0 overflow-hidden">
         <div className="mb-8">
           <img src={logo} alt="Corduroy AI" className="w-full max-w-[200px]" />
         </div>

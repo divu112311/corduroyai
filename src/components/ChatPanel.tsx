@@ -100,7 +100,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       </div>
 
       {/* ── Scrollable content ── */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-white">
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-hidden bg-white">
 
         {messages.length === 0 ? (
           /* ── Empty state — vertically centered ── */
