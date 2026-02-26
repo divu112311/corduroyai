@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowLeft, CheckCircle, AlertCircle, FileText, Calendar, Loader, ThumbsUp, AlertTriangle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth';
 import * as classificationService from '../lib/classificationService';
 
 interface ClassificationResult {
@@ -41,7 +40,7 @@ interface BulkItemDetailProps {
 }
 
 export function BulkItemDetail({ item, onClose, onSave, bulkRunId }: BulkItemDetailProps) {
-  const { user } = useAuth();
+  const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [showExceptionDialog, setShowExceptionDialog] = useState(false);
@@ -61,6 +60,12 @@ export function BulkItemDetail({ item, onClose, onSave, bulkRunId }: BulkItemDet
   };
 
   // Fetch classification result if ID is available
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
+
   useEffect(() => {
     const fetchClassificationResult = async () => {
       if (!item.classification_result_id) return;
