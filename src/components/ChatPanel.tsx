@@ -227,7 +227,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         <div className="chat-panel-inner">
         {/* Header — branded */}
         <div className="h-[56px] px-5 flex items-center justify-between flex-shrink-0
-                        border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1C1C1E]">
+                        border-b border-black/[0.06] dark:border-white/[0.06]">
           <div className="flex items-center gap-2.5">
             <img src={logo} alt="" className="w-5 h-5" />
             <span className="text-[15px] font-semibold text-gray-900 dark:text-gray-100">
@@ -321,9 +321,12 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   /* AI bubble — with background + avatar */
                   <div
                     key={msg.id}
-                    className="self-start max-w-[85%] flex gap-2 chat-msg-enter"
+                    className="self-start max-w-[85%] flex items-start gap-2.5 chat-msg-enter"
                   >
-                    <img src={logo} alt="" className="w-5 h-5 mt-1 flex-shrink-0" />
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+                         style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
+                      <img src={logo} alt="" className="w-4 h-4 brightness-0 invert" />
+                    </div>
                     <div>
                       <div className="px-3.5 py-2.5 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]
                                       text-sm text-gray-700 dark:text-gray-300 leading-[1.5]">
@@ -345,8 +348,11 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
 
               {/* Typing indicator — opacity fade */}
               {isThinking && (
-                <div className="self-start flex gap-2">
-                  <img src={logo} alt="" className="w-5 h-5 mt-1 flex-shrink-0 opacity-50" />
+                <div className="self-start flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center opacity-60"
+                       style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
+                    <img src={logo} alt="" className="w-4 h-4 brightness-0 invert" />
+                  </div>
                   <div className="flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]">
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-0" />
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-1" />
