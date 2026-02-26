@@ -228,14 +228,11 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         {/* Header — branded */}
         <div className="px-4 py-4 flex items-center justify-between flex-shrink-0"
              style={{ borderBottom: '1px solid #E5E7EB' }}>
-          <div className="flex items-center gap-2.5">
-            <img src={logo} alt="" className="w-5 h-5" />
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
-              <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
-                Trade Assistant
-              </span>
-            </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
+            <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
+              Trade Assistant
+            </span>
           </div>
           <button
             onClick={onClose}
@@ -266,7 +263,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
           {/* Empty state */}
           {messages.length === 0 && !isLoading ? (
             <div className="flex flex-col items-center justify-center flex-1 px-6">
-              <img src={logo} alt="" className="w-5 h-5 mb-4 opacity-40" />
+              <img src={logo} alt="" className="w-10 h-10 mb-4" />
               <p className="text-[15px] font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">
                 What are you shipping?
               </p>
@@ -275,10 +272,11 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
               </p>
               <button
                 onClick={handleSuggestion}
-                className="h-10 px-5 rounded-full bg-gray-900 dark:bg-white
-                           text-white dark:text-gray-900 text-sm font-medium
+                className="h-10 px-5 rounded-full
+                           text-white text-sm font-medium
                            hover:opacity-90 active:scale-[0.97]
                            transition-all duration-150"
+                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}
               >
                 Classify a product
               </button>
