@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, AlertCircle } from 'lucide-react';
+import { Send, X, AlertCircle, Sparkles } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { cn } from './ui/utils';
 import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
@@ -163,7 +163,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
       setIsThinking(false);
       addMessage({
         role: 'assistant',
-        content: `I received your message about "${text}". Backend integration is coming soon — this chat will classify products, handle clarifications, and show HTS results inline.`,
+        content: `Got it, classifying your product...`,
       });
     }, 900);
   };
@@ -309,7 +309,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                     key={msg.id}
                     className="self-end max-w-[85%] chat-msg-enter"
                   >
-                    <div className="px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.6]"
+                    <div className="w-fit ml-auto px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.6]"
                          style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
@@ -325,7 +325,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   >
                     <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
                          style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
-                      <img src={logo} alt="" className="w-4 h-4 brightness-0 invert" />
+                      <Sparkles className="w-4 h-4 text-white" strokeWidth={1.5} />
                     </div>
                     <div>
                       <div className="px-3.5 py-3 rounded-xl bg-white dark:bg-[#2C2C2E]
@@ -352,7 +352,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                 <div className="self-start flex items-start gap-2.5">
                   <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center opacity-60"
                        style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
-                    <img src={logo} alt="" className="w-4 h-4 brightness-0 invert" />
+                    <Sparkles className="w-4 h-4 text-white" strokeWidth={1.5} />
                   </div>
                   <div className="flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]">
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-0" />
@@ -367,11 +367,11 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
 
         {/* Input section */}
         <div className="px-4 py-3 flex-shrink-0 border-t border-[#E5E7EB] dark:border-white/10
-                        bg-[#F8F9FB] dark:bg-[#1C1C1E]">
+                        bg-[#f8fafc] dark:bg-[#1C1C1E]">
           <div className="flex items-end gap-2 bg-white dark:bg-[#1C1C1E]
                           rounded-xl border-[1.5px] border-[#E5E7EB] dark:border-white/10
                           focus-within:border-[#06B6D4] dark:focus-within:border-[#06B6D4]
-                          transition-colors duration-150 px-3.5 py-2.5">
+                          shadow-sm transition-colors duration-150 px-3.5 py-2.5">
             <textarea
               ref={inputRef}
               value={input}
