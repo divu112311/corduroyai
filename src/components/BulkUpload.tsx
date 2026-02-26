@@ -166,6 +166,15 @@ interface BulkItem {
   bulkItemId?: string;
   clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
   error?: string;
+  extracted_data?: {
+    product_name?: string;
+    product_description?: string;
+    country_of_origin?: string;
+    materials?: string;
+    unit_cost?: string;
+    [key: string]: any;
+  };
+  classification_result_id?: string | number;
 }
 
 type SortField = 'name' | 'confidence' | 'status';
@@ -302,6 +311,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       materials: (colMap.materials ? row[colMap.materials] : '') || '',
       cost: (colMap.cost ? row[colMap.cost] : '') || '',
       status: 'pending' as const,
+      // Store the complete extracted data for later use in approval flow
+      extracted_data: {
+        product_name: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
+        product_description: (colMap.description ? row[colMap.description] : '') || '',
+        country_of_origin: (colMap.origin ? row[colMap.origin] : '') || '',
+        materials: (colMap.materials ? row[colMap.materials] : '') || '',
+        unit_cost: (colMap.cost ? row[colMap.cost] : '') || '',
+      }
     }));
     setItems(initialItems);
 
@@ -1119,6 +1136,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i));
             setSelectedItem(null);
           }}
+          bulkRunId={0}
         />
       )}
 
