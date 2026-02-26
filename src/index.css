@@ -2888,15 +2888,8 @@ html, body, #root {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f8fafc;
-  border-left: 1px solid #E5E7EB;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.dark .chat-panel-inner {
-  background: #1C1C1E;
-  border-left-color: rgba(255, 255, 255, 0.1);
+  background: var(--chat-panel-bg);
+  border-left: 1px solid var(--chat-panel-border);
 }
 
 /* Hidden scrollbar for chat messages */

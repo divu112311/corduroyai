@@ -224,7 +224,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         aria-label="Corduroy AI Chat"
         aria-hidden={!isOpen}
       >
-        <div className="chat-panel-inner">
+        <div className="chat-panel-inner text-sm leading-relaxed">
         {/* Header — branded */}
         <div className="px-4 py-4 flex items-center justify-between flex-shrink-0"
              style={{ borderBottom: '1px solid #E5E7EB' }}>
