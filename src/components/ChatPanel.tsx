@@ -32,6 +32,13 @@ interface ChatPanelProps {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Constants                                                          */
+/* ------------------------------------------------------------------ */
+
+const GRADIENT = 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)';
+const TIMESTAMP_STYLE: React.CSSProperties = { fontSize: '11px', lineHeight: 1, color: '#9CA3AF' };
+
+/* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -57,15 +64,20 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
     confidence <= 50 ? 'Low' : confidence <= 75 ? 'Medium' : 'High';
 
   return (
-    <div className="mt-4 space-y-1">
+    <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500 dark:text-gray-400">{label} confidence</span>
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{confidence}%</span>
+        <span className="text-xs" style={{ color: '#6b7280' }}>{label} confidence</span>
+        <span className="text-xs font-medium" style={{ color: '#374151' }}>{confidence}%</span>
       </div>
-      <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="rounded-full overflow-hidden" style={{ height: 6, width: '100%', background: '#e5e7eb' }}>
         <div
-          className="h-full rounded-full transition-all duration-300 dynamic-bar dynamic-bar-color"
-          style={{ '--bar-width': `${confidence}%`, '--bar-color': color } as React.CSSProperties}
+          className="rounded-full dynamic-bar dynamic-bar-color"
+          style={{
+            height: '100%',
+            transition: 'all 300ms',
+            '--bar-width': `${confidence}%`,
+            '--bar-color': color,
+          } as React.CSSProperties}
         />
       </div>
     </div>
@@ -75,29 +87,29 @@ function ConfidenceBar({ confidence }: { confidence: number }) {
 /** Structured AI response sections */
 function StructuredContent({ sections }: { sections: MessageSection[] }) {
   return (
-    <div className="space-y-4 mt-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} className="mt-3">
       {sections.map((section, i) => (
         <div key={i}>
           {section.heading && (
-            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-2 text-left">
+            <h4 className="text-left mb-2" style={{ fontSize: 16, fontWeight: 600, color: '#111827' }}>
               {section.heading}
             </h4>
           )}
           {section.content && (
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6]">{section.content}</p>
+            <p className="text-sm" style={{ color: '#374151', lineHeight: 1.6 }}>{section.content}</p>
           )}
           {section.bullets && (
-            <ul className="space-y-2 mt-2">
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: 8 }} className="mt-2">
               {section.bullets.map((bullet, j) => (
-                <li key={j} className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6] flex gap-2">
-                  <span className="text-gray-400 mt-0.5 flex-shrink-0">&bull;</span>
+                <li key={j} className="text-sm flex" style={{ color: '#374151', lineHeight: 1.6, gap: 8 }}>
+                  <span className="flex-shrink-0" style={{ color: '#9ca3af', marginTop: 2 }}>&bull;</span>
                   <span>{bullet}</span>
                 </li>
               ))}
             </ul>
           )}
           {section.metadata && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{section.metadata}</p>
+            <p className="text-xs mt-1" style={{ color: '#6b7280' }}>{section.metadata}</p>
           )}
         </div>
       ))}
@@ -200,17 +212,12 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
       {!isOpen && (
         <button
           onClick={onOpen}
-          className="fixed bottom-6 right-6 z-[9999] w-12 h-12 rounded-full
-                     bg-white dark:bg-[#1C1C1E]
-                     shadow-[0px_8px_24px_rgba(0,0,0,0.08)]
-                     hover:bg-[#F5F5F5] dark:hover:bg-[#2C2C2E]
-                     active:scale-[0.97] active:duration-[80ms]
-                     flex items-center justify-center cursor-pointer
-                     transition-[transform,background] duration-150"
+          className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-white flex items-center justify-center cursor-pointer chat-trigger"
+          style={{ zIndex: 9999, boxShadow: '0px 8px 24px rgba(0,0,0,0.08)', transition: 'transform 150ms, background 150ms' }}
           title="Corduroy AI"
           aria-label="Open chat"
         >
-          <img src={logo} alt="Corduroy AI" className="w-7 h-7" />
+          <img src={logo} alt="Corduroy AI" style={{ width: 28, height: 28 }} />
         </button>
       )}
 
@@ -224,59 +231,52 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         aria-label="Corduroy AI Chat"
         aria-hidden={!isOpen}
       >
-        <div className="chat-panel-inner text-sm leading-relaxed">
+        <div className="chat-panel-inner">
         {/* Header — branded */}
-        <div className="px-4 py-4 flex items-center justify-between flex-shrink-0"
-             style={{ borderBottom: '1px solid #E5E7EB' }}>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
-            <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
+        <div className="chat-header px-4 py-4 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center" style={{ gap: 6 }}>
+            <span className="rounded-full flex-shrink-0" style={{ width: 8, height: 8, background: '#22C55E' }} aria-label="Online" />
+            <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.025em' }}>
               Trade Assistant
             </span>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center
-                       text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300
-                       rounded-full hover:bg-gray-100 dark:hover:bg-gray-800
-                       transition-colors duration-150"
+            className="chat-close-btn w-8 h-8 flex items-center justify-center rounded-full"
             aria-label="Close chat panel"
           >
-            <X className="w-4 h-4" strokeWidth={1.5} />
+            <X style={{ width: 16, height: 16 }} strokeWidth={1.5} />
           </button>
         </div>
 
         {/* Scrollable messages */}
         <div
           ref={scrollRef}
-          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 flex flex-col gap-3 chat-scrollbar-hidden"
+          className="chat-messages flex-1 overflow-y-auto p-4 flex flex-col gap-3 chat-scrollbar-hidden"
         >
           {/* Loading skeleton */}
           {isLoading && (
-            <div className="space-y-3 py-4">
-              <Skeleton className="h-4 w-3/4 rounded-md bg-gray-100 dark:bg-gray-800" />
-              <Skeleton className="h-4 w-1/2 rounded-md bg-gray-100 dark:bg-gray-800" />
-              <Skeleton className="h-4 w-2/3 rounded-md bg-gray-100 dark:bg-gray-800" />
+            <div className="py-4" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Skeleton className="chat-skeleton rounded-lg" style={{ height: 16, width: '75%' }} />
+              <Skeleton className="chat-skeleton rounded-lg" style={{ height: 16, width: '50%' }} />
+              <Skeleton className="chat-skeleton rounded-lg" style={{ height: 16, width: '66%' }} />
             </div>
           )}
 
           {/* Empty state */}
           {messages.length === 0 && !isLoading ? (
-            <div className="flex flex-col items-center justify-center flex-1 px-6">
+            <div className="flex flex-col items-center justify-center flex-1" style={{ paddingLeft: 24, paddingRight: 24 }}>
               <img src={logo} alt="" className="w-10 h-10 mb-4" />
-              <p className="text-[15px] font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">
+              <p className="font-medium mb-2 text-center" style={{ fontSize: 15 }}>
                 What are you shipping?
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+              <p className="text-sm mb-6 text-center" style={{ color: '#6b7280' }}>
                 Describe your product and I'll find the right HTS code.
               </p>
               <button
                 onClick={handleSuggestion}
-                className="h-10 px-5 rounded-full
-                           text-white text-sm font-medium
-                           hover:opacity-90 active:scale-[0.97]
-                           transition-all duration-150"
-                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}
+                className="h-10 px-5 rounded-full text-white text-sm font-medium"
+                style={{ background: GRADIENT }}
               >
                 Classify a product
               </button>
@@ -288,17 +288,17 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   /* Error state */
                   <div
                     key={msg.id}
-                    className="self-start max-w-[85%] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400
-                               px-3.5 py-2.5 rounded-2xl chat-msg-enter"
+                    className="chat-error-bubble chat-msg-ai rounded-2xl chat-msg-enter"
+                    style={{ padding: '10px 14px' }}
                   >
-                    <div className="flex items-start gap-2">
-                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
-                      <p className="text-sm leading-[1.6]">{msg.content}</p>
+                    <div className="flex items-start" style={{ gap: 8 }}>
+                      <AlertCircle style={{ width: 20, height: 20, flexShrink: 0, marginTop: 2 }} strokeWidth={1.5} />
+                      <p className="text-sm" style={{ lineHeight: 1.6 }}>{msg.content}</p>
                     </div>
                     <button
                       onClick={() => handleRetry(msg)}
-                      className="mt-2 text-sm font-medium text-blue-500 hover:text-blue-600
-                                 transition-colors duration-150"
+                      className="text-sm font-medium mt-2"
+                      style={{ color: '#3b82f6' }}
                     >
                       Try again
                     </button>
@@ -307,13 +307,15 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   /* User bubble */
                   <div
                     key={msg.id}
-                    className="self-end max-w-[85%] chat-msg-enter"
+                    className="chat-msg-user chat-msg-enter"
                   >
-                    <div className="w-fit ml-auto px-3.5 py-3 rounded-xl text-[14px] text-white leading-[1.6]"
-                         style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
-                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                    <div
+                      className="w-fit ml-auto rounded-xl text-white"
+                      style={{ padding: '12px 14px', background: GRADIENT, fontSize: 14, lineHeight: 1.6 }}
+                    >
+                      <span className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>{msg.content}</span>
                     </div>
-                    <p className="mt-1.5 text-right mr-1" style={{ fontSize: '11px', lineHeight: 1, color: '#9CA3AF' }}>
+                    <p className="mt-1 text-right mr-1" style={TIMESTAMP_STYLE}>
                       {formatTime(msg.timestamp)}
                     </p>
                   </div>
@@ -321,17 +323,19 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   /* AI bubble — with background + avatar */
                   <div
                     key={msg.id}
-                    className="self-start max-w-[85%] flex items-start gap-2.5 chat-msg-enter"
+                    className="chat-msg-ai flex items-start chat-msg-enter"
+                    style={{ gap: 10 }}
                   >
                     <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
-                         style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
-                      <Sparkles className="w-4 h-4 text-white" strokeWidth={1.5} />
+                         style={{ background: GRADIENT }}>
+                      <Sparkles className="text-white" style={{ width: 16, height: 16 }} strokeWidth={1.5} />
                     </div>
                     <div>
-                      <div className="px-3.5 py-3 rounded-xl bg-white dark:bg-[#2C2C2E]
-                                      shadow-[0_1px_4px_rgba(0,0,0,0.08)]
-                                      text-[14px] text-[#1A1A2E] dark:text-gray-300 leading-[1.6]">
-                        <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                      <div
+                        className="chat-bubble-ai rounded-xl"
+                        style={{ padding: '12px 14px', fontSize: 14, lineHeight: 1.6 }}
+                      >
+                        <span className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>{msg.content}</span>
                         {msg.confidence !== undefined && (
                           <ConfidenceBar confidence={msg.confidence} />
                         )}
@@ -339,7 +343,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                           <StructuredContent sections={msg.sections} />
                         )}
                       </div>
-                      <p className="mt-1.5 ml-1" style={{ fontSize: '11px', lineHeight: 1, color: '#9CA3AF' }}>
+                      <p className="mt-1 ml-1" style={TIMESTAMP_STYLE}>
                         {formatTime(msg.timestamp)}
                       </p>
                     </div>
@@ -349,15 +353,15 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
 
               {/* Typing indicator — opacity fade */}
               {isThinking && (
-                <div className="self-start flex items-start gap-2.5">
-                  <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center opacity-60"
-                       style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6, #06B6D4)' }}>
-                    <Sparkles className="w-4 h-4 text-white" strokeWidth={1.5} />
+                <div className="flex items-start" style={{ alignSelf: 'flex-start', gap: 10 }}>
+                  <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
+                       style={{ background: GRADIENT, opacity: 0.6 }}>
+                    <Sparkles className="text-white" style={{ width: 16, height: 16 }} strokeWidth={1.5} />
                   </div>
-                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]">
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-0" />
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-1" />
-                    <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-2" />
+                  <div className="chat-typing-dots flex items-center h-8 rounded-2xl" style={{ gap: 6, paddingLeft: 12, paddingRight: 12 }}>
+                    <div className="chat-dot rounded-full chat-dot-fade chat-dot-delay-0" style={{ width: 6, height: 6 }} />
+                    <div className="chat-dot rounded-full chat-dot-fade chat-dot-delay-1" style={{ width: 6, height: 6 }} />
+                    <div className="chat-dot rounded-full chat-dot-fade chat-dot-delay-2" style={{ width: 6, height: 6 }} />
                   </div>
                 </div>
               )}
@@ -366,12 +370,8 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         </div>
 
         {/* Input section */}
-        <div className="px-4 py-3 flex-shrink-0 border-t border-[#E5E7EB] dark:border-white/10
-                        bg-[#f8fafc] dark:bg-[#1C1C1E]">
-          <div className="flex items-end gap-2 bg-white dark:bg-[#1C1C1E]
-                          rounded-xl border-[1.5px] border-[#E5E7EB] dark:border-white/10
-                          focus-within:border-[#06B6D4] dark:focus-within:border-[#06B6D4]
-                          shadow-sm transition-colors duration-150 px-3.5 py-2.5">
+        <div className="px-4 py-3 flex-shrink-0 border-t" style={{ borderColor: 'var(--chat-panel-border)', background: 'var(--chat-panel-bg)' }}>
+          <div className="chat-input-wrap flex items-end rounded-xl" style={{ gap: 8, padding: '10px 14px' }}>
             <textarea
               ref={inputRef}
               value={input}
@@ -380,29 +380,16 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
               placeholder="Ask anything..."
               disabled={isThinking}
               rows={1}
-              className={cn(
-                'flex-1 min-h-[24px] max-h-[120px] resize-none',
-                'border-none outline-none bg-transparent',
-                'text-[14px] text-[#1A1A2E] dark:text-gray-100',
-                'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-                'disabled:opacity-50'
-              )}
+              className="chat-textarea flex-1 resize-none"
+              style={{ fontSize: 14 }}
             />
             <button
               onClick={handleSend}
               disabled={isThinking || !input.trim()}
-              className={cn(
-                'w-8 h-8 flex-shrink-0 rounded-lg',
-                'text-[#06B6D4]',
-                'flex items-center justify-center',
-                'hover:bg-[#06B6D4]/10',
-                'disabled:opacity-30 disabled:pointer-events-none',
-                'active:scale-[0.95] active:duration-[80ms]',
-                'transition-all duration-150'
-              )}
+              className="chat-send-btn w-8 h-8 flex-shrink-0 rounded-lg flex items-center justify-center"
               aria-label="Send message"
             >
-              <Send className="w-[18px] h-[18px]" strokeWidth={1.5} />
+              <Send style={{ width: 18, height: 18 }} strokeWidth={1.5} />
             </button>
           </div>
         </div>
