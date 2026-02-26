@@ -1,11 +1,26 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, ChevronsRight, Pin, Wand2, BookOpen, FileSearch, BarChart3 } from 'lucide-react';
-import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
+import { Send, ChevronsRight, Pin, MessageSquare, AlertCircle } from 'lucide-react';
+import { Skeleton } from './ui/skeleton';
+import { cn } from './ui/utils';
+
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
+
+interface MessageSection {
+  heading?: string;
+  content?: string;
+  bullets?: string[];
+  metadata?: string;
+}
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  confidence?: number;
+  sections?: MessageSection[];
+  isError?: boolean;
 }
 
 interface ChatPanelProps {
@@ -13,56 +28,130 @@ interface ChatPanelProps {
   onClose: () => void;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Sub-components                                                     */
+/* ------------------------------------------------------------------ */
+
+/** Step 6 — Confidence indicator bar */
+function ConfidenceBar({ confidence }: { confidence: number }) {
+  const color =
+    confidence <= 50
+      ? '#EF4444'
+      : confidence <= 75
+        ? '#F59E0B'
+        : '#22C55E';
+
+  const label =
+    confidence <= 50 ? 'Low' : confidence <= 75 ? 'Medium' : 'High';
+
+  return (
+    <div className="mt-4 space-y-1">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">{label} confidence</span>
+        <span className="text-xs font-medium text-gray-700">{confidence}%</span>
+      </div>
+      <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{ width: `${confidence}%`, backgroundColor: color }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Step 5 — Structured AI response sections */
+function StructuredContent({ sections }: { sections: MessageSection[] }) {
+  return (
+    <div className="space-y-4 mt-3">
+      {sections.map((section, i) => (
+        <div key={i}>
+          {section.heading && (
+            <h4 className="text-base font-semibold text-gray-900 mb-2 text-left">
+              {section.heading}
+            </h4>
+          )}
+          {section.content && (
+            <p className="text-sm text-gray-700 leading-[1.5]">{section.content}</p>
+          )}
+          {section.bullets && (
+            <ul className="space-y-2 mt-2">
+              {section.bullets.map((bullet, j) => (
+                <li key={j} className="text-sm text-gray-700 leading-[1.5] flex gap-2">
+                  <span className="text-gray-400 mt-0.5 flex-shrink-0">&bull;</span>
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {section.metadata && (
+            <p className="text-xs text-gray-500 mt-1">{section.metadata}</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
 export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
 
+  // Focus input when panel opens
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+      setTimeout(() => inputRef.current?.focus(), 200);
     }
   }, [isOpen]);
 
-  const addMessage = (role: 'user' | 'assistant', content: string) => {
-    setMessages(prev => [...prev, {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      role,
-      content,
-    }]);
+  const addMessage = (msg: Omit<ChatMessage, 'id'>) => {
+    setMessages(prev => [
+      ...prev,
+      { ...msg, id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` },
+    ]);
   };
 
   const handleSend = () => {
     if (!input.trim() || isThinking) return;
     const text = input.trim();
     setInput('');
-    addMessage('user', text);
+    addMessage({ role: 'user', content: text });
 
     setIsThinking(true);
     setTimeout(() => {
       setIsThinking(false);
-      addMessage('assistant',
-        `I received your message about "${text}". Backend integration is coming soon — this chat will classify products, handle clarifications, and show HTS results inline.`
-      );
+      addMessage({
+        role: 'assistant',
+        content: `I received your message about "${text}". Backend integration is coming soon — this chat will classify products, handle clarifications, and show HTS results inline.`,
+      });
     }, 900);
   };
 
-  const handleSuggestion = (action: string) => {
-    const prompts: Record<string, string> = {
-      classify: 'Describe the product you want to classify — include material, intended use, and any relevant details.',
-      explain: 'I can explain any HTS code. Type the code (e.g. "6109.10") or describe the product category.',
-      analyze: 'I can analyze your recent classifications for patterns, common issues, or optimization opportunities. What would you like to review?',
-      review: 'I can help you review exception items. Would you like me to pull up your pending exceptions?',
-    };
-    addMessage('assistant', prompts[action] || 'How can I help?');
+  const handleSuggestion = () => {
+    addMessage({
+      role: 'assistant',
+      content:
+        'Describe the product you want to classify — include material, intended use, and any relevant details.',
+    });
+  };
+
+  const handleRetry = (msg: ChatMessage) => {
+    setMessages(prev => prev.filter(m => m.id !== msg.id));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -72,119 +161,148 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
   };
 
-  if (!isOpen) return null;
-
+  /* ── Step 12: Animate instead of unmount ── */
   return (
-    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col" style={{ height: '100vh' }}>
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 h-[48px] border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center">
-          <span className="text-sm font-medium text-slate-700">AI Chat</span>
+    <div
+      className={cn(
+        // Step 1 — Card wrapper
+        'flex-shrink-0 flex flex-col',
+        'bg-white border border-gray-200 rounded-2xl',
+        'shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+        'overflow-hidden',
+        // Step 12 — Panel animation (180ms)
+        'transition-all duration-[180ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
+        // Step 2 — Width: ~35%, constrained
+        isOpen
+          ? 'w-[35%] min-w-[340px] max-w-[480px] opacity-100'
+          : 'w-0 min-w-0 max-w-0 opacity-0 pointer-events-none border-0 p-0'
+      )}
+    >
+      {/* ── Step 3: Header ── */}
+      <div className="flex items-center gap-3 px-5 py-4 flex-shrink-0">
+        {/* 3px gradient accent strip */}
+        <div
+          className="w-[3px] self-stretch rounded-full flex-shrink-0"
+          style={{ background: 'linear-gradient(135deg, #3B82F6, #2563EB)' }}
+        />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold text-gray-900 leading-[1.3]">
+            AI Chat
+          </h2>
+          <p className="text-xs font-normal text-gray-500 mt-0.5">
+            Last synced just now
+          </p>
         </div>
         <div className="flex items-center gap-1">
           <button
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-[120ms]"
             title="Pin chat"
+            aria-label="Pin chat panel"
           >
-            <Pin className="w-4 h-4" />
+            <Pin className="w-5 h-5" strokeWidth={1.5} />
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
-            title="Close sidebar"
+            className="min-h-[40px] min-w-[40px] flex items-center justify-center text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors duration-[120ms]"
+            title="Close chat"
+            aria-label="Close chat panel"
           >
-            <ChevronsRight className="w-4.5 h-4.5" />
+            <ChevronsRight className="w-5 h-5" strokeWidth={1.5} />
           </button>
         </div>
       </div>
 
       {/* ── Scrollable content ── */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-hidden bg-white">
-
-        {messages.length === 0 ? (
-          /* ── Empty state — vertically centered ── */
-          <div className="flex flex-col items-center justify-center h-full px-6">
-            <img src={logo} alt="Corduroy AI" className="w-10 h-10 mb-5 opacity-80" />
-            <h3 className="text-base font-medium text-slate-800 mb-1">Your personal customs expert</h3>
-            <p className="text-sm text-slate-400 mb-10">What do you want to do today?</p>
-
-            <div className="w-full space-y-1">
-              <button
-                onClick={() => handleSuggestion('classify')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
-              >
-                <Wand2 className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
-                <div>
-                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Classify a product</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSuggestion('explain')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
-              >
-                <BookOpen className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
-                <div>
-                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Explain an HTS code</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Look up what a code covers</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSuggestion('analyze')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
-              >
-                <BarChart3 className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
-                <div>
-                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Analyze classifications</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Review patterns and common issues</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => handleSuggestion('review')}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
-              >
-                <FileSearch className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
-                <div>
-                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Review exceptions</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Pull up items that need attention</p>
-                </div>
-              </button>
-            </div>
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto px-5"
+      >
+        {/* Step 9 — Loading state: skeleton */}
+        {isLoading && (
+          <div className="space-y-3 py-4">
+            <Skeleton className="h-4 w-3/4 rounded-md bg-gray-100" />
+            <Skeleton className="h-4 w-1/2 rounded-md bg-gray-100" />
+            <Skeleton className="h-4 w-2/3 rounded-md bg-gray-100" />
           </div>
+        )}
 
+        {/* Step 9 — Empty state */}
+        {messages.length === 0 && !isLoading ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <MessageSquare
+              className="w-8 h-8 text-gray-400 mb-4"
+              strokeWidth={1.5}
+            />
+            <p className="text-sm text-gray-700 mb-6 text-center">
+              Ask me about HTS codes, classifications, or product compliance.
+            </p>
+            <button
+              onClick={handleSuggestion}
+              className="h-10 px-4 rounded-[10px] bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:bg-blue-700 transition-colors duration-[120ms]"
+            >
+              Classify a product
+            </button>
+          </div>
         ) : (
-          /* ── Messages ── */
-          <div className="px-4 py-5 space-y-5">
+          /* ── Step 4: Message bubbles ── */
+          <div className="py-4 space-y-3">
             {messages.map((msg) => (
-              <div key={msg.id}>
-                {msg.role === 'user' ? (
-                  <div className="flex justify-end">
-                    <div className="bg-slate-100 text-slate-800 text-sm leading-relaxed px-4 py-3 rounded-2xl rounded-tr-md max-w-[85%]">
-                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+              <div
+                key={msg.id}
+                className={cn(
+                  'flex',
+                  msg.role === 'user' ? 'justify-end' : 'justify-start'
+                )}
+              >
+                {/* Step 9 — Error state */}
+                {msg.isError ? (
+                  <div className="max-w-[70%] bg-red-50 text-red-700 px-4 py-3 rounded-2xl">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
+                      <p className="text-sm leading-[1.5]">{msg.content}</p>
                     </div>
+                    <button
+                      onClick={() => handleRetry(msg)}
+                      className="mt-3 h-8 px-3 rounded-lg text-xs font-medium text-red-700 border border-red-300 hover:bg-red-100 transition-colors duration-[120ms]"
+                    >
+                      Retry
+                    </button>
                   </div>
                 ) : (
-                  <div>
-                    <p className="text-xs text-slate-400 font-medium mb-2 px-0.5">AI</p>
-                    <div className="text-sm leading-relaxed text-slate-700 px-0.5">
-                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
-                    </div>
+                  <div
+                    className={cn(
+                      'max-w-[70%] px-4 py-3 rounded-2xl',
+                      'text-sm font-normal leading-[1.5]',
+                      msg.role === 'user'
+                        ? 'bg-blue-100/60 text-gray-900'
+                        : 'bg-gray-100 text-gray-700'
+                    )}
+                  >
+                    <span className="whitespace-pre-wrap break-words">
+                      {msg.content}
+                    </span>
+                    {/* Step 6 — Confidence */}
+                    {msg.confidence !== undefined && (
+                      <ConfidenceBar confidence={msg.confidence} />
+                    )}
+                    {/* Step 5 — Structured responses */}
+                    {msg.sections && (
+                      <StructuredContent sections={msg.sections} />
+                    )}
                   </div>
                 )}
               </div>
             ))}
 
+            {/* Thinking indicator inside a bubble */}
             {isThinking && (
-              <div>
-                <p className="text-xs text-slate-400 font-medium mb-2 px-0.5">AI</p>
-                <div className="flex items-center gap-1.5 h-5 px-0.5">
-                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              <div className="flex justify-start">
+                <div className="bg-gray-100 px-4 py-3 rounded-2xl">
+                  <div className="flex items-center gap-1.5 h-5">
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
                 </div>
               </div>
             )}
@@ -192,28 +310,42 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         )}
       </div>
 
-      {/* ── Input — anchored to bottom ── */}
-      <div className="px-4 py-3 border-t border-slate-200 flex-shrink-0 bg-white">
-        <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-4 py-0.5 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+      {/* ── Step 7: Input field ── */}
+      <div className="px-5 pb-5 pt-4 flex-shrink-0">
+        <div className="flex items-center gap-3">
           <input
             ref={inputRef}
             type="text"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask AI anything..."
             disabled={isThinking}
-            className="flex-1 py-2.5 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
+            className={cn(
+              'flex-1 h-12 px-4 text-sm bg-white',
+              'border border-gray-300 rounded-[10px]',
+              'outline-none focus:outline-2 focus:outline-blue-500 focus:outline-offset-2 focus:border-transparent',
+              'placeholder:text-gray-400',
+              'disabled:opacity-50',
+              'transition-colors duration-[120ms]'
+            )}
           />
-          {input.trim() && (
-            <button
-              onClick={handleSend}
-              disabled={isThinking}
-              className="p-1 text-blue-600 hover:text-blue-700 disabled:opacity-40 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          )}
+          <button
+            onClick={handleSend}
+            disabled={isThinking || !input.trim()}
+            className={cn(
+              'h-10 px-4 rounded-[10px]',
+              'bg-blue-500 text-white',
+              'hover:bg-blue-600 active:bg-blue-700',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'transition-colors duration-[120ms]',
+              'flex items-center justify-center',
+              'focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2'
+            )}
+            aria-label="Send message"
+          >
+            <Send className="w-5 h-5" strokeWidth={1.5} />
+          </button>
         </div>
       </div>
     </div>
