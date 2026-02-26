@@ -164,17 +164,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   return (
     <div
       className={cn(
-        // Card wrapper
-        'flex-shrink-0 flex flex-col',
-        'bg-white border border-gray-200 rounded-2xl',
-        'shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
-        'overflow-hidden',
-        // Panel animation (180ms)
-        'transition-all duration-[180ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
-        // Width: ~35%, constrained
-        isOpen
-          ? 'w-[35%] min-w-[340px] max-w-[480px] opacity-100'
-          : 'w-0 min-w-0 max-w-0 opacity-0 pointer-events-none border-0 p-0'
+        'w-[380px] flex-shrink-0 flex flex-col',
+        'bg-white border-l border-gray-200',
+        'overflow-hidden'
       )}
     >
       {/* Header */}

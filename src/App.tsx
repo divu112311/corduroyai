@@ -552,27 +552,26 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Content area with padding */}
-      <div className="flex-1 min-w-0 flex p-6 gap-6 overflow-hidden">
-        <main className="flex-1 min-w-0 overflow-auto rounded-2xl bg-white border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-          {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
-          {currentView === 'classify' && <UnifiedClassification />}
-          {currentView === 'profile' && <ProductProfile />}
-          {currentView === 'activity' && <Activity />}
-          {currentView === 'settings' && <Settings />}
-        </main>
+      {/* Main Content */}
+      <main className="flex-1 min-w-0 overflow-y-auto">
+        {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
+        {currentView === 'classify' && <UnifiedClassification />}
+        {currentView === 'profile' && <ProductProfile />}
+        {currentView === 'activity' && <Activity />}
+        {currentView === 'settings' && <Settings />}
+      </main>
 
-        {/* Chat Panel — flex child on right */}
+      {/* Chat Panel — only rendered when open */}
+      {isChatOpen && (
         <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-      </div>
+      )}
 
-      {/* Floating chat opener — bottom-right corner */}
+      {/* Floating chat opener */}
       {!isChatOpen && (
         <button
           onClick={() => setIsChatOpen(true)}
           title="Corduroy AI"
-          style={{ position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999 }}
-          className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
+          className="fixed bottom-8 right-6 z-50 w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
         >
           <img src={logo} alt="Corduroy AI" className="w-7 h-7" />
         </button>
