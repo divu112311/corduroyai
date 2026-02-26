@@ -230,15 +230,10 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
              style={{ borderBottom: '1px solid #E5E7EB' }}>
           <div className="flex items-center gap-2.5">
             <img src={logo} alt="" className="w-5 h-5" />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
-                <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
-                  Trade Assistant
-                </span>
-              </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                Ask me anything about HTS codes, duties, or classifications
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#22C55E] flex-shrink-0" aria-label="Online" />
+              <span className="text-[15px] font-semibold tracking-tight text-[#1A1A2E] dark:text-gray-100">
+                Trade Assistant
               </span>
             </div>
           </div>
