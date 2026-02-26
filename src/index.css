@@ -2857,27 +2857,7 @@ html, body, #root {
   overflow-y: auto;
 }
 
-.app-chat-panel {
-  width: 380px;
-  flex-shrink: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.app-chat-btn {
-  position: fixed;
-  bottom: 32px;
-  right: 24px;
-  z-index: 9999;
-}
-
 /* ── Reusable component styles ─────────────────────────────────── */
-
-/* Gradient accent strip (chat header) */
-.gradient-accent-strip {
-  background: linear-gradient(135deg, #3B82F6, #2563EB);
-}
 
 /* Dynamic progress / confidence bars – set --bar-width on the element */
 .dynamic-bar {
@@ -2889,7 +2869,69 @@ html, body, #root {
   background-color: var(--bar-color);
 }
 
-/* Staggered bounce-dot animation delays */
-.bounce-delay-0 { animation-delay: 0ms; }
-.bounce-delay-1 { animation-delay: 150ms; }
-.bounce-delay-2 { animation-delay: 300ms; }
+/* ── Chat panel overlay ─────────────────────────────────────────── */
+
+.chat-panel-overlay {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  width: 420px;
+  height: 65vh;
+  border-radius: 20px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0px 20px 60px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform-origin: bottom right;
+}
+
+.dark .chat-panel-overlay {
+  background: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.chat-panel-open {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  visibility: visible;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
+              transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+              visibility 0ms;
+}
+
+.chat-panel-closed {
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 200ms ease-in,
+              transform 200ms ease-in,
+              visibility 0ms 200ms;
+}
+
+/* Hidden scrollbar for chat messages */
+.chat-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.chat-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Typing indicator: opacity fade animation */
+@keyframes chat-dot-fade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+.chat-dot-fade {
+  animation: chat-dot-fade 1.2s ease-in-out infinite;
+}
+
+.chat-dot-delay-0 { animation-delay: 0ms; }
+.chat-dot-delay-1 { animation-delay: 120ms; }
+.chat-dot-delay-2 { animation-delay: 240ms; }

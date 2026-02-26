@@ -561,22 +561,10 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
 
-      {/* Chat Panel — only rendered when open */}
-      {isChatOpen && (
-        <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-      )}
-
-      {/* Floating chat opener */}
-      {!isChatOpen && (
-        <button
-          onClick={() => setIsChatOpen(true)}
-          title="Corduroy AI"
-          className="app-chat-btn w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
-        >
-          <img src={logo} alt="Corduroy AI" className="w-7 h-7" />
-        </button>
-      )}
     </div>
+
+    {/* Chat Panel — floating overlay, always mounted for animation */}
+    <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
     </>
   );
 }
