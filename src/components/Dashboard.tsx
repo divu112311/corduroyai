@@ -124,7 +124,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-full p-6">
+    <div className="p-6">
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-8">
