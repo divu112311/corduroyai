@@ -369,6 +369,16 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
         if (cancelledRef.current) return;
 
+        console.log(`Result for item ${idx + 1}:`, {
+          result,
+          resultType: result?.type,
+          resultData: result?.data,
+          matches: result?.matches,
+          candidates: result?.candidates,
+          maxConfidence: result?.max_confidence,
+          confidenceThreshold,
+        });
+
         setItems(prev => prev.map(item => {
           if (item.id !== idx + 1) return item;
 
