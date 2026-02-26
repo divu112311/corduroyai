@@ -366,7 +366,8 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         </div>
 
         {/* Input section */}
-        <div className="px-4 py-3 flex-shrink-0">
+        <div className="px-4 py-3 flex-shrink-0 border-t border-[#E5E7EB] dark:border-white/10
+                        bg-[#F8F9FB] dark:bg-[#1C1C1E]">
           <div className="flex items-end gap-2 bg-white dark:bg-[#1C1C1E]
                           rounded-xl border-[1.5px] border-[#E5E7EB] dark:border-white/10
                           focus-within:border-[#06B6D4] dark:focus-within:border-[#06B6D4]
