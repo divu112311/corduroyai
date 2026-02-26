@@ -446,9 +446,9 @@ export default function App() {
         onLogout={handleLogout}
       />
     )}
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex overflow-hidden">
+    <div style={{ height: '100vh', overflow: 'hidden' }} className="bg-gradient-to-br from-slate-50 to-slate-100 flex">
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-slate-200 p-6 flex flex-col flex-shrink-0 overflow-hidden">
+      <aside style={{ width: '240px', flexShrink: 0, overflow: 'hidden' }} className="bg-white border-r border-slate-200 p-6 flex flex-col">
         <div className="mb-8">
           <img src={logo} alt="Corduroy AI" className="w-full max-w-[200px]" />
         </div>
@@ -553,7 +553,7 @@ export default function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-y-auto">
+      <main style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'classify' && <UnifiedClassification />}
         {currentView === 'profile' && <ProductProfile />}
@@ -571,7 +571,8 @@ export default function App() {
         <button
           onClick={() => setIsChatOpen(true)}
           title="Corduroy AI"
-          className="fixed bottom-8 right-6 z-50 w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
+          style={{ position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999 }}
+          className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
         >
           <img src={logo} alt="Corduroy AI" className="w-7 h-7" />
         </button>

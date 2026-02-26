@@ -163,11 +163,8 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   return (
     <div
-      className={cn(
-        'w-[380px] flex-shrink-0 flex flex-col',
-        'bg-white border-l border-gray-200',
-        'overflow-hidden'
-      )}
+      style={{ width: '380px', flexShrink: 0, overflow: 'hidden' }}
+      className="flex flex-col bg-white border-l border-gray-200"
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 flex-shrink-0">
