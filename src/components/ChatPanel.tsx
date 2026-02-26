@@ -84,7 +84,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
   /* ── Expanded panel ── */
   return (
-    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
+    <div className="fixed top-0 right-0 h-screen w-[400px] z-40 bg-white border-l border-slate-200 flex flex-col">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 h-[52px] border-b border-slate-200 flex-shrink-0">
