@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, X, MessageSquare, AlertCircle } from 'lucide-react';
+import { Send, X, AlertCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { cn } from './ui/utils';
 import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
@@ -22,12 +22,22 @@ interface ChatMessage {
   confidence?: number;
   sections?: MessageSection[];
   isError?: boolean;
+  timestamp: number;
 }
 
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function formatTime(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
 /* ------------------------------------------------------------------ */
@@ -131,10 +141,10 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen, onClose]);
 
-  const addMessage = useCallback((msg: Omit<ChatMessage, 'id'>) => {
+  const addMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
     setMessages(prev => [
       ...prev,
-      { ...msg, id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}` },
+      { ...msg, id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, timestamp: Date.now() },
     ]);
   }, []);
 
@@ -211,25 +221,28 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
           isOpen && 'chat-panel-open'
         )}
         role="dialog"
-        aria-label="AI Chat"
+        aria-label="Corduroy AI Chat"
         aria-hidden={!isOpen}
       >
         <div className="chat-panel-inner">
-        {/* Header */}
+        {/* Header — branded */}
         <div className="h-[56px] px-5 flex items-center justify-between flex-shrink-0
                         border-b border-black/[0.06] dark:border-white/[0.06] bg-white dark:bg-[#1C1C1E]">
-          <span className="text-gray-900 dark:text-gray-100"
-                style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '15px', lineHeight: 1.3 }}>
-            AI Chat
-          </span>
+          <div className="flex items-center gap-2.5">
+            <img src={logo} alt="" className="w-5 h-5" />
+            <span className="text-gray-900 dark:text-gray-100"
+                  style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: '15px', lineHeight: 1.3 }}>
+              Corduroy
+            </span>
+          </div>
           <button
             onClick={onClose}
             className="min-h-[44px] min-w-[44px] flex items-center justify-center
-                       text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200
+                       text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300
                        rounded-lg transition-colors duration-150"
             aria-label="Close chat panel"
           >
-            <X className="w-5 h-5" strokeWidth={1.5} />
+            <X className="w-4 h-4" strokeWidth={1.5} />
           </button>
         </div>
 
@@ -249,18 +262,20 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
 
           {/* Empty state */}
           {messages.length === 0 && !isLoading ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <MessageSquare
-                className="w-8 h-8 text-gray-400 dark:text-gray-500 mb-4"
-                strokeWidth={1.5}
-              />
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-6 text-center">
-                Ask me about HTS codes, classifications, or product compliance.
+            <div className="flex flex-col items-center justify-center h-full px-6">
+              <img src={logo} alt="" className="w-10 h-10 mb-4 opacity-40" />
+              <p className="text-[15px] font-medium text-gray-900 dark:text-gray-100 mb-2 text-center">
+                What are you shipping?
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center">
+                Describe your product and I'll find the right HTS code.
               </p>
               <button
                 onClick={handleSuggestion}
-                className="h-10 px-4 rounded-[10px] bg-blue-500 text-white text-sm font-medium
-                           hover:bg-blue-600 active:bg-blue-700 transition-colors duration-150"
+                className="h-10 px-5 rounded-full bg-gray-900 dark:bg-white
+                           text-white dark:text-gray-900 text-sm font-medium
+                           hover:opacity-90 active:scale-[0.97]
+                           transition-all duration-150"
               >
                 Classify a product
               </button>
@@ -273,7 +288,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                   <div
                     key={msg.id}
                     className="self-start max-w-[85%] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400
-                               px-3.5 py-2.5 rounded-2xl"
+                               px-3.5 py-2.5 rounded-2xl chat-msg-enter"
                   >
                     <div className="flex items-start gap-2">
                       <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" strokeWidth={1.5} />
@@ -281,44 +296,58 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                     </div>
                     <button
                       onClick={() => handleRetry(msg)}
-                      className="mt-3 h-8 px-3 rounded-lg text-xs font-medium text-red-700 dark:text-red-400
-                                 border border-red-300 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/40
+                      className="mt-2 text-sm font-medium text-blue-500 hover:text-blue-600
                                  transition-colors duration-150"
                     >
-                      Retry
+                      Try again
                     </button>
                   </div>
                 ) : msg.role === 'user' ? (
                   /* User bubble */
                   <div
                     key={msg.id}
-                    className="self-end max-w-[75%] px-3.5 py-2.5 rounded-2xl
-                               bg-[#F2F2F7] dark:bg-[#2C2C2E]
-                               text-sm text-gray-900 dark:text-gray-100"
+                    className="self-end max-w-[75%] chat-msg-enter"
                   >
-                    <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                    <div className="px-3.5 py-2.5 rounded-2xl
+                                    bg-[#F2F2F7] dark:bg-[#2C2C2E]
+                                    text-sm text-gray-900 dark:text-gray-100">
+                      <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-1 text-right mr-1">
+                      {formatTime(msg.timestamp)}
+                    </p>
                   </div>
                 ) : (
-                  /* AI bubble — no background */
+                  /* AI bubble — with background + avatar */
                   <div
                     key={msg.id}
-                    className="self-start max-w-[85%] text-sm text-gray-700 dark:text-gray-300 leading-[1.5]"
+                    className="self-start max-w-[85%] flex gap-2 chat-msg-enter"
                   >
-                    <span className="whitespace-pre-wrap break-words">{msg.content}</span>
-                    {msg.confidence !== undefined && (
-                      <ConfidenceBar confidence={msg.confidence} />
-                    )}
-                    {msg.sections && (
-                      <StructuredContent sections={msg.sections} />
-                    )}
+                    <img src={logo} alt="" className="w-5 h-5 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="px-3.5 py-2.5 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]
+                                      text-sm text-gray-700 dark:text-gray-300 leading-[1.5]">
+                        <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                        {msg.confidence !== undefined && (
+                          <ConfidenceBar confidence={msg.confidence} />
+                        )}
+                        {msg.sections && (
+                          <StructuredContent sections={msg.sections} />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1 ml-1">
+                        {formatTime(msg.timestamp)}
+                      </p>
+                    </div>
                   </div>
                 )
               ))}
 
               {/* Typing indicator — opacity fade */}
               {isThinking && (
-                <div className="self-start">
-                  <div className="flex items-center gap-1.5 h-5 px-1">
+                <div className="self-start flex gap-2">
+                  <img src={logo} alt="" className="w-5 h-5 mt-1 flex-shrink-0 opacity-50" />
+                  <div className="flex items-center gap-1.5 h-8 px-3 rounded-2xl bg-[#F7F7F8] dark:bg-[#2C2C2E]">
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-0" />
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-1" />
                     <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full chat-dot-fade chat-dot-delay-2" />
@@ -330,20 +359,21 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         </div>
 
         {/* Input section */}
-        <div className="px-4 py-3 flex-shrink-0 bg-[#FAFAFA] dark:bg-[#2C2C2E]
+        <div className="px-5 py-3 flex-shrink-0 bg-[#F5F5F5] dark:bg-[#2C2C2E]
                         border-t border-black/[0.06] dark:border-white/[0.06]">
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             <textarea
               ref={inputRef}
               value={input}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask AI anything..."
+              placeholder="Ask anything..."
               disabled={isThinking}
               rows={1}
               className={cn(
                 'flex-1 min-h-[40px] max-h-[120px] resize-none',
-                'border-none outline-none bg-transparent',
+                'border-none outline-none',
+                'bg-white dark:bg-[#1C1C1E]',
                 'rounded-[14px] px-3.5 py-2.5 text-sm',
                 'text-gray-900 dark:text-gray-100',
                 'placeholder:text-gray-400 dark:placeholder:text-gray-500',
@@ -359,6 +389,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                 'w-9 h-9 flex-shrink-0 rounded-full',
                 'bg-blue-500 text-white',
                 'flex items-center justify-center',
+                'hover:bg-blue-600',
                 'disabled:opacity-40 disabled:pointer-events-none',
                 'active:scale-[0.97] active:duration-[80ms]',
                 'transition-all duration-150'

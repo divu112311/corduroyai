@@ -2919,3 +2919,29 @@ html, body, #root {
 .chat-dot-delay-0 { animation-delay: 0ms; }
 .chat-dot-delay-1 { animation-delay: 120ms; }
 .chat-dot-delay-2 { animation-delay: 240ms; }
+
+/* Message entry animation */
+@keyframes chat-msg-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-msg-enter {
+  animation: chat-msg-enter 200ms ease-out both;
+}
+
+/* Responsive: narrower panel on smaller screens */
+@media (max-width: 1440px) {
+  .chat-panel-docked.chat-panel-open {
+    width: 340px;
+  }
+  .chat-panel-inner {
+    min-width: 340px;
+  }
+}
