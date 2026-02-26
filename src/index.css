@@ -2869,48 +2869,32 @@ html, body, #root {
   background-color: var(--bar-color);
 }
 
-/* ── Chat panel overlay ─────────────────────────────────────────── */
+/* ── Chat panel — docked right sidebar ──────────────────────────── */
 
-.chat-panel-overlay {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
-  width: 420px;
-  height: 65vh;
-  border-radius: 20px;
-  background: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0px 20px 60px rgba(0, 0, 0, 0.15);
+.chat-panel-docked {
+  flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chat-panel-docked.chat-panel-open {
+  width: 400px;
+}
+
+.chat-panel-inner {
+  min-width: 400px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  transform-origin: bottom right;
+  background: #FFFFFF;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.dark .chat-panel-overlay {
+.dark .chat-panel-inner {
   background: #1C1C1E;
-  border-color: rgba(255, 255, 255, 0.06);
-}
-
-.chat-panel-open {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
-  visibility: visible;
-  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-              visibility 0ms;
-}
-
-.chat-panel-closed {
-  opacity: 0;
-  transform: scale(0.96);
-  pointer-events: none;
-  visibility: hidden;
-  transition: opacity 200ms ease-in,
-              transform 200ms ease-in,
-              visibility 0ms 200ms;
+  border-left-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Hidden scrollbar for chat messages */

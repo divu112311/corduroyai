@@ -204,16 +204,17 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
         </button>
       )}
 
-      {/* Panel overlay */}
+      {/* Docked right sidebar */}
       <div
         className={cn(
-          'chat-panel-overlay',
-          isOpen ? 'chat-panel-open' : 'chat-panel-closed'
+          'chat-panel-docked',
+          isOpen && 'chat-panel-open'
         )}
         role="dialog"
         aria-label="AI Chat"
         aria-hidden={!isOpen}
       >
+        <div className="chat-panel-inner">
         {/* Header */}
         <div className="h-14 px-4 flex items-center justify-between flex-shrink-0
                         border-b border-black/[0.06] dark:border-white/[0.06]">
@@ -367,6 +368,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
             </button>
           </div>
         </div>
+        </div>{/* end chat-panel-inner */}
       </div>
     </>
   );

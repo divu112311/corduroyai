@@ -561,10 +561,9 @@ export default function App() {
         {currentView === 'settings' && <Settings />}
       </main>
 
+      {/* Chat panel — docked right sidebar, always mounted for animation */}
+      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
     </div>
-
-    {/* Chat Panel — floating overlay, always mounted for animation */}
-    <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
     </>
   );
 }
