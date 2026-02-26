@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, ChevronsRight, Pin, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
+import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 
 interface ChatMessage {
   id: string;
@@ -19,14 +20,12 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isThinking]);
 
-  // Focus input when panel opens
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -66,13 +65,6 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     addMessage('assistant', prompts[action] || 'How can I help?');
   };
 
-  const handleNewChat = () => {
-    setMessages([]);
-    setInput('');
-    setIsThinking(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -83,24 +75,24 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col h-full">
+    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col" style={{ height: '100vh' }}>
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 h-[52px] border-b border-slate-200 flex-shrink-0">
+      <div className="flex items-center justify-between px-4 h-[48px] border-b border-slate-200 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-slate-400" />
           <span className="text-[14px] font-medium text-slate-700">AI Chat</span>
         </div>
         <div className="flex items-center gap-1">
           <button
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
             title="Pin chat"
           >
             <Pin className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-md transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
             title="Close sidebar"
           >
             <ChevronsRight className="w-4 h-4" />
@@ -108,62 +100,58 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         </div>
       </div>
 
-      {/* ── Content area ── */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
+      {/* ── Scrollable content ── */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto bg-white">
 
         {messages.length === 0 ? (
-          /* ── Empty state ── */
-          <div className="px-4 pt-12 pb-6">
-            <div className="mb-8 px-2">
-              <h3 className="text-[15px] font-medium text-slate-800 mb-1">Your personal customs expert</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed">
-                What do you want to do today?
-              </p>
-            </div>
+          /* ── Empty state — vertically centered ── */
+          <div className="flex flex-col items-center justify-center h-full px-6">
+            <img src={logo} alt="Corduroy AI" className="w-10 h-10 mb-5 opacity-80" />
+            <h3 className="text-[16px] font-medium text-slate-800 mb-1">Your personal customs expert</h3>
+            <p className="text-[14px] text-slate-400 mb-10">What do you want to do today?</p>
 
-            {/* Suggestion rows */}
-            <div className="space-y-0.5">
+            <div className="w-full space-y-1">
               <button
                 onClick={() => handleSuggestion('classify')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <Wand2 className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <Wand2 className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Classify a product</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
+                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Classify a product</span>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
                 </div>
               </button>
 
               <button
                 onClick={() => handleSuggestion('explain')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <BookOpen className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Explain an HTS code</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Look up what a code covers</p>
+                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Explain an HTS code</span>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Look up what a code covers</p>
                 </div>
               </button>
 
               <button
                 onClick={() => handleSuggestion('analyze')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <BarChart3 className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <BarChart3 className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Analyze classifications</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Review patterns and common issues</p>
+                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Analyze classifications</span>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Review patterns and common issues</p>
                 </div>
               </button>
 
               <button
                 onClick={() => handleSuggestion('review')}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 transition-colors group"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <FileSearch className="w-4 h-4 text-slate-400 group-hover:text-slate-600 flex-shrink-0" />
+                <FileSearch className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[13px] text-slate-700 group-hover:text-slate-900">Review exceptions</span>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Pull up items that need attention</p>
+                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Review exceptions</span>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Pull up items that need attention</p>
                 </div>
               </button>
             </div>
@@ -171,19 +159,19 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
         ) : (
           /* ── Messages ── */
-          <div className="px-4 py-4 space-y-4">
+          <div className="px-4 py-5 space-y-5">
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.role === 'user' ? (
                   <div className="flex justify-end">
-                    <div className="bg-slate-100 text-slate-800 text-[13px] leading-relaxed px-3.5 py-2.5 rounded-2xl rounded-tr-md max-w-[85%]">
+                    <div className="bg-slate-100 text-slate-800 text-[14px] leading-relaxed px-4 py-3 rounded-2xl rounded-tr-md max-w-[85%]">
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5">AI</p>
-                    <div className="text-[13px] leading-relaxed text-slate-700">
+                    <p className="text-[12px] text-slate-400 font-medium mb-2 px-0.5">AI</p>
+                    <div className="text-[14px] leading-relaxed text-slate-700 px-0.5">
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
                   </div>
@@ -191,10 +179,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               </div>
             ))}
 
-            {/* Thinking indicator */}
             {isThinking && (
               <div>
-                <p className="text-[11px] text-slate-400 font-medium mb-1.5 px-0.5">AI</p>
+                <p className="text-[12px] text-slate-400 font-medium mb-2 px-0.5">AI</p>
                 <div className="flex items-center gap-1.5 h-5 px-0.5">
                   <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -206,9 +193,9 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
         )}
       </div>
 
-      {/* ── Input ── */}
-      <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
-        <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-3 py-0.5 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+      {/* ── Input — anchored to bottom ── */}
+      <div className="px-4 py-3 border-t border-slate-200 flex-shrink-0 bg-white">
+        <div className="flex items-center gap-2 border border-slate-200 rounded-xl px-4 py-0.5 bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
           <input
             ref={inputRef}
             type="text"
@@ -217,7 +204,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask AI anything..."
             disabled={isThinking}
-            className="flex-1 py-2 bg-transparent text-[13px] text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
+            className="flex-1 py-2.5 bg-transparent text-[14px] text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
           />
           {input.trim() && (
             <button
@@ -225,7 +212,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               disabled={isThinking}
               className="p-1 text-blue-600 hover:text-blue-700 disabled:opacity-40 transition-colors"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
             </button>
           )}
         </div>
