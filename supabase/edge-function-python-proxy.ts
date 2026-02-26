@@ -25,7 +25,7 @@ const PY_BACKEND_TOKEN = Deno.env.get("PY_BACKEND_TOKEN") || "";
 const allowOrigin = Deno.env.get("PY_PROXY_ALLOW_ORIGIN") || "*";
 const allowHeaders =
   Deno.env.get("PY_PROXY_ALLOW_HEADERS") ||
-  "authorization,apikey,content-type";
+  "authorization,apikey,content-type,x-client-info";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": allowOrigin,
