@@ -7,6 +7,7 @@ import {
   type FileMetadata,
 } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
+import { getUserMetadata } from '../lib/userService';
 import React from 'react';
 
 // ── CSV parsing ──────────────────────────────────────────────────────────────
@@ -98,6 +99,59 @@ async function runWithConcurrency(
   await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
 }
 
+// ── Build product description from a CSV row ─────────────────────────────────
+// Uses the detected column mapping to build a clean, natural-language product
+// description — exactly like the working single-item flow.
+// This avoids dumping raw key-value pairs (e.g. "Cost: 15.99") into the prompt.
+
+function buildProductDescription(
+  row: Record<string, string>,
+  colMap: Record<string, string>,
+): string {
+  const parts: string[] = [];
+
+  const productName = colMap.product_name ? row[colMap.product_name] : '';
+  const description = colMap.description ? row[colMap.description] : '';
+  const origin = colMap.origin ? row[colMap.origin] : '';
+  const materials = colMap.materials ? row[colMap.materials] : '';
+
+  if (productName) parts.push(productName);
+  if (description && description !== productName) parts.push(description);
+  if (materials) parts.push(`Material: ${materials}`);
+  if (origin) parts.push(`Country of origin: ${origin}`);
+
+  // If nothing was mapped, fall back to joining all non-empty values
+  if (parts.length === 0) {
+    return Object.entries(row)
+      .filter(([_, v]) => v && v.trim())
+      .map(([_, v]) => v.trim())
+      .join('. ');
+  }
+
+  return parts.join('. ');
+}
+
+// ── Retry helper with exponential backoff ─────────────────────────────────────
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  baseDelay: number = 1000,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 interface BulkItem {
   id: number | string;
   productName: string;
@@ -111,6 +165,7 @@ interface BulkItem {
   cost?: string;
   bulkItemId?: string;
   clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
+  error?: string;
 }
 
 type SortField = 'name' | 'confidence' | 'status';
@@ -205,6 +260,17 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       return;
     }
 
+    // Pre-fetch the user's confidence threshold ONCE before the loop.
+    // This avoids N redundant getUserMetadata calls (one per item) and
+    // prevents concurrent Supabase queries from causing failures.
+    let confidenceThreshold = 0.75;
+    try {
+      const userMeta = await getUserMetadata(user.id);
+      confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+    } catch (err) {
+      console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
+    }
+
     // Parse CSV locally
     let text: string;
     try {
@@ -239,20 +305,43 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     }));
     setItems(initialItems);
 
-    // Classify each row using the working single-product pipeline
+    // Classify each row using the working single-product pipeline.
+    // Each call is fully STATELESS — a fresh messages array (system + user
+    // prompt only) is sent per product. No prior conversation history or
+    // tool_use blocks are replayed, which avoids duplicate ID errors.
     let completed = 0;
 
     const tasks = rows.map((row, idx) => async () => {
       if (cancelledRef.current) return;
 
-      // Build a rich description from all row fields for the classifier
-      const description = Object.entries(row)
-        .filter(([_, v]) => v)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join(', ');
+      // Build a clean product description using detected column mapping,
+      // mirroring what the single-item ClassificationView sends.
+      const description = buildProductDescription(row, colMap);
+
+      if (!description.trim()) {
+        completed++;
+        setProgressCurrent(completed);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: 'No product description available' }
+            : item
+        ));
+        return;
+      }
 
       try {
-        const result = await classifyProduct(description, user.id);
+        // Each call is independent — pass pre-fetched threshold so
+        // classifyProduct does NOT re-fetch user metadata per item.
+        // classifyProduct returns null on failure, so wrap to throw for retry.
+        const result = await retryWithBackoff(
+          async () => {
+            const res = await classifyProduct(description, user.id, confidenceThreshold);
+            if (res === null) throw new Error('Classification returned null (edge function or backend error)');
+            return res;
+          },
+          2,   // up to 2 retries
+          1500, // 1.5s base delay with exponential backoff
+        ).catch(() => null); // After retries exhausted, treat as null
         completed++;
         setProgressCurrent(completed);
 
@@ -262,7 +351,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
           if (item.id !== idx + 1) return item;
 
           if (!result) {
-            return { ...item, status: 'exception' as const };
+            return { ...item, status: 'exception' as const, error: 'Classification returned no result' };
           }
 
           // Handle clarification needed
@@ -272,6 +361,20 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
               options: typeof c === 'string' ? [] : c.options || [],
             }));
             return { ...item, status: 'exception' as const, clarificationQuestions: questions };
+          }
+
+          // Handle explicit exception from backend (e.g. LOW_CONFIDENCE)
+          if (result.type === 'exception') {
+            const exceptionData = result.data;
+            const exceptionRules = exceptionData?.matched_rules || [];
+            const topExRule = exceptionRules[0];
+            return {
+              ...item,
+              status: 'exception' as const,
+              hts: topExRule?.hts || '',
+              confidence: Math.round((result.confidence || 0) * 100),
+              error: result.reason || 'Low confidence',
+            };
           }
 
           // Extract matched rules — mirroring ClassificationView logic
@@ -294,12 +397,23 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
           });
 
           const topRule = sortedMatches[0];
-          const maxConf = topRule
-            ? Math.round((topRule.confidence || topRule.score || result.max_confidence || 0) * 100)
+
+          // Confidence cascade: try rule confidence, then similarity score,
+          // then the response-level max_confidence. This matches the backend
+          // pipeline where generate_rationale sets confidence on each rule.
+          const rawConf = topRule
+            ? (topRule.confidence || topRule.score || 0)
             : 0;
+          const maxConf = rawConf > 0
+            ? Math.round(rawConf * 100)
+            : Math.round((result.max_confidence || 0) * 100);
 
           if (!topRule || maxConf === 0) {
-            return { ...item, status: 'exception' as const };
+            return {
+              ...item,
+              status: 'exception' as const,
+              error: 'No HTS match found or 0% confidence',
+            };
           }
 
           return {
@@ -310,18 +424,23 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
           };
         }));
-      } catch (err) {
+      } catch (err: any) {
         completed++;
         setProgressCurrent(completed);
-        console.error(`Error classifying row ${idx + 1}:`, err);
+        const errorMsg = err?.message || String(err);
+        console.error(`Error classifying row ${idx + 1}:`, errorMsg);
         setItems(prev => prev.map(item =>
-          item.id === idx + 1 ? { ...item, status: 'exception' as const } : item
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: `Classification failed: ${errorMsg}` }
+            : item
         ));
       }
     });
 
-    // Process 3 at a time
-    await runWithConcurrency(tasks, 3, () => cancelledRef.current);
+    // Process 2 at a time — each classification triggers 3+ LLM calls on the
+    // backend (preprocess, rule engine, rationale), so lower concurrency
+    // prevents rate-limit / timeout cascades that cause blanket failures.
+    await runWithConcurrency(tasks, 2, () => cancelledRef.current);
     setProcessing(false);
   };
 
@@ -936,7 +1055,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                           {item.status === 'exception' && (
                             <div className="flex items-center gap-2 text-red-600">
                               <AlertCircle className="w-5 h-5" />
-                              <span className="text-sm">Exception</span>
+                              <div>
+                                <span className="text-sm">Exception</span>
+                                {item.error && (
+                                  <p className="text-xs text-red-400 mt-0.5 max-w-[200px] truncate" title={item.error}>{item.error}</p>
+                                )}
+                              </div>
                             </div>
                           )}
                           {item.status === 'pending' && (
@@ -951,25 +1075,29 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                         <td className="px-6 py-4 text-slate-900 text-sm">{item.origin}</td>
                         <td className="px-6 py-4 text-slate-900">{item.hts}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm ${
-                              (item.confidence || 0) >= 90 ? 'text-green-600' : 
-                              (item.confidence || 0) >= 75 ? 'text-amber-600' : 
-                              'text-red-600'
-                            }`}>
-                              {item.confidence}%
-                            </span>
-                            <div className="w-16 h-1.5 bg-slate-200 rounded-full">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  (item.confidence || 0) >= 90 ? 'bg-green-500' : 
-                                  (item.confidence || 0) >= 75 ? 'bg-amber-500' : 
-                                  'bg-red-500'
-                                }`}
-                                style={{ width: `${item.confidence}%` }}
-                              />
+                          {item.confidence != null && item.confidence > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm ${
+                                item.confidence >= 90 ? 'text-green-600' :
+                                item.confidence >= 75 ? 'text-amber-600' :
+                                'text-red-600'
+                              }`}>
+                                {item.confidence}%
+                              </span>
+                              <div className="w-16 h-1.5 bg-slate-200 rounded-full">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    item.confidence >= 90 ? 'bg-green-500' :
+                                    item.confidence >= 75 ? 'bg-amber-500' :
+                                    'bg-red-500'
+                                  }`}
+                                  style={{ width: `${item.confidence}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <span className="text-sm text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-slate-900">{item.tariff}</td>
                       </tr>
