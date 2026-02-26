@@ -327,7 +327,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
                     style={{ gap: 10 }}
                   >
                     <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
-                         style={{ background: GRADIENT }}>
+                         style={{ background: '#ffffff', border: '1px solid #e2e8f0' }}>
                       <img src={logo} alt="AI" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                     </div>
                     <div>
@@ -355,7 +355,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
               {isThinking && (
                 <div className="flex items-start" style={{ alignSelf: 'flex-start', gap: 10 }}>
                   <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center"
-                       style={{ background: GRADIENT, opacity: 0.6 }}>
+                       style={{ background: '#ffffff', border: '1px solid #e2e8f0', opacity: 0.6 }}>
                     <img src={logo} alt="AI" style={{ width: 18, height: 18, objectFit: 'contain' }} />
                   </div>
                   <div className="chat-typing-dots flex items-center h-8 rounded-2xl" style={{ gap: 6, paddingLeft: 12, paddingRight: 12 }}>
