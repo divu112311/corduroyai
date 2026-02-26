@@ -75,27 +75,27 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 flex flex-col" style={{ height: '100vh' }}>
+    <div className="w-[400px] flex-shrink-0 bg-white border-l border-slate-200 shadow-[-2px_0_8px_rgba(0,0,0,0.04)] flex flex-col" style={{ height: '100vh' }}>
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 h-[48px] border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-slate-400" />
-          <span className="text-[14px] font-medium text-slate-700">AI Chat</span>
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-slate-400" />
+          <span className="text-sm font-medium text-slate-700">AI Chat</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
             title="Pin chat"
           >
-            <Pin className="w-3.5 h-3.5" />
+            <Pin className="w-4 h-4" />
           </button>
           <button
             onClick={onClose}
             className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-md transition-colors"
             title="Close sidebar"
           >
-            <ChevronsRight className="w-4 h-4" />
+            <ChevronsRight className="w-4.5 h-4.5" />
           </button>
         </div>
       </div>
@@ -107,18 +107,18 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           /* ── Empty state — vertically centered ── */
           <div className="flex flex-col items-center justify-center h-full px-6">
             <img src={logo} alt="Corduroy AI" className="w-10 h-10 mb-5 opacity-80" />
-            <h3 className="text-[16px] font-medium text-slate-800 mb-1">Your personal customs expert</h3>
-            <p className="text-[14px] text-slate-400 mb-10">What do you want to do today?</p>
+            <h3 className="text-base font-medium text-slate-800 mb-1">Your personal customs expert</h3>
+            <p className="text-sm text-slate-400 mb-10">What do you want to do today?</p>
 
             <div className="w-full space-y-1">
               <button
                 onClick={() => handleSuggestion('classify')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <Wand2 className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
+                <Wand2 className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Classify a product</span>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
+                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Classify a product</span>
+                  <p className="text-xs text-slate-400 mt-0.5">Describe a product to get HTS codes</p>
                 </div>
               </button>
 
@@ -126,10 +126,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 onClick={() => handleSuggestion('explain')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <BookOpen className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
+                <BookOpen className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Explain an HTS code</span>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Look up what a code covers</p>
+                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Explain an HTS code</span>
+                  <p className="text-xs text-slate-400 mt-0.5">Look up what a code covers</p>
                 </div>
               </button>
 
@@ -137,10 +137,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 onClick={() => handleSuggestion('analyze')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <BarChart3 className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
+                <BarChart3 className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Analyze classifications</span>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Review patterns and common issues</p>
+                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Analyze classifications</span>
+                  <p className="text-xs text-slate-400 mt-0.5">Review patterns and common issues</p>
                 </div>
               </button>
 
@@ -148,10 +148,10 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 onClick={() => handleSuggestion('review')}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left hover:bg-slate-50 transition-colors group"
               >
-                <FileSearch className="w-[18px] h-[18px] text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
+                <FileSearch className="w-5 h-5 text-slate-400 group-hover:text-slate-500 flex-shrink-0" />
                 <div>
-                  <span className="text-[14px] text-slate-700 group-hover:text-slate-900">Review exceptions</span>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Pull up items that need attention</p>
+                  <span className="text-sm text-slate-600 group-hover:text-slate-900">Review exceptions</span>
+                  <p className="text-xs text-slate-400 mt-0.5">Pull up items that need attention</p>
                 </div>
               </button>
             </div>
@@ -164,14 +164,14 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
               <div key={msg.id}>
                 {msg.role === 'user' ? (
                   <div className="flex justify-end">
-                    <div className="bg-slate-100 text-slate-800 text-[14px] leading-relaxed px-4 py-3 rounded-2xl rounded-tr-md max-w-[85%]">
+                    <div className="bg-slate-100 text-slate-800 text-sm leading-relaxed px-4 py-3 rounded-2xl rounded-tr-md max-w-[85%]">
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <p className="text-[12px] text-slate-400 font-medium mb-2 px-0.5">AI</p>
-                    <div className="text-[14px] leading-relaxed text-slate-700 px-0.5">
+                    <p className="text-xs text-slate-400 font-medium mb-2 px-0.5">AI</p>
+                    <div className="text-sm leading-relaxed text-slate-700 px-0.5">
                       <span className="whitespace-pre-wrap break-words">{msg.content}</span>
                     </div>
                   </div>
@@ -181,7 +181,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
             {isThinking && (
               <div>
-                <p className="text-[12px] text-slate-400 font-medium mb-2 px-0.5">AI</p>
+                <p className="text-xs text-slate-400 font-medium mb-2 px-0.5">AI</p>
                 <div className="flex items-center gap-1.5 h-5 px-0.5">
                   <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <div className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -204,7 +204,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
             onKeyDown={handleKeyDown}
             placeholder="Ask AI anything..."
             disabled={isThinking}
-            className="flex-1 py-2.5 bg-transparent text-[14px] text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
+            className="flex-1 py-2.5 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none disabled:opacity-50"
           />
           {input.trim() && (
             <button
