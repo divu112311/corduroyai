@@ -421,11 +421,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
           const rawConf = topRule
             ? (topRule.confidence || topRule.score || 0)
             : 0;
-          const maxConf = rawConf > 0
-            ? Math.round(rawConf * 100)
-            : Math.round((result.max_confidence || 0) * 100);
+          const maxConfDecimal = rawConf > 0
+            ? rawConf
+            : (result.max_confidence || 0);
+          const maxConfPercent = Math.round(maxConfDecimal * 100);
 
-          if (!topRule || maxConf === 0) {
+          if (!topRule || maxConfPercent === 0) {
             return {
               ...item,
               status: 'exception' as const,
@@ -433,11 +434,22 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             };
           }
 
+          // Check if confidence meets threshold — if not, flag as exception for review
+          if (maxConfDecimal < confidenceThreshold) {
+            return {
+              ...item,
+              status: 'exception' as const,
+              hts: topRule.hts || '',
+              confidence: maxConfPercent,
+              error: `Confidence ${maxConfPercent}% is below your ${Math.round(confidenceThreshold * 100)}% threshold`,
+            };
+          }
+
           return {
             ...item,
             status: 'complete' as const,
             hts: topRule.hts || '',
-            confidence: maxConf,
+            confidence: maxConfPercent,
             tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
           };
         }));
