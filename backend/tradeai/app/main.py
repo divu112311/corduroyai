@@ -113,14 +113,14 @@ def classify(req: ClassifyRequest):
         default=0
         )
 
-        if max_confidence < 0.2:  # hardcoding to see all results
+        if max_confidence < req.confidence_threshold:
             return {
             "type": "exception",
             "reason": "LOW_CONFIDENCE",
             "confidence": max_confidence,
             "data": ruling,
             }
-        
+
         return {
             "type": "answer",
             "matches": ruling,

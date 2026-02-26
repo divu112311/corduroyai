@@ -272,17 +272,17 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     // Pre-fetch the user's confidence threshold ONCE before the loop.
     // This avoids N redundant getUserMetadata calls (one per item) and
     // prevents concurrent Supabase queries from causing failures.
-    let confidenceThreshold = 0.75;
+    let confidenceThreshold = 0.80;
     try {
       const userMeta = await getUserMetadata(user.id);
-      confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+      confidenceThreshold = userMeta?.confidence_threshold ?? 0.80;
       console.log('Loaded user confidence threshold:', {
         threshold: confidenceThreshold,
         asPercent: `${Math.round(confidenceThreshold * 100)}%`,
         userMeta
       });
     } catch (err) {
-      console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
+      console.warn('Could not fetch user confidence threshold, using default 0.80:', err);
     }
 
     // Parse CSV locally
@@ -386,68 +386,79 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             return { ...item, status: 'exception' as const, error: 'Classification returned no result' };
           }
 
+          // ── Helper: extract best rule from any result shape ──
+          // Works for both "answer" (result.matches.matched_rules) and
+          // "exception" (result.data.matched_rules) payloads.
+          const extractBestRule = (res: any): { rules: any[]; topRule: any; maxConfDecimal: number; maxConfPercent: number } => {
+            let rules: any[] = [];
+            if (res.matches) {
+              if (Array.isArray(res.matches)) rules = res.matches;
+              else if (Array.isArray(res.matches?.matched_rules)) rules = res.matches.matched_rules;
+            }
+            if (rules.length === 0 && res.data) {
+              if (Array.isArray(res.data?.matched_rules)) rules = res.data.matched_rules;
+            }
+            if (rules.length === 0 && Array.isArray(res.candidates)) {
+              rules = res.candidates;
+            }
+            // Also check partial_matches (returned on clarification responses)
+            if (rules.length === 0 && Array.isArray(res.partial_matches)) {
+              rules = res.partial_matches;
+            }
+
+            const sorted = [...rules].sort((a: any, b: any) => {
+              const aConf = a.confidence || a.score || 0;
+              const bConf = b.confidence || b.score || 0;
+              return bConf - aConf;
+            });
+
+            const top = sorted[0];
+            const rawConf = top ? (top.confidence || top.score || 0) : 0;
+            const decimal = rawConf > 0 ? rawConf : (res.max_confidence || res.confidence || 0);
+            return { rules: sorted, topRule: top, maxConfDecimal: decimal, maxConfPercent: Math.round(decimal * 100) };
+          };
+
           // Handle clarification needed
           if (result.type === 'clarify' || result.needs_clarification) {
             const questions = (result.clarifications || result.questions || []).map((c: any) => ({
               question: typeof c === 'string' ? c : c.question || c,
               options: typeof c === 'string' ? [] : c.options || [],
             }));
-            return { ...item, status: 'exception' as const, clarificationQuestions: questions };
+            const { topRule: clarifyRule, maxConfPercent: clarifyConf } = extractBestRule(result);
+            return {
+              ...item,
+              status: 'exception' as const,
+              hts: clarifyRule?.hts || '',
+              confidence: clarifyConf,
+              clarificationQuestions: questions,
+              error: 'Needs clarification',
+            };
           }
 
           // Handle explicit exception from backend (e.g. LOW_CONFIDENCE)
           if (result.type === 'exception') {
-            const exceptionData = result.data;
-            const exceptionRules = exceptionData?.matched_rules || [];
-            const topExRule = exceptionRules[0];
+            const { topRule: exRule, maxConfPercent: exConf } = extractBestRule(result);
             return {
               ...item,
               status: 'exception' as const,
-              hts: topExRule?.hts || '',
-              confidence: Math.round((result.confidence || 0) * 100),
-              error: result.reason || 'Low confidence',
+              hts: exRule?.hts || '',
+              confidence: exConf,
+              error: result.reason === 'LOW_CONFIDENCE'
+                ? `Confidence ${exConf}% is below your ${Math.round(confidenceThreshold * 100)}% threshold`
+                : (result.reason || 'Low confidence'),
             };
           }
 
-          // Extract matched rules — mirroring ClassificationView logic
-          let matchedRules: any[] = [];
-          if (result.type === 'answer' && result.matches) {
-            if (Array.isArray(result.matches)) {
-              matchedRules = result.matches;
-            } else if (result.matches.matched_rules && Array.isArray(result.matches.matched_rules)) {
-              matchedRules = result.matches.matched_rules;
-            }
-          } else if (result.candidates) {
-            matchedRules = result.candidates;
-          }
-
-          // Sort by confidence descending (matching ClassificationView)
-          const sortedMatches = [...matchedRules].sort((a: any, b: any) => {
-            const aConf = a.confidence || a.score || 0;
-            const bConf = b.confidence || b.score || 0;
-            return bConf - aConf;
-          });
-
-          const topRule = sortedMatches[0];
-
-          // Confidence cascade: try rule confidence, then similarity score,
-          // then the response-level max_confidence. This matches the backend
-          // pipeline where generate_rationale sets confidence on each rule.
-          const rawConf = topRule
-            ? (topRule.confidence || topRule.score || 0)
-            : 0;
-          const maxConfDecimal = rawConf > 0
-            ? rawConf
-            : (result.max_confidence || 0);
-          const maxConfPercent = Math.round(maxConfDecimal * 100);
+          // Extract matched rules for "answer" type
+          const { topRule, maxConfDecimal, maxConfPercent } = extractBestRule(result);
 
           console.log(`Item ${idx + 1} processing:`, {
-            rawConf,
+            topRuleHts: topRule?.hts,
+            topRuleConf: topRule?.confidence,
             maxConfDecimal,
             maxConfPercent,
             confidenceThreshold,
             thresholdPercent: Math.round(confidenceThreshold * 100),
-            comparison: `${maxConfDecimal} < ${confidenceThreshold}?`,
             isBelowThreshold: maxConfDecimal < confidenceThreshold
           });
 
@@ -455,6 +466,8 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             return {
               ...item,
               status: 'exception' as const,
+              hts: topRule?.hts || '',
+              confidence: maxConfPercent,
               error: 'No HTS match found or 0% confidence',
             };
           }
