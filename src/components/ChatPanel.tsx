@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, ChevronsRight, Pin, Wand2, BookOpen, FileSearch, BarChart3, Sparkles } from 'lucide-react';
+import { Send, ChevronsRight, Pin, Wand2, BookOpen, FileSearch, BarChart3 } from 'lucide-react';
 import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 
 interface ChatMessage {
@@ -79,8 +79,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-4 h-[48px] border-b border-slate-200 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-5 h-5 text-slate-400" />
+        <div className="flex items-center">
           <span className="text-sm font-medium text-slate-700">AI Chat</span>
         </div>
         <div className="flex items-center gap-1">
