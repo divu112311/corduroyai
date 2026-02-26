@@ -11,6 +11,7 @@ import { NewPasswordForm } from './components/auth/NewPasswordForm';
 import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
 import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
+import { ChatPanel } from './components/ChatPanel';
 import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
 import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
 import { supabase } from './lib/supabase';
@@ -44,6 +45,7 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Refs to avoid stale closures in onAuthStateChange callback (Fix #1)
   const isAuthenticatedRef = useRef(isAuthenticated);
@@ -444,9 +446,9 @@ export default function App() {
         onLogout={handleLogout}
       />
     )}
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 p-6 flex flex-col">
+      <aside className="w-60 bg-white border-r border-slate-200 p-6 flex flex-col flex-shrink-0 overflow-hidden">
         <div className="mb-8">
           <img src={logo} alt="Corduroy AI" className="w-full max-w-[200px]" />
         </div>
@@ -550,14 +552,31 @@ export default function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
-        {currentView === 'classify' && <UnifiedClassification />}
-        {currentView === 'profile' && <ProductProfile />}
-        {currentView === 'activity' && <Activity />}
-        {currentView === 'settings' && <Settings />}
-      </main>
+      {/* Content area with padding */}
+      <div className="flex-1 min-w-0 flex p-6 gap-6 overflow-hidden">
+        <main className="flex-1 min-w-0 overflow-auto rounded-2xl bg-white border border-gray-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
+          {currentView === 'classify' && <UnifiedClassification />}
+          {currentView === 'profile' && <ProductProfile />}
+          {currentView === 'activity' && <Activity />}
+          {currentView === 'settings' && <Settings />}
+        </main>
+
+        {/* Chat Panel — flex child on right */}
+        <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      </div>
+
+      {/* Floating chat opener — bottom-right corner */}
+      {!isChatOpen && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          title="Corduroy AI"
+          style={{ position: 'fixed', bottom: '32px', right: '24px', zIndex: 9999 }}
+          className="w-12 h-12 rounded-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:scale-105 flex items-center justify-center transition-all cursor-pointer"
+        >
+          <img src={logo} alt="Corduroy AI" className="w-7 h-7" />
+        </button>
+      )}
     </div>
     </>
   );
