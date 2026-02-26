@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Lock, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
-import logo from '../../assets/corduroy-logo.jpg';
+import logo from '../../assets/corduroy-logo.png';
 import { supabase } from '../../lib/supabase';
 
 interface NewPasswordFormProps {
