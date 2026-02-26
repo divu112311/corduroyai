@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, X, AlertCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { cn } from './ui/utils';
-import logo from '../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
+import logo from '../assets/corduroy-logo.png';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
