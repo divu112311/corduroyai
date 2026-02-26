@@ -12,7 +12,7 @@ import { WelcomeScreen } from './components/auth/WelcomeScreen';
 import { OnboardingFlow } from './components/auth/OnboardingFlow';
 import { IdleTimeoutWarning } from './components/IdleTimeoutWarning';
 import { Package, FileText, LayoutDashboard, LogOut, User, Settings as SettingsIcon } from 'lucide-react';
-import logo from './assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
+import logo from './assets/corduroy-logo.jpg';
 import { supabase } from './lib/supabase';
 import { getUserMetadata, updateLastLogin, createOrUpdateUserMetadata } from './lib/userService';
 import { recordLogin, upsertSession, heartbeat, removeCurrentSession } from './lib/sessionService';
