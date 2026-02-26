@@ -127,7 +127,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
+    <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-8">
