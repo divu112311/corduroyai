@@ -211,79 +211,89 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="p-5 text-center text-slate-500">No exceptions requiring review</div>
                 ) : (
                   <>
-                    {activeExceptions
-                      .filter(item => filterBy === 'all' || item.category === filterBy)
-                      .sort((a, b) => {
-                        if (sortBy === 'priority') {
-                          const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-                          return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
-                        } else if (sortBy === 'product') {
-                          return a.product.localeCompare(b.product);
-                        }
-                        return 0;
-                      })
-                      .map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
-                          onClick={() => setSelectedException(item)}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <AlertCircle className={`w-5 h-5 flex-shrink-0 ${
-                                  item.priority === 'high' ? 'text-red-600' : 
-                                  item.priority === 'medium' ? 'text-amber-600' : 'text-blue-600'
-                                }`} />
-                                <span className="text-slate-900 truncate">{item.product}</span>
-                                <span className={`px-2 py-0.5 rounded text-xs border flex-shrink-0 ${getPriorityColor(item.priority)}`}>
-                                  {item.priority}
-                                </span>
-                              </div>
-                              
-                              <div className="ml-0 sm:ml-8 space-y-1">
-                                <div className="text-sm text-slate-600">
-                                  <span className="text-red-700">⚠ {item.reason}</span>
+                    {(() => {
+                      const filteredExceptions = activeExceptions
+                        .filter(item => filterBy === 'all' || item.category === filterBy)
+                        .sort((a, b) => {
+                          if (sortBy === 'priority') {
+                            const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+                            return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
+                          } else if (sortBy === 'product') {
+                            return a.product.localeCompare(b.product);
+                          }
+                          return 0;
+                        });
+                      const displayedExceptions = filteredExceptions.slice(0, 5);
+                      const remainingCount = filteredExceptions.length - displayedExceptions.length;
+
+                      return (
+                        <>
+                          {displayedExceptions.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
+                              onClick={() => setSelectedException(item)}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    <AlertCircle className={`w-5 h-5 flex-shrink-0 ${
+                                      item.priority === 'high' ? 'text-red-600' :
+                                      item.priority === 'medium' ? 'text-amber-600' : 'text-blue-600'
+                                    }`} />
+                                    <span className="text-slate-900 truncate">{item.product}</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs border flex-shrink-0 ${getPriorityColor(item.priority)}`}>
+                                      {item.priority}
+                                    </span>
+                                  </div>
+
+                                  <div className="ml-0 sm:ml-8 space-y-1">
+                                    <div className="text-sm text-slate-600">
+                                      <span className="text-red-700">⚠ {item.reason}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                                      <span className="whitespace-nowrap">SKU: {item.sku}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">HTS: {item.hts}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">Origin: {item.origin}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">Value: {item.value}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-                                  <span className="whitespace-nowrap">SKU: {item.sku}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">HTS: {item.hts}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">Origin: {item.origin}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">Value: {item.value}</span>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedException(item);
+                                    }}
+                                    className="hidden sm:block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm opacity-0 group-hover:opacity-100"
+                                  >
+                                    Review Now
+                                  </button>
+                                  <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </div>
                             </div>
-                            
-                            <div className="flex items-center gap-2 flex-shrink-0">
+                          ))}
+                          {remainingCount > 0 && (
+                            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedException(item);
-                                }}
-                                className="hidden sm:block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm opacity-0 group-hover:opacity-100"
+                                onClick={() => setShowAllReviewModal(true)}
+                                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
                               >
-                                Review Now
+                                Review {remainingCount} more exception{remainingCount > 1 ? 's' : ''}
+                                <ChevronRight className="w-4 h-4" />
                               </button>
-                              <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          )}
+                        </>
+                      );
+                    })()}
                   </>
                 )}
-              </div>
-
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <button 
-                  onClick={() => setShowAllReviewModal(true)}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
-                >
-                  View all exceptions
-                  <ChevronRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
