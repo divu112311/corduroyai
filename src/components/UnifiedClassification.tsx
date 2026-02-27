@@ -207,7 +207,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   <RefreshCw className="w-6 h-6 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-amber-900 mb-1">Bulk Run In Progress</h3>
+                  <h3 className="text-amber-900 mb-1">Bulk Run In Progress</h3>
                   <p className="text-amber-700 text-sm">
                     {activeBulkRun.fileName} &mdash; {activeBulkRun.totalItems} products
                   </p>
@@ -244,7 +244,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   <Upload className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-white mb-1">Need to classify multiple products?</h3>
+                  <h3 className="text-white mb-1">Need to classify multiple products?</h3>
                   <p className="text-blue-100 text-sm">Upload a CSV, Excel, or PDF file for bulk classification</p>
                 </div>
               </div>
@@ -273,7 +273,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                     <FileSpreadsheet className="w-8 h-8 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="text-base font-medium text-slate-900">Ready to Classify</h4>
+                    <h4 className="text-slate-900">Ready to Classify</h4>
                     <p className="text-slate-600 text-sm">{uploadedFile.name}</p>
                     <p className="text-slate-500 text-xs mt-1">
                       {(uploadedFile.size / 1024).toFixed(1)} KB
@@ -295,7 +295,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="w-5 h-5 text-slate-600" />
                   <div>
-                    <h4 className="text-base font-medium text-slate-900">General Product Description (Optional)</h4>
+                    <h4 className="text-slate-900">General Product Description (Optional)</h4>
                     <p className="text-slate-600 text-sm">Describe the products' intended use, materials, or function</p>
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-slate-600" />
                   <div>
-                    <h4 className="text-base font-medium text-slate-900">Supporting Documents (Optional)</h4>
+                    <h4 className="text-slate-900">Supporting Documents (Optional)</h4>
                     <p className="text-slate-600 text-sm">Specs, BOMs, datasheets to improve accuracy</p>
                   </div>
                 </div>
@@ -375,7 +375,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-base font-medium text-slate-900 mb-1">Ready to Start</h4>
+                  <h4 className="text-slate-900 mb-1">Ready to Start</h4>
                   <p className="text-slate-600 text-sm">
                     {bulkDescription && supportingFiles.length > 0
                       ? `Main file + description + ${supportingFiles.length} supporting document${supportingFiles.length > 1 ? 's' : ''} ready`
@@ -408,51 +408,45 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
 
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
-          <div className="mt-8">
-            <div className="flex items-center gap-2 mb-3">
-              <FileSpreadsheet className="w-4 h-4 text-slate-500" />
-              <p className="text-slate-700 text-sm font-medium">Bulk Classification Runs</p>
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+            <div className="px-6 py-4 border-b border-slate-100">
+              <h3 className="text-slate-900">Bulk Classification Runs</h3>
             </div>
 
             {loadingRuns ? (
-              <div className="bg-white rounded-xl p-6 border border-slate-200 text-center">
-                <Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto mb-2" />
-                <p className="text-slate-500 text-xs">Loading runs...</p>
-              </div>
+              <div className="p-6 text-center text-slate-500">Loading runs...</div>
             ) : bulkRuns.length === 0 ? (
-              <div className="bg-white rounded-xl p-6 border border-slate-200 text-center">
-                <p className="text-slate-400 text-xs">No bulk classification runs yet</p>
-              </div>
+              <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-slate-100">
                 {bulkRuns.map((run) => {
                   const statusDisplay = getRunStatusDisplay(run);
                   return (
                     <div
                       key={run.id}
-                      className="bg-white rounded-lg p-3 border border-slate-200"
+                      className="px-6 py-4 hover:bg-slate-50 transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className={`p-1.5 rounded border ${statusDisplay.color}`}>
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 min-w-0 flex-1">
+                          <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
                             {statusDisplay.icon}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-slate-900 text-sm truncate">
+                          <div className="min-w-0 flex-1">
+                            <span className="text-slate-900 truncate block">
                               {run.fileName}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-slate-500 text-xs">
+                            </span>
+                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                              <span>
                                 {run.classifiedCount} product{run.classifiedCount !== 1 ? 's' : ''} classified
                               </span>
-                              <span className="text-slate-300 text-xs">·</span>
-                              <span className="text-slate-400 text-xs">
+                              <span>·</span>
+                              <span>
                                 {formatTimeAgo(run.created_at)}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${statusDisplay.color}`}>
                           {statusDisplay.label}
                         </span>
                       </div>
