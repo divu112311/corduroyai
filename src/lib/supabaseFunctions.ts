@@ -154,9 +154,15 @@ export async function applyRules(data: any): Promise<any> {
 // Chat Functions
 // ============================================================================
 
+export interface ChatNavigation {
+  screen: 'dashboard' | 'classify' | 'profile' | 'settings';
+  reason?: string;
+}
+
 export interface ChatResponse {
   response: string;
   classification_result: any | null;
+  navigation: ChatNavigation | null;
 }
 
 /**

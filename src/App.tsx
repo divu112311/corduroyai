@@ -578,6 +578,12 @@ export default function App() {
           setChatClassificationResult(result);
           setCurrentView('classify');
         }}
+        onNavigate={(screen: string) => {
+          const validViews: View[] = ['dashboard', 'classify', 'profile', 'settings'];
+          if (validViews.includes(screen as View)) {
+            setCurrentView(screen as View);
+          }
+        }}
       />
     </div>
     </>

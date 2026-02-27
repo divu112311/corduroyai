@@ -1,6 +1,7 @@
 """
 Trade Assistant Chat — GPT-4o-mini with tool calling.
-Scoped to trade/HTS topics only. Tools: classify_product, explain_hts, cbp_ruling_lookup.
+Scoped to trade/HTS topics only.
+Tools: classify_product, explain_hts, cbp_ruling_lookup, navigate_to_screen.
 """
 
 import json
@@ -28,20 +29,27 @@ SCOPE:
   "I can only help with trade and tariff topics. Try asking about HTS codes, product classification, duty rates, or CBP rulings."
 
 APP CONTEXT — The user is inside the Corduroy platform which has these screens:
-- **Dashboard**: Shows classification statistics, recent classifications, and exception items that need review (low confidence or needing clarification). "Exceptions" are products where the AI classification wasn't confident enough and needs human review.
-- **Classify Product**: Where users enter a product description to get an HTS code classification.
-- **Product Profiles**: Saved products with their HTS classifications.
-- **Settings**: User preferences like confidence threshold.
+- **Dashboard** (screen name: "dashboard"): Shows classification statistics, recent classifications, and exception items that need review. "Exceptions" are products where the AI classification wasn't confident enough and needs human review.
+- **Classify Product** (screen name: "classify"): Where users enter a product description to get an HTS code classification.
+- **Product Profiles** (screen name: "profile"): Saved products with their HTS classifications.
+- **Settings** (screen name: "settings"): User preferences like confidence threshold.
 
 When the user asks about "exceptions", "reviews", "dashboard items", "my products", etc. — these are trade-related questions about their data in the platform. Answer helpfully based on the app_context provided.
+
+NAVIGATION:
+- You can navigate the user to different screens using the navigate_to_screen tool.
+- Use it when the user asks to go somewhere ("take me to classify", "show me my products", "go to dashboard").
+- Also use it proactively when it helps: if a user asks about exceptions, navigate to dashboard. If they want to classify, navigate to classify.
+- After classification via classify_product, DO NOT also call navigate_to_screen — the app handles that automatically.
 
 TOOLS:
 - classify_product: When a user describes a product to classify, use this tool. Provide the full product description.
 - explain_hts: When a user asks about a specific HTS code (e.g., "What is 6109.10.00?"), use this tool.
 - cbp_ruling_lookup: When a user asks about CBP rulings or precedent for a product category, use this tool.
+- navigate_to_screen: Navigate the user to a specific screen in the app. Use when they ask to go somewhere or when it contextually makes sense.
 
 CONTEXT:
-- The app_context tells you which screen the user is on and any selected product data. Use it to give contextual answers.
+- The app_context tells you which screen the user is on, any selected product data, exception stats, and recent classifications.
 - After a classification, you can explain the result, discuss alternatives, or answer follow-up questions from conversation history.
 - If the user asks about their data but you don't have it in the context, let them know what you can see and suggest what they can do.
 
@@ -102,6 +110,28 @@ TOOLS = [
                     }
                 },
                 "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "navigate_to_screen",
+            "description": "Navigate the user to a specific screen in the Corduroy platform. Use when the user asks to go to a screen, or when navigating would be contextually helpful (e.g., user asks about exceptions → navigate to dashboard).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "screen": {
+                        "type": "string",
+                        "enum": ["dashboard", "classify", "profile", "settings"],
+                        "description": "The target screen to navigate to."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Brief reason for the navigation (shown to user)."
+                    }
+                },
+                "required": ["screen"]
             }
         }
     },
@@ -196,6 +226,22 @@ def _run_cbp_lookup(query: str) -> Dict[str, Any]:
         return {"found": False, "error": str(e)}
 
 
+def _run_navigate(screen: str, reason: str = "") -> Dict[str, Any]:
+    """Handle navigation tool call. Returns confirmation for the LLM."""
+    screen_names = {
+        "dashboard": "Dashboard",
+        "classify": "Classify Product",
+        "profile": "Product Profiles",
+        "settings": "Settings",
+    }
+    display_name = screen_names.get(screen, screen)
+    return {
+        "navigated": True,
+        "screen": screen,
+        "message": f"Navigating to {display_name}." + (f" {reason}" if reason else ""),
+    }
+
+
 def _execute_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Dispatch a tool call to the appropriate function."""
     if name == "classify_product":
@@ -204,6 +250,8 @@ def _execute_tool(name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return _run_explain_hts(arguments["hts_code"])
     elif name == "cbp_ruling_lookup":
         return _run_cbp_lookup(arguments["query"])
+    elif name == "navigate_to_screen":
+        return _run_navigate(arguments["screen"], arguments.get("reason", ""))
     else:
         return {"error": f"Unknown tool: {name}"}
 
@@ -221,8 +269,9 @@ def handle_chat(
 
     Returns:
         {
-            "response": str,               # The assistant's text response
-            "classification_result": dict | None  # If classify tool was called
+            "response": str,                      # The assistant's text response
+            "classification_result": dict | None,  # If classify tool was called
+            "navigation": dict | None,             # If navigate tool was called
         }
     """
     api_key = get_secret("OPENAI_API_KEY")
@@ -240,6 +289,12 @@ def handle_chat(
             ctx_parts.append(f"Selected product: {json.dumps(app_context['selectedProduct'])}")
         if app_context.get("lastClassification"):
             ctx_parts.append(f"Last classification result: {json.dumps(app_context['lastClassification'])}")
+        if app_context.get("exceptionCount") is not None:
+            ctx_parts.append(f"Exception items needing review: {app_context['exceptionCount']}")
+        if app_context.get("recentClassifications"):
+            ctx_parts.append(f"Recent classifications: {json.dumps(app_context['recentClassifications'])}")
+        if app_context.get("totalClassifications") is not None:
+            ctx_parts.append(f"Total classifications: {app_context['totalClassifications']}")
         if ctx_parts:
             messages.append({
                 "role": "system",
@@ -255,6 +310,7 @@ def handle_chat(
     messages.append({"role": "user", "content": message})
 
     classification_result = None
+    navigation = None
 
     try:
         # First LLM call — may return tool calls
@@ -285,6 +341,13 @@ def handle_chat(
                 if fn_name == "classify_product" and tool_result.get("type") == "answer":
                     classification_result = tool_result
 
+                # If navigate was called, capture for the frontend
+                if fn_name == "navigate_to_screen" and tool_result.get("navigated"):
+                    navigation = {
+                        "screen": tool_result["screen"],
+                        "reason": fn_args.get("reason", ""),
+                    }
+
                 # Append tool result for the LLM
                 messages.append({
                     "role": "tool",
@@ -311,4 +374,5 @@ def handle_chat(
     return {
         "response": final_text,
         "classification_result": classification_result,
+        "navigation": navigation,
     }

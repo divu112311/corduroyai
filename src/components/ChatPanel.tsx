@@ -33,6 +33,8 @@ interface ChatPanelProps {
   currentView?: string;
   user?: { id: string; email: string; [key: string]: any } | null;
   onClassificationResult?: (result: any) => void;
+  onNavigate?: (screen: string) => void;
+  appContext?: Record<string, any>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,7 +127,7 @@ function StructuredContent({ sections }: { sections: MessageSection[] }) {
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ChatPanel({ isOpen, onClose, onOpen, currentView, user, onClassificationResult }: ChatPanelProps) {
+export function ChatPanel({ isOpen, onClose, onOpen, currentView, user, onClassificationResult, onNavigate, appContext }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -181,15 +183,15 @@ export function ChatPanel({ isOpen, onClose, onOpen, currentView, user, onClassi
         .filter(m => !m.isError)
         .map(m => ({ role: m.role, content: m.content }));
 
-      // Build app context
-      const appContext: Record<string, any> = {};
-      if (currentView) appContext.currentView = currentView;
+      // Build app context — merge currentView with any extra context from parent
+      const ctx: Record<string, any> = { ...appContext };
+      if (currentView) ctx.currentView = currentView;
 
       const response = await sendChatMessage(
         user?.id || 'anonymous',
         text,
         history,
-        appContext,
+        ctx,
       );
 
       setIsThinking(false);
@@ -247,6 +249,11 @@ export function ChatPanel({ isOpen, onClose, onOpen, currentView, user, onClassi
 
           onClassificationResult(classificationResult);
         }
+      }
+
+      // If navigation was requested, trigger it on the frontend
+      if (response.navigation && onNavigate) {
+        onNavigate(response.navigation.screen);
       }
     } catch (err) {
       setIsThinking(false);
