@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { ClassificationView } from './ClassificationView';
 import { BulkUpload } from './BulkUpload';
+import { getUserBulkRuns, type BulkRunSummary } from '../lib/classificationService';
+import { supabase } from '../lib/supabase';
 
 type InputMode = 'manual' | 'file';
 
@@ -23,6 +25,8 @@ interface UnifiedClassificationProps {
   onChatResultConsumed?: () => void;
 }
 
+const BULK_RUN_KEY = 'corduroy_bulk_run';
+
 export function UnifiedClassification({ chatClassificationResult, onChatResultConsumed }: UnifiedClassificationProps = {}) {
   const [inputMode, setInputMode] = useState<InputMode>('manual');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -30,6 +34,38 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   const [bulkDescription, setBulkDescription] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [showBulkResults, setShowBulkResults] = useState(false);
+
+  // Bulk runs history
+  const [bulkRuns, setBulkRuns] = useState<BulkRunSummary[]>([]);
+  const [loadingRuns, setLoadingRuns] = useState(true);
+
+  // Check for active bulk run in localStorage (for resume banner)
+  const [activeBulkRun, setActiveBulkRun] = useState<{
+    runId: number; fileName: string; totalItems: number;
+  } | null>(() => {
+    try {
+      const stored = localStorage.getItem(BULK_RUN_KEY);
+      return stored ? JSON.parse(stored) : null;
+    } catch { return null; }
+  });
+
+  // Load bulk runs history on mount
+  useEffect(() => {
+    const loadBulkRuns = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const runs = await getUserBulkRuns(user.id);
+          setBulkRuns(runs);
+        }
+      } catch (err) {
+        console.error('Error loading bulk runs:', err);
+      } finally {
+        setLoadingRuns(false);
+      }
+    };
+    loadBulkRuns();
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -45,15 +81,15 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
-    const mainFile = files.find(f => 
-      f.name.endsWith('.csv') || 
-      f.name.endsWith('.xlsx') || 
+    const mainFile = files.find(f =>
+      f.name.endsWith('.csv') ||
+      f.name.endsWith('.xlsx') ||
       f.name.endsWith('.xls') ||
       f.name.endsWith('.pdf')
     );
-    
+
     if (mainFile) {
       setUploadedFile(mainFile);
       setInputMode('file');
@@ -100,15 +136,52 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     setShowBulkResults(true);
   };
 
+  const handleResumeBulkRun = () => {
+    // Switch to BulkUpload view — it will auto-resume from localStorage
+    setInputMode('file');
+    setShowBulkResults(true);
+  };
+
+  const formatTimeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getRunStatusDisplay = (run: BulkRunSummary) => {
+    if (run.status === 'completed' && run.classifiedCount >= run.totalProducts && run.totalProducts > 0) {
+      return { label: 'Classified', color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle className="w-4 h-4 text-green-600" /> };
+    }
+    if (run.status === 'completed' && run.classifiedCount < run.totalProducts) {
+      return { label: 'Partial', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: <AlertCircle className="w-4 h-4 text-amber-600" /> };
+    }
+    if (run.status === 'cancelled') {
+      return { label: 'Cancelled', color: 'text-red-700 bg-red-50 border-red-200', icon: <X className="w-4 h-4 text-red-600" /> };
+    }
+    if (run.status === 'in_progress') {
+      return { label: 'In Progress', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Clock className="w-4 h-4 text-blue-600" /> };
+    }
+    return { label: 'Unknown', color: 'text-slate-700 bg-slate-50 border-slate-200', icon: <AlertCircle className="w-4 h-4 text-slate-600" /> };
+  };
+
   // Show bulk results if we're in file mode and user has started classification
   if (inputMode === 'file' && showBulkResults) {
     return (
       <div className="p-8">
         <div className="max-w-7xl mx-auto">
-          <BulkUpload 
+          <BulkUpload
             initialFile={uploadedFile}
             initialSupportingFiles={supportingFiles}
-            autoStart={true}
+            autoStart={!!uploadedFile}
           />
         </div>
       </div>
@@ -123,6 +196,43 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
           <h1 className="text-slate-900 mb-2">Product Classification</h1>
           <p className="text-slate-600">Classify products with natural language or upload bulk files for AI-powered HS/HTS classification</p>
         </div>
+
+        {/* Resume Bulk Run Banner */}
+        {activeBulkRun && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 mb-6 border-2 border-amber-200 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-100 p-3 rounded-lg">
+                  <RefreshCw className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-amber-900 mb-1">Bulk Run In Progress</h3>
+                  <p className="text-amber-700 text-sm">
+                    {activeBulkRun.fileName} &mdash; {activeBulkRun.totalItems} products
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    localStorage.removeItem(BULK_RUN_KEY);
+                    setActiveBulkRun(null);
+                  }}
+                  className="px-4 py-2 text-amber-700 hover:text-amber-900 transition-colors text-sm"
+                >
+                  Dismiss
+                </button>
+                <button
+                  onClick={handleResumeBulkRun}
+                  className="px-5 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Resume
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Bulk Upload Button - Always Visible */}
         {!uploadedFile && (
@@ -293,6 +403,103 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             chatClassificationResult={chatClassificationResult}
             onChatResultConsumed={onChatResultConsumed}
           />
+        )}
+
+        {/* Bulk Classification Runs History */}
+        {!uploadedFile && (
+          <div className="mt-8">
+            <div className="flex items-center gap-3 mb-4">
+              <FileSpreadsheet className="w-5 h-5 text-slate-600" />
+              <h2 className="text-slate-900 text-lg font-semibold">Bulk Classification Runs</h2>
+            </div>
+
+            {loadingRuns ? (
+              <div className="bg-white rounded-xl p-8 border border-slate-200 text-center">
+                <Loader2 className="w-6 h-6 text-slate-400 animate-spin mx-auto mb-2" />
+                <p className="text-slate-500 text-sm">Loading runs...</p>
+              </div>
+            ) : bulkRuns.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 border border-slate-200 text-center">
+                <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-slate-500 text-sm">No bulk classification runs yet</p>
+                <p className="text-slate-400 text-xs mt-1">Upload a CSV file above to start your first bulk run</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bulkRuns.map((run) => {
+                  const statusDisplay = getRunStatusDisplay(run);
+                  return (
+                    <div
+                      key={run.id}
+                      className="bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
+                            {statusDisplay.icon}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-slate-900 text-sm font-medium truncate">
+                              {run.fileName}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-slate-500 text-xs">
+                                {run.classifiedCount}/{run.totalProducts} products classified
+                              </span>
+                              <span className="text-slate-300">|</span>
+                              <span className="text-slate-500 text-xs">
+                                {formatTimeAgo(run.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
+                            {statusDisplay.label}
+                          </span>
+                          {run.status === 'in_progress' && (
+                            <button
+                              onClick={() => {
+                                // Set localStorage so BulkUpload can resume this run
+                                localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
+                                  runId: run.id,
+                                  fileName: run.fileName,
+                                  totalItems: run.totalProducts,
+                                  startedAt: run.created_at,
+                                }));
+                                handleResumeBulkRun();
+                              }}
+                              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs flex items-center gap-1"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Resume
+                            </button>
+                          )}
+                          {run.status === 'completed' && (
+                            <button
+                              onClick={() => {
+                                // Set localStorage so BulkUpload can load this completed run
+                                localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
+                                  runId: run.id,
+                                  fileName: run.fileName,
+                                  totalItems: run.totalProducts,
+                                  startedAt: run.created_at,
+                                }));
+                                handleResumeBulkRun();
+                              }}
+                              className="px-3 py-1 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-xs"
+                            >
+                              View
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

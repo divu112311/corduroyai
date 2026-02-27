@@ -23,16 +23,28 @@ export interface ClassificationRun {
  */
 export async function createClassificationRun(
   userId: string,
-  runType: 'single' | 'bulk' = 'single'
+  runType: 'single' | 'bulk' = 'single',
+  metadata?: { fileName?: string; totalItems?: number }
 ): Promise<number> {
   try {
+    // Store file metadata as the first conversation entry for bulk runs
+    const initialConversations: ClarificationMessage[] = metadata
+      ? [{
+          step: 'preprocess',
+          type: 'system',
+          content: `Bulk classification started: ${metadata.fileName || 'unknown file'}`,
+          timestamp: new Date().toISOString(),
+          metadata,
+        }]
+      : [];
+
     const { data, error } = await supabase
       .from('classification_runs')
       .insert({
         user_id: userId,
         status: 'in_progress',
         run_type: runType,
-        conversations: [],
+        conversations: initialConversations,
       })
       .select('id')
       .single();
@@ -287,6 +299,202 @@ export async function getClassificationRun(runId: number): Promise<Classificatio
   }
 }
 
+/**
+ * Get all products and results for a bulk classification run.
+ * Used to resume / hydrate BulkUpload state after a page refresh.
+ */
+export async function getBulkRunResults(runId: number): Promise<{
+  run: ClassificationRun;
+  items: Array<{
+    product: {
+      id: number;
+      product_name: string;
+      product_description?: string;
+      country_of_origin?: string;
+      materials?: any;
+      unit_cost?: number;
+      vendor?: string;
+      sku?: string;
+    };
+    result: {
+      id: number;
+      hts_classification?: string;
+      confidence?: number;
+      tariff_rate?: number;
+      description?: string;
+      reasoning?: string;
+      alternate_classifications?: any;
+      cbp_rulings?: any;
+      rule_verification?: any;
+      rule_confidence?: number;
+      similarity_score?: number;
+    } | null;
+  }>;
+} | null> {
+  try {
+    // 1. Get the run itself
+    const { data: run, error: runError } = await supabase
+      .from('classification_runs')
+      .select('*')
+      .eq('id', runId)
+      .single();
 
+    if (runError || !run) {
+      console.error('Error fetching bulk run:', runError);
+      return null;
+    }
 
+    // 2. Get all products for this run
+    const { data: products, error: prodError } = await supabase
+      .from('user_products')
+      .select('*')
+      .eq('classification_run_id', runId)
+      .order('id', { ascending: true });
+
+    if (prodError) {
+      console.error('Error fetching bulk run products:', prodError);
+      return null;
+    }
+
+    if (!products || products.length === 0) {
+      return { run, items: [] };
+    }
+
+    // 3. Get all classification results for these products in one query
+    const productIds = products.map((p: any) => p.id);
+    const { data: results, error: resError } = await supabase
+      .from('user_product_classification_results')
+      .select('*')
+      .in('product_id', productIds)
+      .eq('classification_run_id', runId);
+
+    if (resError) {
+      console.error('Error fetching bulk run results:', resError);
+      return null;
+    }
+
+    // Build a map of product_id → result for fast lookup
+    const resultMap = new Map<number, any>();
+    (results || []).forEach((r: any) => {
+      resultMap.set(r.product_id, r);
+    });
+
+    // 4. Combine products with their results
+    const items = products.map((p: any) => ({
+      product: {
+        id: p.id,
+        product_name: p.product_name,
+        product_description: p.product_description,
+        country_of_origin: p.country_of_origin,
+        materials: p.materials,
+        unit_cost: p.unit_cost,
+        vendor: p.vendor,
+        sku: p.sku,
+      },
+      result: resultMap.get(p.id) ? {
+        id: resultMap.get(p.id).id,
+        hts_classification: resultMap.get(p.id).hts_classification,
+        confidence: resultMap.get(p.id).confidence,
+        tariff_rate: resultMap.get(p.id).tariff_rate,
+        description: resultMap.get(p.id).description,
+        reasoning: resultMap.get(p.id).reasoning,
+        alternate_classifications: resultMap.get(p.id).alternate_classifications,
+        cbp_rulings: resultMap.get(p.id).cbp_rulings,
+        rule_verification: resultMap.get(p.id).rule_verification,
+        rule_confidence: resultMap.get(p.id).rule_confidence,
+        similarity_score: resultMap.get(p.id).similarity_score,
+      } : null,
+    }));
+
+    return { run, items };
+  } catch (error) {
+    console.error('Error fetching bulk run results:', error);
+    return null;
+  }
+}
+
+/**
+ * Summary of a bulk classification run for the history list.
+ */
+export interface BulkRunSummary {
+  id: number;
+  status: 'in_progress' | 'completed' | 'cancelled';
+  created_at: string;
+  completed_at: string | null;
+  fileName: string;
+  totalProducts: number;
+  classifiedCount: number;
+}
+
+/**
+ * Get all bulk classification runs for a user (most recent first).
+ * Returns summary info including product counts for the history UI.
+ */
+export async function getUserBulkRuns(userId: string): Promise<BulkRunSummary[]> {
+  try {
+    // 1. Get recent bulk runs
+    const { data: runs, error: runError } = await supabase
+      .from('classification_runs')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('run_type', 'bulk')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (runError || !runs || runs.length === 0) {
+      return [];
+    }
+
+    const runIds = runs.map((r: any) => r.id);
+
+    // 2. Get product counts per run
+    const { data: products } = await supabase
+      .from('user_products')
+      .select('id, classification_run_id')
+      .in('classification_run_id', runIds);
+
+    // 3. Get result counts per run (items that have a classification result)
+    const { data: results } = await supabase
+      .from('user_product_classification_results')
+      .select('id, classification_run_id')
+      .in('classification_run_id', runIds);
+
+    // Build count maps
+    const productCountMap = new Map<number, number>();
+    const resultCountMap = new Map<number, number>();
+
+    (products || []).forEach((p: any) => {
+      productCountMap.set(p.classification_run_id, (productCountMap.get(p.classification_run_id) || 0) + 1);
+    });
+    (results || []).forEach((r: any) => {
+      resultCountMap.set(r.classification_run_id, (resultCountMap.get(r.classification_run_id) || 0) + 1);
+    });
+
+    // 4. Build summaries
+    return runs.map((run: any) => {
+      // Extract file name from conversations metadata
+      let fileName = 'Bulk Run';
+      const conversations = run.conversations as ClarificationMessage[] | null;
+      if (conversations && conversations.length > 0) {
+        const firstMsg = conversations[0];
+        if (firstMsg.metadata?.fileName) {
+          fileName = firstMsg.metadata.fileName;
+        }
+      }
+
+      return {
+        id: run.id,
+        status: run.status,
+        created_at: run.created_at,
+        completed_at: run.completed_at,
+        fileName,
+        totalProducts: productCountMap.get(run.id) || 0,
+        classifiedCount: resultCountMap.get(run.id) || 0,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching user bulk runs:', error);
+    return [];
+  }
+}
 

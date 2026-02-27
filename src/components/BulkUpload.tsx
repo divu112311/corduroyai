@@ -8,6 +8,13 @@ import {
 } from '../lib/supabaseFunctions';
 import { supabase } from '../lib/supabase';
 import { getUserMetadata } from '../lib/userService';
+import {
+  createClassificationRun,
+  saveProduct,
+  saveClassificationResult,
+  updateClassificationRunStatus,
+  getBulkRunResults,
+} from '../lib/classificationService';
 import React from 'react';
 
 // ── CSV parsing ──────────────────────────────────────────────────────────────
@@ -203,6 +210,13 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
   const cancelledRef = useRef(false);
+  const runIdRef = useRef<number | null>(null);
+  const BULK_RUN_KEY = 'corduroy_bulk_run';
+  const [isResuming, setIsResuming] = useState<boolean>(() => {
+    try {
+      return !!localStorage.getItem('corduroy_bulk_run');
+    } catch { return false; }
+  });
 
   // Auto-start classification if initial file is provided
   React.useEffect(() => {
@@ -210,6 +224,84 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       startClassification();
     }
   }, [initialFile, autoStart]);
+
+  // Resume a bulk run from Supabase after page refresh
+  React.useEffect(() => {
+    const resumeBulkRun = async () => {
+      const stored = localStorage.getItem(BULK_RUN_KEY);
+      if (!stored || items.length > 0 || processing) {
+        setIsResuming(false);
+        return;
+      }
+
+      try {
+        const { runId, totalItems } = JSON.parse(stored);
+        const data = await getBulkRunResults(runId);
+
+        if (!data || data.items.length === 0) {
+          localStorage.removeItem(BULK_RUN_KEY);
+          setIsResuming(false);
+          return;
+        }
+
+        // If run is done, clear localStorage but still show results
+        if (data.run.status === 'completed' || data.run.status === 'cancelled') {
+          localStorage.removeItem(BULK_RUN_KEY);
+        }
+
+        runIdRef.current = runId;
+
+        // Fetch user's confidence threshold for status determination
+        const { data: { user } } = await supabase.auth.getUser();
+        let threshold = 0.75;
+        if (user) {
+          try {
+            const meta = await getUserMetadata(user.id);
+            threshold = meta?.confidence_threshold ?? 0.75;
+          } catch { /* use default */ }
+        }
+
+        // Hydrate BulkItem[] from Supabase data
+        const hydratedItems: BulkItem[] = data.items.map((item, idx) => {
+          const rawConf = item.result?.confidence || 0;
+          const conf = Math.round(rawConf * 100);
+          const hasResult = !!item.result;
+
+          return {
+            id: item.product.id,
+            productName: item.product.product_name || `Item ${idx + 1}`,
+            description: item.product.product_description || '',
+            origin: item.product.country_of_origin || '',
+            materials: typeof item.product.materials === 'string' ? item.product.materials : '',
+            cost: item.product.unit_cost?.toString() || '',
+            status: hasResult ? (rawConf >= threshold ? 'complete' : 'exception') : 'exception',
+            hts: item.result?.hts_classification || '',
+            confidence: conf,
+            tariff: item.result?.tariff_rate != null ? `${(item.result.tariff_rate * 100).toFixed(1)}%` : '',
+            classification_result_id: item.result?.id,
+            extracted_data: {
+              product_name: item.product.product_name,
+              product_description: item.product.product_description,
+              country_of_origin: item.product.country_of_origin,
+              materials: typeof item.product.materials === 'string' ? item.product.materials : '',
+              unit_cost: item.product.unit_cost?.toString() || '',
+            },
+          };
+        });
+
+        setItems(hydratedItems);
+        setProgressTotal(totalItems || hydratedItems.length);
+        setProgressCurrent(hydratedItems.length);
+      } catch (err) {
+        console.error('Error resuming bulk run:', err);
+        localStorage.removeItem(BULK_RUN_KEY);
+      } finally {
+        setIsResuming(false);
+      }
+    };
+
+    resumeBulkRun();
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -302,6 +394,26 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
     setProgressTotal(rows.length);
 
+    // Create Supabase classification run for persistence
+    let runId: number | null = null;
+    try {
+      runId = await createClassificationRun(user.id, 'bulk', {
+        fileName: fileToUpload.name,
+        totalItems: rows.length,
+      });
+      runIdRef.current = runId;
+      // Store in localStorage for page refresh recovery
+      localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
+        runId,
+        fileName: fileToUpload.name,
+        totalItems: rows.length,
+        startedAt: new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.error('Failed to create classification run:', err);
+      // Continue without persistence — classification still works
+    }
+
     // Build initial items from parsed rows
     const initialItems: BulkItem[] = rows.map((row, idx) => ({
       id: idx + 1,
@@ -334,10 +446,28 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       // Build a clean product description using detected column mapping,
       // mirroring what the single-item ClassificationView sends.
       const description = buildProductDescription(row, colMap);
+      const productName = (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`;
+      const origin = colMap.origin ? row[colMap.origin] : '';
+      const materials = colMap.materials ? row[colMap.materials] : '';
+      const costStr = colMap.cost ? row[colMap.cost] : '';
+      const parsedCost = costStr ? parseFloat(costStr) : NaN;
+      const unitCost = !isNaN(parsedCost) ? parsedCost : undefined;
 
       if (!description.trim()) {
         completed++;
         setProgressCurrent(completed);
+        // Save product to Supabase even if no description (so count is accurate)
+        if (runIdRef.current) {
+          try {
+            await saveProduct(user.id, runIdRef.current, {
+              product_name: productName,
+              product_description: '',
+              country_of_origin: origin || undefined,
+              materials: materials || undefined,
+              unit_cost: unitCost,
+            });
+          } catch (e) { console.error('Supabase save error:', e); }
+        }
         setItems(prev => prev.map(item =>
           item.id === idx + 1
             ? { ...item, status: 'exception' as const, error: 'No product description available' }
@@ -364,36 +494,38 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
         if (cancelledRef.current) return;
 
-        setItems(prev => prev.map(item => {
-          if (item.id !== idx + 1) return item;
+        // ── Compute item update from classification result ──────────
+        let itemStatus: 'complete' | 'exception' = 'exception';
+        let itemHts = '';
+        let itemConfidence = 0;
+        let itemTariff = '';
+        let itemError = '';
+        let itemQuestions: Array<{ question: string; options: string[] }> | null = null;
+        // Raw values for Supabase persistence (0–1 scale)
+        let rawConfidence = 0;
+        let rawTariffRate: number | undefined;
+        let topRuleForSave: any = null;
 
-          if (!result) {
-            return { ...item, status: 'exception' as const, error: 'Classification returned no result' };
-          }
-
+        if (!result) {
+          itemError = 'Classification returned no result';
+        } else if (result.type === 'clarify' || result.needs_clarification) {
           // Handle clarification needed
-          if (result.type === 'clarify' || result.needs_clarification) {
-            const questions = (result.clarifications || result.questions || []).map((c: any) => ({
-              question: typeof c === 'string' ? c : c.question || c,
-              options: typeof c === 'string' ? [] : c.options || [],
-            }));
-            return { ...item, status: 'exception' as const, clarificationQuestions: questions };
-          }
-
+          itemQuestions = (result.clarifications || result.questions || []).map((c: any) => ({
+            question: typeof c === 'string' ? c : c.question || c,
+            options: typeof c === 'string' ? [] : c.options || [],
+          }));
+        } else if (result.type === 'exception') {
           // Handle explicit exception from backend (e.g. LOW_CONFIDENCE)
-          if (result.type === 'exception') {
-            const exceptionData = result.data;
-            const exceptionRules = exceptionData?.matched_rules || [];
-            const topExRule = exceptionRules[0];
-            return {
-              ...item,
-              status: 'exception' as const,
-              hts: topExRule?.hts || '',
-              confidence: Math.round((result.confidence || 0) * 100),
-              error: result.reason || 'Low confidence',
-            };
-          }
-
+          const exceptionData = result.data;
+          const exceptionRules = exceptionData?.matched_rules || [];
+          const topExRule = exceptionRules[0];
+          itemHts = topExRule?.hts || '';
+          itemConfidence = Math.round((result.confidence || 0) * 100);
+          itemError = result.reason || 'Low confidence';
+          rawConfidence = result.confidence || 0;
+          rawTariffRate = topExRule?.tariff_rate;
+          topRuleForSave = topExRule;
+        } else {
           // Extract matched rules — mirroring ClassificationView logic
           let matchedRules: any[] = [];
           if (result.type === 'answer' && result.matches) {
@@ -426,19 +558,60 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             : Math.round((result.max_confidence || 0) * 100);
 
           if (!topRule || maxConf === 0) {
-            return {
-              ...item,
-              status: 'exception' as const,
-              error: 'No HTS match found or 0% confidence',
-            };
+            itemError = 'No HTS match found or 0% confidence';
+          } else {
+            itemStatus = 'complete';
+            itemHts = topRule.hts || '';
+            itemConfidence = maxConf;
+            itemTariff = topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '';
+            rawConfidence = rawConf;
+            rawTariffRate = topRule.tariff_rate;
+            topRuleForSave = topRule;
           }
+        }
 
+        // ── Persist to Supabase ────────────────────────────────────
+        let classificationResultId: number | undefined;
+        if (runIdRef.current) {
+          try {
+            const productId = await saveProduct(user.id, runIdRef.current, {
+              product_name: productName,
+              product_description: description,
+              country_of_origin: origin || undefined,
+              materials: materials || undefined,
+              unit_cost: unitCost,
+            });
+            // Save classification result — even for exceptions so Dashboard picks them up
+            if (itemHts || rawConfidence > 0 || result) {
+              classificationResultId = await saveClassificationResult(productId, runIdRef.current, {
+                hts_classification: itemHts || undefined,
+                confidence: rawConfidence || undefined,
+                tariff_rate: rawTariffRate,
+                description: topRuleForSave?.description || result?.description,
+                reasoning: result?.reasoning,
+                cbp_rulings: result?.cbp_rulings,
+                rule_verification: result?.rule_verification,
+                rule_confidence: topRuleForSave?.rule_confidence,
+                similarity_score: topRuleForSave?.similarity_score,
+              });
+            }
+          } catch (e) {
+            console.error('Supabase save error:', e);
+          }
+        }
+
+        // ── Update React state ─────────────────────────────────────
+        setItems(prev => prev.map(item => {
+          if (item.id !== idx + 1) return item;
           return {
             ...item,
-            status: 'complete' as const,
-            hts: topRule.hts || '',
-            confidence: maxConf,
-            tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+            status: itemStatus as 'complete' | 'exception',
+            hts: itemHts,
+            confidence: itemConfidence,
+            tariff: itemTariff,
+            error: itemError || undefined,
+            clarificationQuestions: itemQuestions,
+            classification_result_id: classificationResultId,
           };
         }));
       } catch (err: any) {
@@ -446,6 +619,18 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
         setProgressCurrent(completed);
         const errorMsg = err?.message || String(err);
         console.error(`Error classifying row ${idx + 1}:`, errorMsg);
+        // Save failed product to Supabase so count is accurate
+        if (runIdRef.current) {
+          try {
+            await saveProduct(user.id, runIdRef.current, {
+              product_name: productName,
+              product_description: description,
+              country_of_origin: origin || undefined,
+              materials: materials || undefined,
+              unit_cost: unitCost,
+            });
+          } catch (e) { console.error('Supabase save error:', e); }
+        }
         setItems(prev => prev.map(item =>
           item.id === idx + 1
             ? { ...item, status: 'exception' as const, error: `Classification failed: ${errorMsg}` }
@@ -458,6 +643,20 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     // backend (preprocess, rule engine, rationale), so lower concurrency
     // prevents rate-limit / timeout cascades that cause blanket failures.
     await runWithConcurrency(tasks, 2, () => cancelledRef.current);
+
+    // Mark run as completed/cancelled in Supabase and clear localStorage
+    if (runIdRef.current) {
+      try {
+        await updateClassificationRunStatus(
+          runIdRef.current,
+          cancelledRef.current ? 'cancelled' : 'completed'
+        );
+      } catch (err) {
+        console.error('Failed to update run status:', err);
+      }
+      localStorage.removeItem(BULK_RUN_KEY);
+    }
+
     setProcessing(false);
   };
 
@@ -569,8 +768,21 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   return (
     <div>
       <div className="max-w-7xl mx-auto">
+        {/* Resume Loading State */}
+        {isResuming && items.length === 0 && (
+          <div className="bg-white rounded-xl p-12 border border-slate-200">
+            <div className="text-center">
+              <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+              </div>
+              <h3 className="text-slate-900 mb-2">Resuming Bulk Run...</h3>
+              <p className="text-slate-600">Loading your previous classification results</p>
+            </div>
+          </div>
+        )}
+
         {/* Upload Area */}
-        {items.length === 0 && (
+        {items.length === 0 && !isResuming && (
           <div
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -954,12 +1166,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                   Filters
                 </button>
               </div>
-              <button 
+              <button
                 onClick={() => {
                   setItems([]);
                   setUploadedMainFile(null);
                   setSupportingFiles([]);
                   setFileMetadata(null);
+                  localStorage.removeItem(BULK_RUN_KEY);
+                  runIdRef.current = null;
                 }}
                 className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
               >
