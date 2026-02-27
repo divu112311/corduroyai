@@ -400,15 +400,17 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
 
         {/* Manual Entry Mode - Always Show When No File */}
         {!uploadedFile && (
-          <ClassificationView
-            chatClassificationResult={chatClassificationResult}
-            onChatResultConsumed={onChatResultConsumed}
-          />
+          <div className="mb-6">
+            <ClassificationView
+              chatClassificationResult={chatClassificationResult}
+              onChatResultConsumed={onChatResultConsumed}
+            />
+          </div>
         )}
 
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-12">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100">
               <h3 className="text-slate-900">Bulk Classification Runs</h3>
             </div>
