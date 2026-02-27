@@ -136,6 +136,12 @@ CRITICAL RULES:
 - If the user provides context that makes it clear, it is NOT ambiguous. Do NOT ask.
   "cow for meat" = bovine meat. "horse hair" = horsehair. "live cow" = live bovine. "cow leather" = cowhide.
 - If the input is nonsensical or too vague (e.g., "thing", "stuff", "abc"), set "too_vague" to true.
+- BRAND NAMES: If the input contains a brand name alongside a product description, the brand REINFORCES
+  the product category — it does NOT create ambiguity. Focus on the product type, not the brand name.
+  A brand name + product type that are in the same product category = NOT ambiguous.
+  "ChapStick lip balm" → both refer to lip care cosmetics → NOT ambiguous.
+  "Band-Aid bandages" → both refer to adhesive bandages → NOT ambiguous.
+  "Tylenol pain reliever" → both refer to medication → NOT ambiguous.
 - When in doubt, ASK. But if the user gave you enough context to determine the product category, just classify it.
 
 Raw input: "{text}"
@@ -148,6 +154,7 @@ Respond in this exact JSON format:
     "material": "material type or empty if not mentioned",
     "breed": "breed type or empty if not applicable",
     "age": "age or age group or empty if not mentioned",
+    "product_type": "broad product category (e.g., apparel, footwear, leather article, furniture, electronics, cosmetics, food/beverage, raw material, fabric, machinery, jewelry, toy, vehicle, etc.)",
     "usage": "intended usage or empty if not mentioned",
     "form": "physical form (liquid/solid/powder/woven/knitted/crocheted/etc.) or empty. IMPORTANT for textiles: baby/infant apparel (onesies, rompers, bodysuits), socks, stockings, tights, t-shirts, sweaters, sweatshirts, and hosiery are typically KNITTED. Jeans, dress shirts, suits, blazers, trousers are typically WOVEN.",
     "processing": "level of processing (raw/processed/assembled/etc.) or empty",
@@ -181,6 +188,9 @@ Examples of when NOT to flag as ambiguous:
 - "cow for meat" → NOT ambiguous (user specified "for meat")
 - "live horses for racing" → NOT ambiguous (user specified "live" and "for racing")
 - "horse meat" → NOT ambiguous (clearly horse meat)
+- "chapstick lip gloss" → NOT ambiguous (brand + product type, both cosmetics ch.33)
+- "Band-Aid bandages" → NOT ambiguous (brand + product type, both medical ch.30)
+- "Nike running shoes" → NOT ambiguous (brand + product type, footwear ch.64)
 
 Corrections example:
 - "cotton tshrt mens" → product_name: "men's cotton t-shirt", corrections_made: "expanded 'tshrt' to 't-shirt'"
@@ -217,6 +227,7 @@ Respond ONLY with JSON.
                 return {
                     "cleaned_text": parsed.get("product_description", text.strip()),
                     "product_name": parsed.get("product_name", ""),
+                    "product_type": parsed.get("product_type", ""),
                     "gender": parsed.get("gender", ""),
                     "material": parsed.get("material", ""),
                     "breed": parsed.get("breed", ""),
@@ -237,6 +248,7 @@ Respond ONLY with JSON.
             return {
                 "cleaned_text": parsed.get("product_description", text.strip()),
                 "product_name": parsed.get("product_name", ""),
+                "product_type": parsed.get("product_type", ""),
                 "gender": parsed.get("gender", ""),
                 "material": parsed.get("material", ""),
                 "breed": parsed.get("breed", ""),
@@ -254,6 +266,7 @@ Respond ONLY with JSON.
     return {
         "cleaned_text": text.strip(),
         "product_name": "",
+        "product_type": "",
         "gender": "",
         "material": "",
         "breed": "",
