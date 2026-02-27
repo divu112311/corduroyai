@@ -151,6 +151,58 @@ export async function applyRules(data: any): Promise<any> {
 
 
 // ============================================================================
+// Chat Functions
+// ============================================================================
+
+export interface ChatResponse {
+  response: string;
+  classification_result: any | null;
+}
+
+/**
+ * Send a message to the Trade Assistant chat.
+ * Routes through the python-dev Edge Function with action='chat'.
+ */
+export async function sendChatMessage(
+  userId: string,
+  message: string,
+  conversationHistory: Array<{ role: string; content: string }> = [],
+  appContext: Record<string, any> = {},
+): Promise<ChatResponse | null> {
+  try {
+    const { data, error } = await supabase.functions.invoke('python-dev', {
+      body: {
+        action: 'chat',
+        user_id: userId,
+        message,
+        conversation_history: conversationHistory,
+        app_context: appContext,
+      },
+    });
+
+    if (error) {
+      console.error('Edge function error (chat):', error);
+      return null;
+    }
+
+    let parsed = data;
+    if (typeof data === 'string') {
+      try {
+        parsed = JSON.parse(data);
+      } catch {
+        return null;
+      }
+    }
+
+    return parsed as ChatResponse;
+  } catch (err) {
+    console.error('Error calling chat:', err);
+    return null;
+  }
+}
+
+
+// ============================================================================
 // Bulk Classification Functions
 // ============================================================================
 

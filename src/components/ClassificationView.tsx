@@ -30,7 +30,12 @@ interface ClassificationResult {
   alternatives?: Array<{ hts: string; confidence: number; description: string; tariff: string; reasoning?: string }>;
 }
 
-export function ClassificationView() {
+interface ClassificationViewProps {
+  chatClassificationResult?: any;
+  onChatResultConsumed?: () => void;
+}
+
+export function ClassificationView({ chatClassificationResult, onChatResultConsumed }: ClassificationViewProps = {}) {
   const [query, setQuery] = useState('');
   const [productDescription, setProductDescription] = useState('');
   const [originCountry, setOriginCountry] = useState('');
@@ -78,6 +83,21 @@ export function ClassificationView() {
     }, 3000);
     return () => clearInterval(interval);
   }, [loading]);
+
+  // Accept classification result from chat panel
+  useEffect(() => {
+    if (chatClassificationResult) {
+      setResult(chatClassificationResult);
+      setNeedsClarification(false);
+      setCurrentStep(null);
+      setPartialMatches([]);
+      setWasAutoApproved(false);
+      setLoading(false);
+      if (onChatResultConsumed) {
+        onChatResultConsumed();
+      }
+    }
+  }, [chatClassificationResult]);
 
   const addMaterial = () => {
     if (newMaterial.material && newMaterial.percentage > 0) {
