@@ -1,11 +1,159 @@
-import { useState } from 'react';
-import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Filter, ArrowUpDown, Plus, X, FileText, File, Sparkles } from 'lucide-react';
+import { useState, useRef, useCallback } from 'react';
+import { Upload, FileSpreadsheet, Download, CheckCircle, AlertCircle, Clock, Filter, ArrowUpDown, Plus, X, FileText, File, Sparkles, StopCircle, Loader2 } from 'lucide-react';
 import { BulkItemDetail } from './BulkItemDetail';
 import { ExceptionReview } from './ExceptionReview';
+import {
+  classifyProduct,
+  type FileMetadata,
+} from '../lib/supabaseFunctions';
+import { supabase } from '../lib/supabase';
+import { getUserMetadata } from '../lib/userService';
 import React from 'react';
 
+// ── CSV parsing ──────────────────────────────────────────────────────────────
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
+      else if (ch === '"') inQuotes = false;
+      else current += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { result.push(current.trim()); current = ''; }
+      else current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(text: string): { headers: string[]; rows: Record<string, string>[] } {
+  // Handle BOM
+  const clean = text.replace(/^\uFEFF/, '');
+  const lines = clean.split(/\r?\n/);
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  const headers = parseCSVLine(lines[0]);
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseCSVLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
+// ── Column detection ─────────────────────────────────────────────────────────
+
+const COLUMN_SYNONYMS: Record<string, string[]> = {
+  product_name: ['product', 'product name', 'product_name', 'item', 'item name', 'name', 'sku', 'sku name', 'part', 'part name', 'article'],
+  description:  ['description', 'desc', 'product description', 'details', 'product details', 'item description'],
+  origin:       ['origin', 'country', 'country of origin', 'coo', 'source', 'made in', 'country_of_origin'],
+  materials:    ['material', 'materials', 'fabric', 'composition', 'material composition', 'component'],
+  cost:         ['cost', 'value', 'price', 'unit value', 'unit_value', 'unit cost', 'unit price', 'fob', 'declared value'],
+};
+
+function detectColumns(headers: string[]): Record<string, string> {
+  const mapping: Record<string, string> = {};
+  const lowerHeaders = headers.map(h => h.toLowerCase().trim());
+
+  for (const [field, synonyms] of Object.entries(COLUMN_SYNONYMS)) {
+    for (const syn of synonyms) {
+      const idx = lowerHeaders.indexOf(syn);
+      if (idx !== -1 && !Object.values(mapping).includes(headers[idx])) {
+        mapping[field] = headers[idx];
+        break;
+      }
+    }
+  }
+  // Fallback: first column = product_name if not detected
+  if (!mapping.product_name && headers.length > 0) mapping.product_name = headers[0];
+  if (!mapping.description && headers.length > 1 && !Object.values(mapping).includes(headers[1])) {
+    mapping.description = headers[1];
+  }
+  return mapping;
+}
+
+// ── Concurrency helper ───────────────────────────────────────────────────────
+
+async function runWithConcurrency(
+  tasks: (() => Promise<void>)[],
+  limit: number,
+  shouldCancel: () => boolean,
+): Promise<void> {
+  let idx = 0;
+  async function worker() {
+    while (idx < tasks.length && !shouldCancel()) {
+      const i = idx++;
+      if (i < tasks.length) await tasks[i]();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => worker()));
+}
+
+// ── Build product description from a CSV row ─────────────────────────────────
+// Uses the detected column mapping to build a clean, natural-language product
+// description — exactly like the working single-item flow.
+// This avoids dumping raw key-value pairs (e.g. "Cost: 15.99") into the prompt.
+
+function buildProductDescription(
+  row: Record<string, string>,
+  colMap: Record<string, string>,
+): string {
+  const parts: string[] = [];
+
+  const productName = colMap.product_name ? row[colMap.product_name] : '';
+  const description = colMap.description ? row[colMap.description] : '';
+  const origin = colMap.origin ? row[colMap.origin] : '';
+  const materials = colMap.materials ? row[colMap.materials] : '';
+
+  if (productName) parts.push(productName);
+  if (description && description !== productName) parts.push(description);
+  if (materials) parts.push(`Material: ${materials}`);
+  if (origin) parts.push(`Country of origin: ${origin}`);
+
+  // If nothing was mapped, fall back to joining all non-empty values
+  if (parts.length === 0) {
+    return Object.entries(row)
+      .filter(([_, v]) => v && v.trim())
+      .map(([_, v]) => v.trim())
+      .join('. ');
+  }
+
+  return parts.join('. ');
+}
+
+// ── Retry helper with exponential backoff ─────────────────────────────────────
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 2,
+  baseDelay: number = 1000,
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, baseDelay * Math.pow(2, attempt)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 interface BulkItem {
-  id: number;
+  id: number | string;
   productName: string;
   description: string;
   status: 'pending' | 'complete' | 'exception';
@@ -15,6 +163,18 @@ interface BulkItem {
   origin?: string;
   materials?: string;
   cost?: string;
+  bulkItemId?: string;
+  clarificationQuestions?: Array<{ question: string; options: string[] }> | null;
+  error?: string;
+  extracted_data?: {
+    product_name?: string;
+    product_description?: string;
+    country_of_origin?: string;
+    materials?: string;
+    unit_cost?: string;
+    [key: string]: any;
+  };
+  classification_result_id?: string | number;
 }
 
 type SortField = 'name' | 'confidence' | 'status';
@@ -38,7 +198,11 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [showFilters, setShowFilters] = useState(false);
   const [supportingFiles, setSupportingFiles] = useState<File[]>(initialSupportingFiles);
   const [uploadedMainFile, setUploadedMainFile] = useState<File | null>(initialFile);
-  const [aiChatOpen, setAiChatOpen] = useState(true);
+  const [progressCurrent, setProgressCurrent] = useState(0);
+  const [progressTotal, setProgressTotal] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
+  const cancelledRef = useRef(false);
 
   // Auto-start classification if initial file is provided
   React.useEffect(() => {
@@ -61,7 +225,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFile(e.dataTransfer.files[0]);
     }
@@ -75,27 +239,231 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
   const handleFile = (file: File) => {
     setUploadedMainFile(file);
+    setErrorMessage(null);
   };
 
-  const startClassification = () => {
+  const startClassification = async () => {
+    const fileToUpload = uploadedMainFile || initialFile;
+    if (!fileToUpload) return;
+
     setProcessing(true);
-    
-    // Simulate file processing
-    setTimeout(() => {
-      const mockItems: BulkItem[] = [
-        { id: 1, productName: 'Wireless Bluetooth Speaker', description: 'Portable speaker with rechargeable battery', status: 'complete', hts: '8517.62.0050', confidence: 96, tariff: '0%', origin: 'China', materials: 'ABS Plastic', cost: '$12.50' },
-        { id: 2, productName: 'Organic Cotton T-Shirt', description: '100% organic cotton, crew neck', status: 'complete', hts: '6109.10.0012', confidence: 97, tariff: '16.5%', origin: 'India', materials: '100% Cotton', cost: '$4.25' },
-        { id: 3, productName: 'Smart Watch with Health Monitor', description: 'Fitness tracking, heart rate, GPS', status: 'exception', hts: '9102.11.0000', confidence: 67, tariff: '9.8%', origin: 'China', materials: 'Electronics', cost: '$32.00' },
-        { id: 4, productName: 'LED Desk Lamp', description: 'Adjustable brightness, USB charging', status: 'complete', hts: '9405.20.6000', confidence: 98, tariff: '3.9%', origin: 'Vietnam', materials: 'Aluminum', cost: '$8.75' },
-        { id: 5, productName: 'Stainless Steel Water Bottle', description: 'Insulated, 32oz capacity', status: 'complete', hts: '7323.93.0000', confidence: 99, tariff: '0%', origin: 'South Korea', materials: 'Stainless Steel', cost: '$6.30' },
-        { id: 6, productName: 'Cotton-Polyester Blend Fabric', description: '60% cotton, 40% polyester', status: 'exception', hts: '5515.11.0000', confidence: 72, tariff: '12%', origin: 'China', materials: 'Textile', cost: '$2.15' },
-        { id: 7, productName: 'Ceramic Coffee Mug', description: 'Dishwasher safe, 12oz', status: 'complete', hts: '6912.00.4810', confidence: 95, tariff: '4.5%', origin: 'Mexico', materials: 'Ceramic', cost: '$1.80' },
-        { id: 8, productName: 'Bamboo Cutting Board', description: 'Large size, with juice groove', status: 'complete', hts: '4419.90.9040', confidence: 94, tariff: '3.2%', origin: 'Vietnam', materials: 'Bamboo', cost: '$5.50' },
-      ];
-      
-      setItems(mockItems);
+    setErrorMessage(null);
+    setItems([]);
+    setProgressCurrent(0);
+    setProgressTotal(0);
+    setFileMetadata(null);
+    cancelledRef.current = false;
+
+    // Validate file type
+    const ext = fileToUpload.name.split('.').pop()?.toLowerCase();
+    if (ext !== 'csv') {
+      setErrorMessage('Currently only CSV files are supported for bulk classification. XLSX support coming soon.');
       setProcessing(false);
-    }, 2000);
+      return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErrorMessage('You must be logged in to classify products.');
+      setProcessing(false);
+      return;
+    }
+
+    // Pre-fetch the user's confidence threshold ONCE before the loop.
+    // This avoids N redundant getUserMetadata calls (one per item) and
+    // prevents concurrent Supabase queries from causing failures.
+    let confidenceThreshold = 0.75;
+    try {
+      const userMeta = await getUserMetadata(user.id);
+      confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+    } catch (err) {
+      console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
+    }
+
+    // Parse CSV locally
+    let text: string;
+    try {
+      text = await fileToUpload.text();
+    } catch {
+      setErrorMessage('Failed to read file.');
+      setProcessing(false);
+      return;
+    }
+
+    const { headers, rows } = parseCSV(text);
+    if (rows.length === 0) {
+      setErrorMessage('No data rows found in the file. Make sure the first row contains headers.');
+      setProcessing(false);
+      return;
+    }
+
+    // Detect column mapping
+    const colMap = detectColumns(headers);
+    setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
+    setProgressTotal(rows.length);
+
+    // Build initial items from parsed rows
+    const initialItems: BulkItem[] = rows.map((row, idx) => ({
+      id: idx + 1,
+      productName: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
+      description: (colMap.description ? row[colMap.description] : '') || '',
+      origin: (colMap.origin ? row[colMap.origin] : '') || '',
+      materials: (colMap.materials ? row[colMap.materials] : '') || '',
+      cost: (colMap.cost ? row[colMap.cost] : '') || '',
+      status: 'pending' as const,
+      // Store the complete extracted data for later use in approval flow
+      extracted_data: {
+        product_name: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
+        product_description: (colMap.description ? row[colMap.description] : '') || '',
+        country_of_origin: (colMap.origin ? row[colMap.origin] : '') || '',
+        materials: (colMap.materials ? row[colMap.materials] : '') || '',
+        unit_cost: (colMap.cost ? row[colMap.cost] : '') || '',
+      }
+    }));
+    setItems(initialItems);
+
+    // Classify each row using the working single-product pipeline.
+    // Each call is fully STATELESS — a fresh messages array (system + user
+    // prompt only) is sent per product. No prior conversation history or
+    // tool_use blocks are replayed, which avoids duplicate ID errors.
+    let completed = 0;
+
+    const tasks = rows.map((row, idx) => async () => {
+      if (cancelledRef.current) return;
+
+      // Build a clean product description using detected column mapping,
+      // mirroring what the single-item ClassificationView sends.
+      const description = buildProductDescription(row, colMap);
+
+      if (!description.trim()) {
+        completed++;
+        setProgressCurrent(completed);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: 'No product description available' }
+            : item
+        ));
+        return;
+      }
+
+      try {
+        // Each call is independent — pass pre-fetched threshold so
+        // classifyProduct does NOT re-fetch user metadata per item.
+        // classifyProduct returns null on failure, so wrap to throw for retry.
+        const result = await retryWithBackoff(
+          async () => {
+            const res = await classifyProduct(description, user.id, confidenceThreshold);
+            if (res === null) throw new Error('Classification returned null (edge function or backend error)');
+            return res;
+          },
+          2,   // up to 2 retries
+          1500, // 1.5s base delay with exponential backoff
+        ).catch(() => null); // After retries exhausted, treat as null
+        completed++;
+        setProgressCurrent(completed);
+
+        if (cancelledRef.current) return;
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== idx + 1) return item;
+
+          if (!result) {
+            return { ...item, status: 'exception' as const, error: 'Classification returned no result' };
+          }
+
+          // Handle clarification needed
+          if (result.type === 'clarify' || result.needs_clarification) {
+            const questions = (result.clarifications || result.questions || []).map((c: any) => ({
+              question: typeof c === 'string' ? c : c.question || c,
+              options: typeof c === 'string' ? [] : c.options || [],
+            }));
+            return { ...item, status: 'exception' as const, clarificationQuestions: questions };
+          }
+
+          // Handle explicit exception from backend (e.g. LOW_CONFIDENCE)
+          if (result.type === 'exception') {
+            const exceptionData = result.data;
+            const exceptionRules = exceptionData?.matched_rules || [];
+            const topExRule = exceptionRules[0];
+            return {
+              ...item,
+              status: 'exception' as const,
+              hts: topExRule?.hts || '',
+              confidence: Math.round((result.confidence || 0) * 100),
+              error: result.reason || 'Low confidence',
+            };
+          }
+
+          // Extract matched rules — mirroring ClassificationView logic
+          let matchedRules: any[] = [];
+          if (result.type === 'answer' && result.matches) {
+            if (Array.isArray(result.matches)) {
+              matchedRules = result.matches;
+            } else if (result.matches.matched_rules && Array.isArray(result.matches.matched_rules)) {
+              matchedRules = result.matches.matched_rules;
+            }
+          } else if (result.candidates) {
+            matchedRules = result.candidates;
+          }
+
+          // Sort by confidence descending (matching ClassificationView)
+          const sortedMatches = [...matchedRules].sort((a: any, b: any) => {
+            const aConf = a.confidence || a.score || 0;
+            const bConf = b.confidence || b.score || 0;
+            return bConf - aConf;
+          });
+
+          const topRule = sortedMatches[0];
+
+          // Confidence cascade: try rule confidence, then similarity score,
+          // then the response-level max_confidence. This matches the backend
+          // pipeline where generate_rationale sets confidence on each rule.
+          const rawConf = topRule
+            ? (topRule.confidence || topRule.score || 0)
+            : 0;
+          const maxConf = rawConf > 0
+            ? Math.round(rawConf * 100)
+            : Math.round((result.max_confidence || 0) * 100);
+
+          if (!topRule || maxConf === 0) {
+            return {
+              ...item,
+              status: 'exception' as const,
+              error: 'No HTS match found or 0% confidence',
+            };
+          }
+
+          return {
+            ...item,
+            status: 'complete' as const,
+            hts: topRule.hts || '',
+            confidence: maxConf,
+            tariff: topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '',
+          };
+        }));
+      } catch (err: any) {
+        completed++;
+        setProgressCurrent(completed);
+        const errorMsg = err?.message || String(err);
+        console.error(`Error classifying row ${idx + 1}:`, errorMsg);
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: `Classification failed: ${errorMsg}` }
+            : item
+        ));
+      }
+    });
+
+    // Process 2 at a time — each classification triggers 3+ LLM calls on the
+    // backend (preprocess, rule engine, rationale), so lower concurrency
+    // prevents rate-limit / timeout cascades that cause blanket failures.
+    await runWithConcurrency(tasks, 2, () => cancelledRef.current);
+    setProcessing(false);
+  };
+
+  const handleCancelClassification = () => {
+    cancelledRef.current = true;
+    setProcessing(false);
   };
 
   const handleSort = (field: SortField) => {
@@ -372,19 +740,57 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
         )}
 
         {/* Processing State */}
-        {processing && items.length === 0 && (
+        {processing && (
           <div className="bg-white rounded-xl p-12 border border-slate-200">
             <div className="text-center">
               <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full" />
               </div>
-              <h3 className="text-slate-900 mb-2">Processing File...</h3>
-              <p className="text-slate-600">AI is classifying your products</p>
-              {supportingFiles.length > 0 && (
-                <p className="text-slate-500 text-sm mt-2">
-                  Using {supportingFiles.length} supporting document{supportingFiles.length > 1 ? 's' : ''} for enhanced accuracy
-                </p>
+              <h3 className="text-slate-900 mb-2">Classifying Products...</h3>
+              <p className="text-slate-600">
+                {progressTotal > 0
+                  ? `Processing ${progressCurrent} of ${progressTotal} products`
+                  : 'Parsing file and extracting products...'}
+              </p>
+              {progressTotal > 0 && (
+                <div className="mt-4 max-w-md mx-auto">
+                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500 dynamic-bar"
+                      style={{ '--bar-width': `${(progressCurrent / progressTotal) * 100}%` } as React.CSSProperties}
+                    />
+                  </div>
+                  <p className="text-slate-500 text-sm mt-2">
+                    {Math.round((progressCurrent / progressTotal) * 100)}% complete
+                  </p>
+                </div>
               )}
+              <button
+                onClick={handleCancelClassification}
+                className="mt-4 px-4 py-2 text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-2 mx-auto"
+              >
+                <StopCircle className="w-4 h-4" />
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {errorMessage && !processing && (
+          <div className="bg-red-50 rounded-xl p-6 border border-red-200">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+              <div>
+                <h4 className="text-red-900">Classification Error</h4>
+                <p className="text-red-700 text-sm">{errorMessage}</p>
+              </div>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="ml-auto text-red-600 hover:text-red-900"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
         )}
@@ -414,14 +820,20 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                       <strong>📄 Main File Detected:</strong>
                     </p>
                     <p className="text-blue-800 text-xs mb-1">
-                      {uploadedMainFile && uploadedMainFile.name.endsWith('.pdf') ? 'PDF document' : uploadedMainFile && uploadedMainFile.name.endsWith('.csv') ? 'CSV file' : 'Excel spreadsheet'} 
-                      {' with 8 product entries'}
+                      {uploadedMainFile && uploadedMainFile.name.endsWith('.pdf') ? 'PDF document' : uploadedMainFile && uploadedMainFile.name.endsWith('.csv') ? 'CSV file' : 'Excel spreadsheet'}
+                      {` with ${progressTotal || items.length} product entries`}
                     </p>
                     <p className="text-blue-800 text-xs">
-                      Found columns: <span className="font-medium">Product Name, Description, Country of Origin, Materials, Unit Cost</span>
+                      Found columns: <span className="font-medium">
+                        {fileMetadata?.detected_columns && fileMetadata.detected_columns.length > 0
+                          ? fileMetadata.detected_columns.join(', ')
+                          : 'Detecting...'}
+                      </span>
                     </p>
                     <p className="text-blue-700 text-xs mt-1">
-                      Products include electronics, textiles, and household items.
+                      {items.length > 0
+                        ? `${items.length} product${items.length !== 1 ? 's' : ''} detected for classification.`
+                        : 'Analyzing product data...'}
                     </p>
                   </div>
 
@@ -547,6 +959,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                   setItems([]);
                   setUploadedMainFile(null);
                   setSupportingFiles([]);
+                  setFileMetadata(null);
                 }}
                 className="px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
               >
@@ -659,7 +1072,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                           {item.status === 'exception' && (
                             <div className="flex items-center gap-2 text-red-600">
                               <AlertCircle className="w-5 h-5" />
-                              <span className="text-sm">Exception</span>
+                              <div>
+                                <span className="text-sm">Exception</span>
+                                {item.error && (
+                                  <p className="text-xs text-red-400 mt-0.5 max-w-[200px] truncate" title={item.error}>{item.error}</p>
+                                )}
+                              </div>
                             </div>
                           )}
                           {item.status === 'pending' && (
@@ -674,25 +1092,29 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                         <td className="px-6 py-4 text-slate-900 text-sm">{item.origin}</td>
                         <td className="px-6 py-4 text-slate-900">{item.hts}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm ${
-                              (item.confidence || 0) >= 90 ? 'text-green-600' : 
-                              (item.confidence || 0) >= 75 ? 'text-amber-600' : 
-                              'text-red-600'
-                            }`}>
-                              {item.confidence}%
-                            </span>
-                            <div className="w-16 h-1.5 bg-slate-200 rounded-full">
-                              <div 
-                                className={`h-full rounded-full ${
-                                  (item.confidence || 0) >= 90 ? 'bg-green-500' : 
-                                  (item.confidence || 0) >= 75 ? 'bg-amber-500' : 
-                                  'bg-red-500'
-                                }`}
-                                style={{ width: `${item.confidence}%` }}
-                              />
+                          {item.confidence != null && item.confidence > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-sm ${
+                                item.confidence >= 90 ? 'text-green-600' :
+                                item.confidence >= 75 ? 'text-amber-600' :
+                                'text-red-600'
+                              }`}>
+                                {item.confidence}%
+                              </span>
+                              <div className="w-16 h-1.5 bg-slate-200 rounded-full">
+                                <div
+                                  className={`h-full rounded-full dynamic-bar ${
+                                    item.confidence >= 90 ? 'bg-green-500' :
+                                    item.confidence >= 75 ? 'bg-amber-500' :
+                                    'bg-red-500'
+                                  }`}
+                                  style={{ '--bar-width': `${item.confidence}%` } as React.CSSProperties}
+                                />
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <span className="text-sm text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-slate-900">{item.tariff}</td>
                       </tr>
@@ -714,6 +1136,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             setItems(items.map(i => i.id === updatedItem.id ? updatedItem : i));
             setSelectedItem(null);
           }}
+          bulkRunId={0}
         />
       )}
 
@@ -729,11 +1152,24 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             origin: exceptionItem.origin || 'China',
             reason: 'Low confidence score - Multiple possible classifications detected'
           }}
+          bulkRunId={undefined}
+          bulkItemId={exceptionItem.bulkItemId || undefined}
+          clarificationQuestions={exceptionItem.clarificationQuestions}
           onClose={() => setExceptionItem(null)}
-          onApprove={() => {
-            setItems(items.map(i => 
-              i.id === exceptionItem.id ? { ...i, status: 'complete' as const } : i
-            ));
+          onApprove={(updatedProduct?: any) => {
+            setItems(items.map(i => {
+              if (i.id !== exceptionItem.id) return i;
+              if (updatedProduct) {
+                return {
+                  ...i,
+                  status: 'complete' as const,
+                  hts: updatedProduct.hts || i.hts,
+                  confidence: updatedProduct.confidence || i.confidence,
+                  tariff: updatedProduct.tariff || i.tariff,
+                };
+              }
+              return { ...i, status: 'complete' as const };
+            }));
             setExceptionItem(null);
           }}
           onReject={() => {

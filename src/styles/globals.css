@@ -39,6 +39,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Chat panel */
+  --chat-panel-bg: #f8fafc;
+  --chat-panel-border: #E5E7EB;
 }
 
 .dark {
@@ -76,6 +79,9 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  /* Chat panel */
+  --chat-panel-bg: #1C1C1E;
+  --chat-panel-border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -183,4 +189,9 @@
 
 html {
   font-size: var(--font-size);
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
 }

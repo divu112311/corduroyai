@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Package, Upload, FileText, Sparkles, CheckCircle, ArrowRight, LayoutDashboard, AlertTriangle } from 'lucide-react';
-import logo from '../../assets/8dffc9a46764dc298d3dc392fb46f27f3eb8c7e5.png';
+import logo from '../../assets/corduroy-logo.png';
 
 interface OnboardingFlowProps {
   userName: string;
@@ -378,8 +378,8 @@ export function OnboardingFlow({ userName, company, onComplete }: OnboardingFlow
             </div>
             <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-600 transition-all duration-300"
-                style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                className="h-full bg-blue-600 transition-all duration-300 dynamic-bar"
+                style={{ '--bar-width': `${((currentStep + 1) / steps.length) * 100}%` } as React.CSSProperties}
               />
             </div>
           </div>

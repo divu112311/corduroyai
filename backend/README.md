@@ -3,10 +3,9 @@
 This repository contains Python code for TradeAI-related projects.
 
 ## Structure
-- `tradeingestion/` – data ingestion scripts
 - `tradeai/` – core logic and utilities
-- `Scripts/` – helper scripts
-- `corduroyai/` – experimental or supporting code
+
+(Scripts, embedding, and ingestion code have been moved to a separate private repo.)
 
 ## Setup
 Create a virtual environment and install dependencies as needed.

@@ -2455,6 +2455,8 @@
   --sidebar-accent-foreground: oklch(.205 0 0);
   --sidebar-border: oklch(.922 0 0);
   --sidebar-ring: oklch(.708 0 0);
+  --chat-panel-bg: #ffffff;
+  --chat-panel-border: #e2e8f0;
 }
 
 .dark {
@@ -2830,5 +2832,305 @@ html {
   from {
     opacity: var(--tw-enter-opacity, 1);
     transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0) scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), var(--tw-enter-scale, 1)) rotate(var(--tw-enter-rotate, 0));
+  }
+}
+
+/* ── App layout ────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+.app-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+.app-main::-webkit-scrollbar {
+  width: 6px;
+}
+.app-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-main::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+.app-main::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ── Reusable component styles ─────────────────────────────────── */
+
+/* Dynamic progress / confidence bars – set --bar-width on the element */
+.dynamic-bar {
+  width: var(--bar-width, 0%);
+}
+
+/* When the bar also needs a dynamic color – set --bar-color on the element */
+.dynamic-bar-color {
+  background-color: var(--bar-color);
+}
+
+/* ── Chat panel — docked right sidebar ──────────────────────────── */
+
+.chat-panel-docked {
+  flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chat-panel-docked.chat-panel-open {
+  width: 400px;
+}
+
+.chat-panel-inner {
+  min-width: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-panel-bg);
+  border-left: 1px solid var(--chat-panel-border);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1A1A2E;
+}
+
+.dark .chat-panel-inner {
+  color: #f3f4f6;
+}
+
+/* Header */
+.chat-header {
+  border-bottom: 1px solid var(--chat-panel-border);
+}
+
+/* User message */
+.chat-msg-user {
+  align-self: flex-end;
+  max-width: 85%;
+}
+
+/* AI message */
+.chat-msg-ai {
+  align-self: flex-start;
+  max-width: 85%;
+}
+
+/* AI bubble */
+.chat-bubble-ai {
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  color: #1A1A2E;
+}
+.dark .chat-bubble-ai {
+  background: #2C2C2E;
+  color: #d1d5db;
+}
+
+/* Input container */
+.chat-input-wrap {
+  border: 1.5px solid #E5E7EB;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 150ms;
+}
+.chat-input-wrap:focus-within {
+  border-color: #3B82F6;
+}
+.dark .chat-input-wrap {
+  background: #1C1C1E;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.dark .chat-input-wrap:focus-within {
+  border-color: #3B82F6;
+}
+
+/* Textarea */
+.chat-textarea {
+  border: none;
+  outline: none;
+  background: transparent;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 24px;
+  padding: 0;
+  color: #1A1A2E;
+}
+.chat-textarea::placeholder {
+  color: #9ca3af;
+}
+.chat-textarea:disabled {
+  opacity: 0.5;
+}
+.dark .chat-textarea {
+  color: #f3f4f6;
+}
+.dark .chat-textarea::placeholder {
+  color: #6b7280;
+}
+
+/* Send button */
+.chat-send-btn {
+  color: #3B82F6;
+  transition: all 150ms;
+}
+.chat-send-btn:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+.chat-send-btn:disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+.chat-send-btn:active {
+  transform: scale(0.95);
+}
+
+/* Close button */
+.chat-close-btn {
+  color: #9ca3af;
+  transition: color 150ms, background-color 150ms;
+}
+.chat-close-btn:hover {
+  color: #4b5563;
+  background: #f3f4f6;
+}
+.dark .chat-close-btn {
+  color: #6b7280;
+}
+.dark .chat-close-btn:hover {
+  color: #d1d5db;
+  background: #1f2937;
+}
+
+/* Typing dots */
+.chat-typing-dots {
+  background: #F7F7F8;
+}
+.dark .chat-typing-dots {
+  background: #2C2C2E;
+}
+
+.chat-dot {
+  background: #9ca3af;
+}
+.dark .chat-dot {
+  background: #6b7280;
+}
+
+/* Error bubble */
+.chat-error-bubble {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.dark .chat-error-bubble {
+  background: rgba(127, 29, 29, 0.2);
+  color: #f87171;
+}
+
+/* Skeleton placeholder */
+.chat-skeleton {
+  background: #f3f4f6;
+}
+.dark .chat-skeleton {
+  background: #1f2937;
+}
+
+/* Messages scroll area */
+.chat-messages {
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Floating trigger */
+.chat-trigger:hover {
+  background: #F5F5F5;
+}
+.dark .chat-trigger:hover {
+  background: #2C2C2E;
+}
+.chat-trigger:active {
+  transform: scale(0.97);
+}
+
+/* Subtle scrollbar for chat messages */
+.chat-scrollbar-hidden {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.chat-scrollbar-hidden:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+.dark .chat-scrollbar-hidden:hover {
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.chat-scrollbar-hidden::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-scrollbar-hidden::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scrollbar-hidden::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.chat-scrollbar-hidden:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+/* Typing indicator: opacity fade animation */
+@keyframes chat-dot-fade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+.chat-dot-fade {
+  animation: chat-dot-fade 1.2s ease-in-out infinite;
+}
+
+.chat-dot-delay-0 { animation-delay: 0ms; }
+.chat-dot-delay-1 { animation-delay: 120ms; }
+.chat-dot-delay-2 { animation-delay: 240ms; }
+
+/* Message entry animation */
+@keyframes chat-msg-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-msg-enter {
+  animation: chat-msg-enter 200ms ease-out both;
+}
+
+/* Responsive: narrower panel on smaller screens */
+@media (max-width: 1440px) {
+  .chat-panel-docked.chat-panel-open {
+    width: 340px;
+  }
+  .chat-panel-inner {
+    min-width: 340px;
   }
 }

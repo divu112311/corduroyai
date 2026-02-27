@@ -131,6 +131,7 @@ export async function saveProduct(
     materials?: any; // JSONB
     unit_cost?: number;
     vendor?: string;
+    sku?: string;
   }
 ): Promise<number> {
   try {
@@ -171,6 +172,17 @@ export async function saveClassificationResult(
     unit_cost?: number;
     tariff_amount?: number;
     total_cost?: number;
+    description?: string;
+    reasoning?: string;
+    chapter_code?: string;
+    chapter_title?: string;
+    section_code?: string;
+    section_title?: string;
+    cbp_rulings?: any;
+    rule_verification?: any;
+    rule_confidence?: number;
+    similarity_score?: number;
+    alternate_classifications?: any;
   }
 ): Promise<number> {
   try {
@@ -202,9 +214,18 @@ export async function saveClassificationResult(
 export async function saveClassificationApproval(
   productId: number,
   classificationResultId: number,
-  approved: boolean
+  approved: boolean,
+  approvalReason?: string
 ): Promise<void> {
   try {
+    const record: Record<string, any> = {
+      approved: approved,
+      approved_at: approved ? new Date().toISOString() : null,
+    };
+    if (approvalReason) {
+      record.approval_reason = approvalReason;
+    }
+
     // Check if approval record already exists
     const { data: existing } = await supabase
       .from('user_product_classification_history')
@@ -214,13 +235,9 @@ export async function saveClassificationApproval(
       .single();
 
     if (existing) {
-      // Update existing record
       const { error } = await supabase
         .from('user_product_classification_history')
-        .update({
-          approved: approved,
-          approved_at: approved ? new Date().toISOString() : null,
-        })
+        .update(record)
         .eq('id', existing.id);
 
       if (error) {
@@ -228,14 +245,12 @@ export async function saveClassificationApproval(
         throw error;
       }
     } else {
-      // Insert new record
       const { error } = await supabase
         .from('user_product_classification_history')
         .insert({
           product_id: productId,
           classification_result_id: classificationResultId,
-          approved: approved,
-          approved_at: approved ? new Date().toISOString() : null,
+          ...record,
         });
 
       if (error) {

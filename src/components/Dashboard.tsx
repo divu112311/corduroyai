@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Clock, TrendingUp, ChevronRight, Package, FileText, X, Upload, Database, BarChart, Search, Plus, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle, TrendingUp, ChevronRight, Package, X, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { ExceptionReview } from './ExceptionReview';
 import { supabase } from '../lib/supabase';
@@ -34,6 +34,8 @@ export function Dashboard({ onNavigate }: DashboardProps) {
     { label: 'Avg Confidence', value: '0%', subtext: 'Approved Products', icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
   ]);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
 
   // Load data from database on mount
   useEffect(() => {
@@ -68,8 +70,10 @@ export function Dashboard({ onNavigate }: DashboardProps) {
         setIsLoadingExceptions(false);
         setIsLoadingRecentActivity(false);
         setIsLoadingStats(false);
+        setLastSyncTime(new Date());
       } catch (error) {
         console.error('Error loading dashboard data:', error);
+        setLoadError('Failed to load dashboard data. Please refresh the page to try again.');
         setIsLoadingExceptions(false);
         setIsLoadingRecentActivity(false);
         setIsLoadingStats(false);
@@ -81,13 +85,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
   const [recentClassifications, setRecentClassifications] = useState<any[]>([]);
   const [isLoadingRecentActivity, setIsLoadingRecentActivity] = useState(true);
-
-  const recentProfiles = [
-    { name: 'Bluetooth Audio Series', products: 12, updated: '1 day ago' },
-    { name: 'Smart Home Devices', products: 8, updated: '2 days ago' },
-    { name: 'Textile Products', products: 24, updated: '3 days ago' },
-  ];
-
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -127,7 +124,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-br from-slate-50 via-white to-blue-50 p-6">
+    <div className="p-6">
       <div className="max-w-[1600px] mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -148,10 +145,25 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             </div>
             <div className="text-left sm:text-right flex-shrink-0">
               <div className="text-slate-600 text-sm whitespace-nowrap">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              <div className="text-slate-500 text-sm whitespace-nowrap">Last sync: 2 min ago</div>
+              <div className="text-slate-500 text-sm whitespace-nowrap">
+                {lastSyncTime ? `Last sync: ${lastSyncTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'Syncing...'}
+              </div>
             </div>
           </div>
         </div>
+
+        {loadError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <span className="text-red-700 text-sm flex-1">{loadError}</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-6">
           {/* Main Content - Full Width */}
@@ -199,78 +211,89 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="p-5 text-center text-slate-500">No exceptions requiring review</div>
                 ) : (
                   <>
-                    {activeExceptions
-                      .filter(item => filterBy === 'all' || item.category === filterBy)
-                      .sort((a, b) => {
-                        if (sortBy === 'priority') {
-                          return a.priority.localeCompare(b.priority);
-                        } else if (sortBy === 'product') {
-                          return a.product.localeCompare(b.product);
-                        }
-                        return 0;
-                      })
-                      .map((item) => (
-                        <div 
-                          key={item.id} 
-                          className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
-                          onClick={() => setSelectedException(item)}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2 mb-2">
-                                <AlertCircle className={`w-5 h-5 flex-shrink-0 ${
-                                  item.priority === 'high' ? 'text-red-600' : 
-                                  item.priority === 'medium' ? 'text-amber-600' : 'text-blue-600'
-                                }`} />
-                                <span className="text-slate-900 truncate">{item.product}</span>
-                                <span className={`px-2 py-0.5 rounded text-xs border flex-shrink-0 ${getPriorityColor(item.priority)}`}>
-                                  {item.priority}
-                                </span>
-                              </div>
-                              
-                              <div className="ml-0 sm:ml-8 space-y-1">
-                                <div className="text-sm text-slate-600">
-                                  <span className="text-red-700">⚠ {item.reason}</span>
+                    {(() => {
+                      const filteredExceptions = activeExceptions
+                        .filter(item => filterBy === 'all' || item.category === filterBy)
+                        .sort((a, b) => {
+                          if (sortBy === 'priority') {
+                            const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+                            return (priorityOrder[a.priority] ?? 3) - (priorityOrder[b.priority] ?? 3);
+                          } else if (sortBy === 'product') {
+                            return a.product.localeCompare(b.product);
+                          }
+                          return 0;
+                        });
+                      const displayedExceptions = filteredExceptions.slice(0, 5);
+                      const remainingCount = filteredExceptions.length - displayedExceptions.length;
+
+                      return (
+                        <>
+                          {displayedExceptions.map((item) => (
+                            <div
+                              key={item.id}
+                              className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
+                              onClick={() => setSelectedException(item)}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                                    <AlertCircle className={`w-5 h-5 flex-shrink-0 ${
+                                      item.priority === 'high' ? 'text-red-600' :
+                                      item.priority === 'medium' ? 'text-amber-600' : 'text-blue-600'
+                                    }`} />
+                                    <span className="text-slate-900 truncate">{item.product}</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs border flex-shrink-0 ${getPriorityColor(item.priority)}`}>
+                                      {item.priority}
+                                    </span>
+                                  </div>
+
+                                  <div className="ml-0 sm:ml-8 space-y-1">
+                                    <div className="text-sm text-slate-600">
+                                      <span className="text-red-700">⚠ {item.reason}</span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                                      <span className="whitespace-nowrap">SKU: {item.sku}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">HTS: {item.hts}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">Origin: {item.origin}</span>
+                                      <span className="hidden sm:inline">•</span>
+                                      <span className="whitespace-nowrap">Value: {item.value}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-                                  <span className="whitespace-nowrap">SKU: {item.sku}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">HTS: {item.hts}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">Origin: {item.origin}</span>
-                                  <span className="hidden sm:inline">•</span>
-                                  <span className="whitespace-nowrap">Value: {item.value}</span>
+
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedException(item);
+                                    }}
+                                    className="hidden sm:block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm opacity-0 group-hover:opacity-100"
+                                  >
+                                    Review Now
+                                  </button>
+                                  <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
                               </div>
                             </div>
-                            
-                            <div className="flex items-center gap-2 flex-shrink-0">
+                          ))}
+                          {remainingCount > 0 && (
+                            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedException(item);
-                                }}
-                                className="hidden sm:block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm opacity-0 group-hover:opacity-100"
+                                onClick={() => setShowAllReviewModal(true)}
+                                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
                               >
-                                Review Now
+                                Review {remainingCount} more exception{remainingCount > 1 ? 's' : ''}
+                                <ChevronRight className="w-4 h-4" />
                               </button>
-                              <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                          </div>
-                        </div>
-                      ))}
+                          )}
+                        </>
+                      );
+                    })()}
                   </>
                 )}
-              </div>
-
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <button 
-                  onClick={() => setShowAllReviewModal(true)}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
-                >
-                  View all exceptions
-                  <ChevronRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -291,7 +314,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="text-slate-900 text-sm truncate">{item.product}</div>
-                          <div className="text-green-600 text-xs">Exception resolved • Confidence improved to 96%</div>
+                          <div className="text-green-600 text-xs">Exception resolved • Classification approved</div>
                         </div>
                         <div className="text-slate-400 text-xs whitespace-nowrap">Just now</div>
                         <ChevronRight className="w-4 h-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -305,10 +328,39 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                   <div className="p-4 text-center text-slate-500">No recent activity</div>
                 ) : (
                   recentClassifications.map((activity, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
-                      onClick={() => onNavigate('activity')}
+                      onClick={() => {
+                        // Open ExceptionReview with the activity's data
+                        if (activity.classification_result_id) {
+                          setSelectedException({
+                            id: activity.classification_result_id,
+                            product: activity.product,
+                            description: activity.description || '',
+                            hts: activity.hts,
+                            confidence: activity.confidenceRaw || 0,
+                            tariff_rate: activity.tariff_rate,
+                            origin: activity.origin || 'Unknown',
+                            reason: `Confidence: ${activity.confidence}`,
+                            hts_description: activity.description,
+                            reasoning: activity.reasoning,
+                            chapter_code: activity.chapter_code,
+                            chapter_title: activity.chapter_title,
+                            section_code: activity.section_code,
+                            section_title: activity.section_title,
+                            cbp_rulings: activity.cbp_rulings,
+                            rule_verification: activity.rule_verification,
+                            alternate_classifications: activity.alternate_classifications,
+                            product_id: activity.product_id,
+                            classification_result_id: activity.classification_result_id,
+                            classification_run_id: activity.classification_run_id,
+                            status: activity.status,
+                          });
+                        } else {
+                          onNavigate('activity');
+                        }
+                      }}
                     >
                       <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
                       <div className="flex-1 min-w-0">
@@ -345,8 +397,21 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             confidence: Math.round((selectedException.confidence || 0) * 100),
             tariff: selectedException.tariff_rate ? `${(selectedException.tariff_rate * 100).toFixed(1)}%` : 'N/A',
             origin: selectedException.origin,
-            reason: selectedException.reason
+            reason: selectedException.reason,
+            // Extended classification data
+            hts_description: selectedException.hts_description,
+            reasoning: selectedException.reasoning,
+            chapter_code: selectedException.chapter_code,
+            chapter_title: selectedException.chapter_title,
+            section_code: selectedException.section_code,
+            section_title: selectedException.section_title,
+            cbp_rulings: selectedException.cbp_rulings,
+            rule_verification: selectedException.rule_verification,
+            rule_confidence: selectedException.rule_confidence,
+            alternate_classifications: selectedException.alternate_classifications,
+            classification_run_id: selectedException.classification_run_id,
           }}
+          readOnly={selectedException.status === 'approved'}
           onClose={() => setSelectedException(null)}
           onApprove={() => handleResolveException(selectedException)}
           onReject={() => setSelectedException(null)}

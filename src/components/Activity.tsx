@@ -1,23 +1,43 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { ChevronRight, Clock, Package, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { ChevronRight, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { ExceptionReview } from './ExceptionReview';
+import { saveClassificationApproval } from '../lib/classificationService';
 
 interface ActivityItem {
   id: number;
   product: string;
+  productDescription: string;
   hts: string;
   confidence: string;
+  confidenceRaw: number;
   time: string;
   status: string;
   runType: 'single' | 'bulk';
   runId: number;
   createdAt: string;
+  productId: number;
+  origin: string;
+  tariffRate?: number;
+  // Extended classification data
+  htsDescription?: string;
+  reasoning?: string;
+  chapterCode?: string;
+  chapterTitle?: string;
+  sectionCode?: string;
+  sectionTitle?: string;
+  cbpRulings?: any;
+  ruleVerification?: any;
+  ruleConfidence?: number;
+  alternateClassifications?: any;
+  classificationRunId?: number;
 }
 
 export function Activity() {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
 
   useEffect(() => {
     const loadActivities = async () => {
@@ -48,7 +68,7 @@ export function Activity() {
         // OPTIMIZED: Get results first, then only fetch products we need
         const { data: allResults, error: resultsError } = await supabase
           .from('user_product_classification_results')
-          .select('id, hts_classification, confidence, product_id, classified_at, classification_run_id')
+          .select('id, hts_classification, confidence, product_id, classified_at, classification_run_id, tariff_rate, description, reasoning, chapter_code, chapter_title, section_code, section_title, cbp_rulings, rule_verification, rule_confidence, alternate_classifications')
           .in('classification_run_id', runIds)
           .order('classified_at', { ascending: false })
           .limit(500); // Limit to 500 most recent
@@ -67,7 +87,7 @@ export function Activity() {
         const [productsResponse, historyResponse] = await Promise.all([
           supabase
             .from('user_products')
-            .select('id, product_name')
+            .select('id, product_name, product_description, country_of_origin')
             .in('id', productIds)
             .eq('user_id', user.id),
           supabase
@@ -121,13 +141,29 @@ export function Activity() {
           return {
             id: result.id,
             product: product.product_name || 'Unnamed Product',
+            productDescription: (product.product_description as string) || '',
             hts: (result.hts_classification as string) || 'N/A',
             confidence: `${confidencePercent}%`,
+            confidenceRaw: confidencePercent,
             time: timeStr,
             status: isApproved ? 'approved' : 'pending',
             runType: run.run_type as 'single' | 'bulk',
             runId: run.id,
             createdAt: run.created_at,
+            productId: result.product_id,
+            origin: (product.country_of_origin as string) || 'Unknown',
+            tariffRate: (result.tariff_rate as number) || undefined,
+            htsDescription: (result.description as string) || undefined,
+            reasoning: (result.reasoning as string) || undefined,
+            chapterCode: (result.chapter_code as string) || undefined,
+            chapterTitle: (result.chapter_title as string) || undefined,
+            sectionCode: (result.section_code as string) || undefined,
+            sectionTitle: (result.section_title as string) || undefined,
+            cbpRulings: result.cbp_rulings || undefined,
+            ruleVerification: result.rule_verification || undefined,
+            ruleConfidence: (result.rule_confidence as number) || undefined,
+            alternateClassifications: result.alternate_classifications || undefined,
+            classificationRunId: result.classification_run_id,
           };
         }).filter((item): item is ActivityItem => item !== null);
 
@@ -193,7 +229,8 @@ export function Activity() {
             {filteredActivities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group"
+                className="flex items-center gap-4 p-4 hover:bg-slate-50 transition-colors group cursor-pointer"
+                onClick={() => setSelectedActivity(activity)}
               >
                 <div className="flex-shrink-0">
                   {activity.status === 'approved' ? (
@@ -235,6 +272,54 @@ export function Activity() {
         <div className="mt-6 text-center text-slate-500 text-sm">
           Showing {filteredActivities.length} of {activities.length} activity {activities.length === 1 ? 'item' : 'items'}
         </div>
+      )}
+
+      {/* ExceptionReview Modal */}
+      {selectedActivity && (
+        <ExceptionReview
+          product={{
+            id: selectedActivity.id,
+            productName: selectedActivity.product,
+            description: selectedActivity.productDescription,
+            hts: selectedActivity.hts,
+            confidence: selectedActivity.confidenceRaw,
+            tariff: selectedActivity.tariffRate ? `${(selectedActivity.tariffRate * 100).toFixed(2)}%` : 'N/A',
+            origin: selectedActivity.origin,
+            reason: `Confidence: ${selectedActivity.confidence}`,
+            hts_description: selectedActivity.htsDescription,
+            reasoning: selectedActivity.reasoning,
+            chapter_code: selectedActivity.chapterCode,
+            chapter_title: selectedActivity.chapterTitle,
+            section_code: selectedActivity.sectionCode,
+            section_title: selectedActivity.sectionTitle,
+            cbp_rulings: selectedActivity.cbpRulings,
+            rule_verification: selectedActivity.ruleVerification,
+            rule_confidence: selectedActivity.ruleConfidence,
+            alternate_classifications: selectedActivity.alternateClassifications,
+            classification_run_id: selectedActivity.classificationRunId,
+          }}
+          readOnly={selectedActivity.status === 'approved'}
+          onClose={() => setSelectedActivity(null)}
+          onApprove={async () => {
+            try {
+              await saveClassificationApproval(
+                selectedActivity.productId,
+                selectedActivity.id,
+                true
+              );
+              // Update local state to reflect approval
+              setActivities(prev =>
+                prev.map(a =>
+                  a.id === selectedActivity.id ? { ...a, status: 'approved' } : a
+                )
+              );
+              setSelectedActivity(null);
+            } catch (error) {
+              console.error('Error approving classification:', error);
+            }
+          }}
+          onReject={() => setSelectedActivity(null)}
+        />
       )}
     </div>
   );
