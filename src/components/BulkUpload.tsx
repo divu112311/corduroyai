@@ -775,7 +775,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
               <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
               </div>
-              <h3 className="text-slate-900 mb-2">Resuming Bulk Run...</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Resuming Bulk Run...</h3>
               <p className="text-slate-600">Loading your previous classification results</p>
             </div>
           </div>
@@ -805,12 +805,12 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
               
               {processing ? (
                 <div>
-                  <h3 className="text-slate-900 mb-2">Processing File...</h3>
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">Processing File...</h3>
                   <p className="text-slate-600">AI is classifying your products</p>
                 </div>
               ) : (
                 <>
-                  <h3 className="text-slate-900 mb-2">
+                  <h3 className="text-lg font-medium text-slate-900 mb-2">
                     {dragActive ? 'Drop file to upload' : 'Upload Product File'}
                   </h3>
                   <p className="text-slate-600 mb-4">
@@ -850,7 +850,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                     <FileSpreadsheet className="w-8 h-8 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="text-slate-900">Ready to Classify</h4>
+                    <h4 className="text-base font-medium text-slate-900">Ready to Classify</h4>
                     <p className="text-slate-600 text-sm">{uploadedMainFile.name}</p>
                     <p className="text-slate-500 text-xs mt-1">
                       {(uploadedMainFile.size / 1024).toFixed(1)} KB
@@ -875,7 +875,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-slate-600" />
                   <div>
-                    <h4 className="text-slate-900">Supporting Documents (Optional)</h4>
+                    <h4 className="text-base font-medium text-slate-900">Supporting Documents (Optional)</h4>
                     <p className="text-slate-600 text-sm">Specs, BOMs, datasheets to improve accuracy</p>
                   </div>
                 </div>
@@ -932,7 +932,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-slate-900 mb-1">Ready to Start</h4>
+                  <h4 className="text-base font-medium text-slate-900 mb-1">Ready to Start</h4>
                   <p className="text-slate-600 text-sm">
                     {supportingFiles.length > 0
                       ? `Main file + ${supportingFiles.length} supporting document${supportingFiles.length > 1 ? 's' : ''} ready`
@@ -958,7 +958,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
               <div className="bg-blue-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <div className="animate-spin w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full" />
               </div>
-              <h3 className="text-slate-900 mb-2">Classifying Products...</h3>
+              <h3 className="text-lg font-medium text-slate-900 mb-2">Classifying Products...</h3>
               <p className="text-slate-600">
                 {progressTotal > 0
                   ? `Processing ${progressCurrent} of ${progressTotal} products`
@@ -994,7 +994,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             <div className="flex items-center gap-3">
               <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
               <div>
-                <h4 className="text-red-900">Classification Error</h4>
+                <h4 className="text-base font-medium text-red-900">Classification Error</h4>
                 <p className="text-red-700 text-sm">{errorMessage}</p>
               </div>
               <button
@@ -1018,7 +1018,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                     <Sparkles className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white">AI Analysis</h3>
+                    <h3 className="text-lg font-medium text-white">AI Analysis</h3>
                     <p className="text-blue-100 text-sm">File insights & classification summary</p>
                   </div>
                 </div>
@@ -1117,7 +1117,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
                       <AlertCircle className="w-6 h-6 text-red-600" />
                     </div>
                     <div>
-                      <h3 className="text-red-900 mb-1">Action Required: {stats.exceptions} Exception{stats.exceptions > 1 ? 's' : ''} Need Review</h3>
+                      <h3 className="text-lg font-medium text-red-900 mb-1">Action Required: {stats.exceptions} Exception{stats.exceptions > 1 ? 's' : ''} Need Review</h3>
                       <p className="text-red-700 text-sm">
                         Low confidence scores require your review before approval
                       </p>

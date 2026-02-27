@@ -158,11 +158,11 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   };
 
   const getRunStatusDisplay = (run: BulkRunSummary) => {
-    if (run.status === 'completed' && run.classifiedCount >= run.totalProducts && run.totalProducts > 0) {
+    if (run.status === 'completed' && run.classifiedCount > 0) {
       return { label: 'Classified', color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle className="w-4 h-4 text-green-600" /> };
     }
-    if (run.status === 'completed' && run.classifiedCount < run.totalProducts) {
-      return { label: 'Partial', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: <AlertCircle className="w-4 h-4 text-amber-600" /> };
+    if (run.status === 'completed' && run.classifiedCount === 0) {
+      return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
     }
     if (run.status === 'cancelled') {
       return { label: 'Cancelled', color: 'text-red-700 bg-red-50 border-red-200', icon: <X className="w-4 h-4 text-red-600" /> };
@@ -170,7 +170,8 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     if (run.status === 'in_progress') {
       return { label: 'In Progress', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Clock className="w-4 h-4 text-blue-600" /> };
     }
-    return { label: 'Unknown', color: 'text-slate-700 bg-slate-50 border-slate-200', icon: <AlertCircle className="w-4 h-4 text-slate-600" /> };
+    // Fallback — treat as failed if no classifiedCount
+    return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
   };
 
   // Show bulk results if we're in file mode and user has started classification
@@ -206,7 +207,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   <RefreshCw className="w-6 h-6 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-amber-900 mb-1">Bulk Run In Progress</h3>
+                  <h3 className="text-lg font-medium text-amber-900 mb-1">Bulk Run In Progress</h3>
                   <p className="text-amber-700 text-sm">
                     {activeBulkRun.fileName} &mdash; {activeBulkRun.totalItems} products
                   </p>
@@ -243,7 +244,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   <Upload className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-white mb-1">Need to classify multiple products?</h3>
+                  <h3 className="text-lg font-medium text-white mb-1">Need to classify multiple products?</h3>
                   <p className="text-blue-100 text-sm">Upload a CSV, Excel, or PDF file for bulk classification</p>
                 </div>
               </div>
@@ -272,7 +273,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                     <FileSpreadsheet className="w-8 h-8 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="text-slate-900">Ready to Classify</h4>
+                    <h4 className="text-base font-medium text-slate-900">Ready to Classify</h4>
                     <p className="text-slate-600 text-sm">{uploadedFile.name}</p>
                     <p className="text-slate-500 text-xs mt-1">
                       {(uploadedFile.size / 1024).toFixed(1)} KB
@@ -294,7 +295,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="w-5 h-5 text-slate-600" />
                   <div>
-                    <h4 className="text-slate-900">General Product Description (Optional)</h4>
+                    <h4 className="text-base font-medium text-slate-900">General Product Description (Optional)</h4>
                     <p className="text-slate-600 text-sm">Describe the products' intended use, materials, or function</p>
                   </div>
                 </div>
@@ -317,7 +318,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-slate-600" />
                   <div>
-                    <h4 className="text-slate-900">Supporting Documents (Optional)</h4>
+                    <h4 className="text-base font-medium text-slate-900">Supporting Documents (Optional)</h4>
                     <p className="text-slate-600 text-sm">Specs, BOMs, datasheets to improve accuracy</p>
                   </div>
                 </div>
@@ -374,7 +375,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             <div className="bg-white rounded-xl p-6 border border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-slate-900 mb-1">Ready to Start</h4>
+                  <h4 className="text-base font-medium text-slate-900 mb-1">Ready to Start</h4>
                   <p className="text-slate-600 text-sm">
                     {bulkDescription && supportingFiles.length > 0
                       ? `Main file + description + ${supportingFiles.length} supporting document${supportingFiles.length > 1 ? 's' : ''} ready`
@@ -408,91 +409,52 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
           <div className="mt-8">
-            <div className="flex items-center gap-3 mb-4">
-              <FileSpreadsheet className="w-5 h-5 text-slate-600" />
-              <h2 className="text-slate-900 text-lg font-semibold">Bulk Classification Runs</h2>
+            <div className="flex items-center gap-2 mb-3">
+              <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+              <p className="text-slate-700 text-sm font-medium">Bulk Classification Runs</p>
             </div>
 
             {loadingRuns ? (
-              <div className="bg-white rounded-xl p-8 border border-slate-200 text-center">
-                <Loader2 className="w-6 h-6 text-slate-400 animate-spin mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">Loading runs...</p>
+              <div className="bg-white rounded-xl p-6 border border-slate-200 text-center">
+                <Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto mb-2" />
+                <p className="text-slate-500 text-xs">Loading runs...</p>
               </div>
             ) : bulkRuns.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 border border-slate-200 text-center">
-                <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-slate-500 text-sm">No bulk classification runs yet</p>
-                <p className="text-slate-400 text-xs mt-1">Upload a CSV file above to start your first bulk run</p>
+              <div className="bg-white rounded-xl p-6 border border-slate-200 text-center">
+                <p className="text-slate-400 text-xs">No bulk classification runs yet</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {bulkRuns.map((run) => {
                   const statusDisplay = getRunStatusDisplay(run);
                   return (
                     <div
                       key={run.id}
-                      className="bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 transition-colors"
+                      className="bg-white rounded-lg p-3 border border-slate-200"
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4 min-w-0">
-                          <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-1.5 rounded border ${statusDisplay.color}`}>
                             {statusDisplay.icon}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-slate-900 text-sm font-medium truncate">
+                            <p className="text-slate-900 text-sm truncate">
                               {run.fileName}
                             </p>
-                            <div className="flex items-center gap-3 mt-1">
+                            <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-slate-500 text-xs">
-                                {run.classifiedCount}/{run.totalProducts} products classified
+                                {run.classifiedCount} product{run.classifiedCount !== 1 ? 's' : ''} classified
                               </span>
-                              <span className="text-slate-300">|</span>
-                              <span className="text-slate-500 text-xs">
+                              <span className="text-slate-300 text-xs">·</span>
+                              <span className="text-slate-400 text-xs">
                                 {formatTimeAgo(run.created_at)}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
-                            {statusDisplay.label}
-                          </span>
-                          {run.status === 'in_progress' && (
-                            <button
-                              onClick={() => {
-                                // Set localStorage so BulkUpload can resume this run
-                                localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
-                                  runId: run.id,
-                                  fileName: run.fileName,
-                                  totalItems: run.totalProducts,
-                                  startedAt: run.created_at,
-                                }));
-                                handleResumeBulkRun();
-                              }}
-                              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs flex items-center gap-1"
-                            >
-                              <RefreshCw className="w-3 h-3" />
-                              Resume
-                            </button>
-                          )}
-                          {run.status === 'completed' && (
-                            <button
-                              onClick={() => {
-                                // Set localStorage so BulkUpload can load this completed run
-                                localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
-                                  runId: run.id,
-                                  fileName: run.fileName,
-                                  totalItems: run.totalProducts,
-                                  startedAt: run.created_at,
-                                }));
-                                handleResumeBulkRun();
-                              }}
-                              className="px-3 py-1 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-xs"
-                            >
-                              View
-                            </button>
-                          )}
-                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
+                          {statusDisplay.label}
+                        </span>
                       </div>
                     </div>
                   );
