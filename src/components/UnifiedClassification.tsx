@@ -408,7 +408,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
 
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-8">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-12">
             <div className="px-6 py-4 border-b border-slate-100">
               <h3 className="text-slate-900">Bulk Classification Runs</h3>
             </div>
