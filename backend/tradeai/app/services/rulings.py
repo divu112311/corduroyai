@@ -74,11 +74,17 @@ Select the BEST 3 HTS codes from the list and explain in 1-2 sentences:
    This adjustment will be added to the Pinecone score (never decrease it).
 
 IMPORTANT:
-- Use the HTS codes EXACTLY as provided below.
-- Do NOT shorten, truncate, normalize, reformat, change the HTS codes.
+- The "hts" field in your response MUST exactly match one of the HTS codes listed above.
+- Do NOT shorten, truncate, normalize, reformat, or change the original HTS codes.
+- Do NOT invent or generate HTS codes. Only pick from the list provided.
 - Preserve all dots and digits.
-- The HTS value in your response MUST exactly match one of the HTS codes listed.
 
+10-DIGIT SPECIFICITY:
+- HTS codes have a hierarchy: 8-digit codes (e.g. 0901.21.00) are parent/basket codes,
+  10-digit codes (e.g. 0901.21.00.25) are the most specific statistical suffixes.
+- When BOTH an 8-digit parent and one of its 10-digit children appear in the candidate list,
+  ALWAYS prefer the 10-digit child that best matches the product.
+- Never select an 8-digit code if a more specific 10-digit code under the same parent is available in the list.
 
 Respond in this JSON format as the example provided:
 {{
@@ -123,7 +129,6 @@ Respond ONLY with JSON.
             for r in top_matches
             if r.get("hts")
         }
-
         print("Rationales:", rationales)
 
         # Keep only the top 3 matches in the order returned by the LLM
