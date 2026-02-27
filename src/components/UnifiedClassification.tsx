@@ -18,7 +18,12 @@ interface BulkItem {
   cost?: string;
 }
 
-export function UnifiedClassification() {
+interface UnifiedClassificationProps {
+  chatClassificationResult?: any;
+  onChatResultConsumed?: () => void;
+}
+
+export function UnifiedClassification({ chatClassificationResult, onChatResultConsumed }: UnifiedClassificationProps = {}) {
   const [inputMode, setInputMode] = useState<InputMode>('manual');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [supportingFiles, setSupportingFiles] = useState<File[]>([]);
@@ -284,7 +289,10 @@ export function UnifiedClassification() {
 
         {/* Manual Entry Mode - Always Show When No File */}
         {!uploadedFile && (
-          <ClassificationView />
+          <ClassificationView
+            chatClassificationResult={chatClassificationResult}
+            onChatResultConsumed={onChatResultConsumed}
+          />
         )}
       </div>
     </div>

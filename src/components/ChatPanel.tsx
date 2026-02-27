@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, X, AlertCircle } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { cn } from './ui/utils';
+import { sendChatMessage } from '../lib/supabaseFunctions';
 import logo from '../assets/corduroy-logo.png';
 
 /* ------------------------------------------------------------------ */
@@ -29,6 +30,11 @@ interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen: () => void;
+  currentView?: string;
+  user?: { id: string; email: string; [key: string]: any } | null;
+  onClassificationResult?: (result: any) => void;
+  onNavigate?: (screen: string) => void;
+  appContext?: Record<string, any>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -121,7 +127,7 @@ function StructuredContent({ sections }: { sections: MessageSection[] }) {
 /*  Main component                                                     */
 /* ------------------------------------------------------------------ */
 
-export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
+export function ChatPanel({ isOpen, onClose, onOpen, currentView, user, onClassificationResult, onNavigate, appContext }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -160,7 +166,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
     ]);
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || isThinking) return;
     const text = input.trim();
     setInput('');
@@ -169,15 +175,94 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
       inputRef.current.style.height = 'auto';
     }
     addMessage({ role: 'user', content: text });
-
     setIsThinking(true);
-    setTimeout(() => {
+
+    try {
+      // Build conversation history from existing messages (exclude errors)
+      const history = messages
+        .filter(m => !m.isError)
+        .map(m => ({ role: m.role, content: m.content }));
+
+      // Build app context — merge currentView with any extra context from parent
+      const ctx: Record<string, any> = { ...appContext };
+      if (currentView) ctx.currentView = currentView;
+
+      const response = await sendChatMessage(
+        user?.id || 'anonymous',
+        text,
+        history,
+        ctx,
+      );
+
+      setIsThinking(false);
+
+      if (!response) {
+        addMessage({
+          role: 'assistant',
+          content: 'Sorry, I couldn\'t reach the server. Please try again.',
+          isError: true,
+        });
+        return;
+      }
+
+      // Add the assistant response
+      addMessage({
+        role: 'assistant',
+        content: response.response,
+      });
+
+      // If a classification was performed, send it to the classify screen
+      if (response.classification_result && onClassificationResult) {
+        const ruling = response.classification_result;
+        const matchedRules = ruling.matched_rules || [];
+
+        if (matchedRules.length > 0) {
+          const sorted = [...matchedRules].sort((a: any, b: any) => {
+            const aConf = a.confidence || a.score || 0;
+            const bConf = b.confidence || b.score || 0;
+            return bConf - aConf;
+          });
+          const primary = sorted[0];
+          const alternates = sorted.slice(1, 3);
+
+          const classificationResult = {
+            hts: primary.hts || 'N/A',
+            confidence: Math.round((primary.confidence || primary.score || 0) * 100),
+            description: primary.description || '',
+            reasoning: primary.rationale || '',
+            cbp_rulings: primary.cbp_rulings || undefined,
+            rule_verification: primary.rule_verification || undefined,
+            rule_confidence: primary.rule_confidence || undefined,
+            similarity_score: primary.similarity_score || undefined,
+            alternate_classifications: alternates.length > 0
+              ? alternates.map((alt: any) => ({
+                  hts: alt.hts || 'N/A',
+                  description: alt.description || '',
+                  confidence: Math.round((alt.confidence || alt.score || 0) * 100),
+                  cbp_rulings: alt.cbp_rulings || undefined,
+                  rationale: alt.rationale || undefined,
+                  rule_verification: alt.rule_verification || undefined,
+                }))
+              : undefined,
+            alternate_classification: alternates.length > 0 ? alternates[0].hts : undefined,
+          };
+
+          onClassificationResult(classificationResult);
+        }
+      }
+
+      // If navigation was requested, trigger it on the frontend
+      if (response.navigation && onNavigate) {
+        onNavigate(response.navigation.screen);
+      }
+    } catch (err) {
       setIsThinking(false);
       addMessage({
         role: 'assistant',
-        content: `Got it, classifying your product...`,
+        content: 'Something went wrong. Please try again.',
+        isError: true,
       });
-    }, 900);
+    }
   };
 
   const handleSuggestion = () => {
@@ -377,7 +462,7 @@ export function ChatPanel({ isOpen, onClose, onOpen }: ChatPanelProps) {
               value={input}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask anything..."
+              placeholder="Ask about trade, HTS codes, or classify a product..."
               disabled={isThinking}
               rows={1}
               className="chat-textarea flex-1 resize-none"

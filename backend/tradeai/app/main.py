@@ -20,6 +20,7 @@ from app.services.bulk_orchestrator import (
     clarify_item,
     cancel_bulk_run,
 )
+from app.services.chat import handle_chat
 from app.models import PreprocessRequest
 load_dotenv()
 
@@ -131,6 +132,31 @@ def classify(req: ClassifyRequest):
         "type": "error",
         "message": "Unhandled classification state",
     }
+
+
+# ============================================================================
+# Chat Endpoint
+# ============================================================================
+
+class ChatRequest(BaseModel):
+    user_id: str
+    message: str
+    conversation_history: list = []
+    app_context: dict = {}
+
+
+@app.post("/chat")
+def chat_endpoint(req: ChatRequest):
+    """
+    Trade Assistant chat — GPT-4o-mini with tool calling.
+    Tools: classify_product, explain_hts, cbp_ruling_lookup.
+    """
+    return handle_chat(
+        user_id=req.user_id,
+        message=req.message,
+        conversation_history=req.conversation_history,
+        app_context=req.app_context,
+    )
 
 
 # ============================================================================

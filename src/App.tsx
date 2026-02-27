@@ -46,6 +46,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpiredMessage, setSessionExpiredMessage] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatClassificationResult, setChatClassificationResult] = useState<any>(null);
 
   // Refs to avoid stale closures in onAuthStateChange callback (Fix #1)
   const isAuthenticatedRef = useRef(isAuthenticated);
@@ -555,14 +556,35 @@ export default function App() {
       {/* Main Content */}
       <main className="app-main">
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
-        {currentView === 'classify' && <UnifiedClassification />}
+        {currentView === 'classify' && (
+          <UnifiedClassification
+            chatClassificationResult={chatClassificationResult}
+            onChatResultConsumed={() => setChatClassificationResult(null)}
+          />
+        )}
         {currentView === 'profile' && <ProductProfile />}
         {currentView === 'activity' && <Activity />}
         {currentView === 'settings' && <Settings />}
       </main>
 
       {/* Chat panel — docked right sidebar, always mounted for animation */}
-      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} onOpen={() => setIsChatOpen(true)} />
+      <ChatPanel
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onOpen={() => setIsChatOpen(true)}
+        currentView={currentView}
+        user={user}
+        onClassificationResult={(result: any) => {
+          setChatClassificationResult(result);
+          setCurrentView('classify');
+        }}
+        onNavigate={(screen: string) => {
+          const validViews: View[] = ['dashboard', 'classify', 'profile', 'settings'];
+          if (validViews.includes(screen as View)) {
+            setCurrentView(screen as View);
+          }
+        }}
+      />
     </div>
     </>
   );
