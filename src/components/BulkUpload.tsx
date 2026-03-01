@@ -398,12 +398,24 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
     // Detect column mapping
     const colMap = detectColumns(headers);
-    setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
-    setProgressTotal(rows.length);
+
+    // Validate: file must have identifiable product data
+    const validProducts = rows.filter(row => {
+      const name = colMap.product_name ? (row[colMap.product_name] || '').trim() : '';
+      return name.length > 0;
+    });
+    if (validProducts.length === 0) {
+      setErrorMessage('No valid product records found in the file. Ensure the file has a column with product names.');
+      setProcessing(false);
+      return;
+    }
+
+    setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: validProducts.length });
+    setProgressTotal(validProducts.length);
 
     // Duplicate file check — prevent re-classifying same file with same products
     try {
-      const productNames = rows.map(row =>
+      const productNames = validProducts.map(row =>
         (colMap.product_name ? row[colMap.product_name] : '') || ''
       ).filter(n => n);
       const { isDuplicate } = await checkDuplicateRun(user.id, fileToUpload.name, productNames);
@@ -421,14 +433,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     try {
       runId = await createClassificationRun(user.id, 'bulk', {
         fileName: fileToUpload.name,
-        totalItems: rows.length,
+        totalItems: validProducts.length,
       });
       runIdRef.current = runId;
       // Store in localStorage for page refresh recovery
       localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
         runId,
         fileName: fileToUpload.name,
-        totalItems: rows.length,
+        totalItems: validProducts.length,
         startedAt: new Date().toISOString(),
       }));
     } catch (err) {
@@ -436,8 +448,8 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
       // Continue without persistence — classification still works
     }
 
-    // Build initial items from parsed rows
-    const initialItems: BulkItem[] = rows.map((row, idx) => ({
+    // Build initial items from valid products only
+    const initialItems: BulkItem[] = validProducts.map((row, idx) => ({
       id: idx + 1,
       productName: (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`,
       description: (colMap.description ? row[colMap.description] : '') || '',
