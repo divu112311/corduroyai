@@ -9,6 +9,7 @@ import {
   createClassificationRun,
   saveProduct,
   saveClassificationResult,
+  saveClassificationApproval,
   updateClassificationRunStatus,
   getBulkRunResults,
   checkDuplicateRun,
@@ -359,6 +360,19 @@ export function BulkClassificationProvider({ children }: { children: React.React
                 rule_confidence: topRuleForSave?.rule_confidence,
                 similarity_score: topRuleForSave?.similarity_score,
               });
+            }
+            // Auto-approve high-confidence results (same as single classification)
+            if (classificationResultId && itemStatus === 'complete' && rawConfidence >= confidenceThreshold) {
+              try {
+                await saveClassificationApproval(
+                  productId,
+                  classificationResultId,
+                  true,
+                  `Auto-approved: confidence (${Math.round(rawConfidence * 100)}%) meets ${Math.round(confidenceThreshold * 100)}% threshold`
+                );
+              } catch (e) {
+                console.error('Auto-approval error:', e);
+              }
             }
           } catch (e) {
             console.error('Supabase save error:', e);

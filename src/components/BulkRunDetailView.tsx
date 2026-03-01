@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { getBulkRunResults, type BulkRunSummary } from '../lib/classificationService';
 import { getUserMetadata } from '../lib/userService';
 import { supabase } from '../lib/supabase';
+import { BulkItemDetail } from './BulkItemDetail';
 
 interface BulkRunDetailViewProps {
   run: BulkRunSummary;
@@ -11,9 +12,15 @@ interface BulkRunDetailViewProps {
 
 interface DetailItem {
   productName: string;
+  productDescription: string;
   htsCode: string;
   confidence: number; // 0-1
   aboveThreshold: boolean;
+  productId: number;
+  classificationResultId: number | null;
+  origin: string;
+  materials: string;
+  cost: string;
 }
 
 export function BulkRunDetailView({ run, onClose }: BulkRunDetailViewProps) {
@@ -21,6 +28,7 @@ export function BulkRunDetailView({ run, onClose }: BulkRunDetailViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [threshold, setThreshold] = useState(0.8);
+  const [selectedItem, setSelectedItem] = useState<DetailItem | null>(null);
 
   useEffect(() => {
     const loadDetails = async () => {
@@ -51,9 +59,15 @@ export function BulkRunDetailView({ run, onClose }: BulkRunDetailViewProps) {
           const conf = item.result?.confidence ?? 0;
           return {
             productName: item.product.product_name,
+            productDescription: item.product.product_description || '',
             htsCode: item.result?.hts_classification || '-',
             confidence: conf,
             aboveThreshold: conf >= userThreshold,
+            productId: item.product.id,
+            classificationResultId: item.result?.id ?? null,
+            origin: item.product.country_of_origin || '',
+            materials: typeof item.product.materials === 'string' ? item.product.materials : '',
+            cost: item.product.unit_cost?.toString() || '',
           };
         });
 
@@ -140,7 +154,8 @@ export function BulkRunDetailView({ run, onClose }: BulkRunDetailViewProps) {
             {items.map((item, idx) => (
               <div
                 key={idx}
-                className={`px-6 py-3 grid grid-cols-12 gap-4 items-center border-l-4 ${
+                onClick={() => setSelectedItem(item)}
+                className={`px-6 py-3 grid grid-cols-12 gap-4 items-center border-l-4 cursor-pointer hover:bg-slate-50 transition-colors ${
                   item.aboveThreshold
                     ? 'border-l-green-500 bg-green-50/30'
                     : 'border-l-red-500 bg-red-50/30'
@@ -165,6 +180,34 @@ export function BulkRunDetailView({ run, onClose }: BulkRunDetailViewProps) {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Product Detail Modal */}
+      {selectedItem && (
+        <BulkItemDetail
+          item={{
+            id: selectedItem.productId,
+            productName: selectedItem.productName,
+            description: selectedItem.productDescription,
+            status: selectedItem.aboveThreshold ? 'complete' : 'exception',
+            hts: selectedItem.htsCode !== '-' ? selectedItem.htsCode : undefined,
+            confidence: Math.round(selectedItem.confidence * 100),
+            origin: selectedItem.origin,
+            materials: selectedItem.materials,
+            cost: selectedItem.cost,
+            classification_result_id: selectedItem.classificationResultId ?? undefined,
+            extracted_data: {
+              product_name: selectedItem.productName,
+              product_description: selectedItem.productDescription,
+              country_of_origin: selectedItem.origin,
+              materials: selectedItem.materials,
+              unit_cost: selectedItem.cost,
+            },
+          }}
+          onClose={() => setSelectedItem(null)}
+          onSave={() => setSelectedItem(null)}
+          bulkRunId={run.id}
+        />
       )}
     </div>
   );
