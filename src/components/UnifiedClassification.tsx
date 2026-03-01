@@ -235,6 +235,20 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     );
   }
 
+  // Show full-screen detail view when a completed run is selected
+  if (selectedRun) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <BulkRunDetailView
+            run={selectedRun}
+            onClose={() => setSelectedRun(null)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
@@ -539,15 +553,6 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
               )}
             </div>
 
-            {/* Detail view for selected completed run */}
-            {selectedRun && (
-              <div className="mt-4">
-                <BulkRunDetailView
-                  run={selectedRun}
-                  onClose={() => setSelectedRun(null)}
-                />
-              </div>
-            )}
           </>
         )}
       </div>
