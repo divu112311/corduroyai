@@ -14,6 +14,7 @@ import {
   saveClassificationResult,
   updateClassificationRunStatus,
   getBulkRunResults,
+  checkDuplicateRun,
 } from '../lib/classificationService';
 import React from 'react';
 
@@ -191,9 +192,11 @@ interface BulkUploadProps {
   initialFile?: File | null;
   initialSupportingFiles?: File[];
   autoStart?: boolean;
+  rerunProducts?: import('../lib/classificationService').RerunProduct[];
+  rerunFileName?: string;
 }
 
-export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false }: BulkUploadProps = {}) {
+export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false, rerunProducts, rerunFileName }: BulkUploadProps = {}) {
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [items, setItems] = useState<BulkItem[]>([]);
@@ -211,6 +214,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
   const [fileMetadata, setFileMetadata] = useState<FileMetadata | null>(null);
   const cancelledRef = useRef(false);
   const runIdRef = useRef<number | null>(null);
+  const classifiedCountRef = useRef(0);
   const BULK_RUN_KEY = 'corduroy_bulk_run';
   const [isResuming, setIsResuming] = useState<boolean>(() => {
     try {
@@ -218,12 +222,14 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     } catch { return false; }
   });
 
-  // Auto-start classification if initial file is provided
+  // Auto-start classification if initial file is provided or rerun products are ready
   React.useEffect(() => {
-    if (initialFile && autoStart && items.length === 0 && !processing) {
+    if (rerunProducts && rerunProducts.length > 0 && items.length === 0 && !processing) {
+      startRerunClassification();
+    } else if (initialFile && autoStart && items.length === 0 && !processing) {
       startClassification();
     }
-  }, [initialFile, autoStart]);
+  }, [initialFile, autoStart, rerunProducts]);
 
   // Resume a bulk run from Supabase after page refresh
   React.useEffect(() => {
@@ -345,6 +351,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     setProgressTotal(0);
     setFileMetadata(null);
     cancelledRef.current = false;
+    classifiedCountRef.current = 0;
 
     // Validate file type
     const ext = fileToUpload.name.split('.').pop()?.toLowerCase();
@@ -393,6 +400,21 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     const colMap = detectColumns(headers);
     setFileMetadata({ detected_columns: headers, column_mapping: colMap, total_rows: rows.length });
     setProgressTotal(rows.length);
+
+    // Duplicate file check — prevent re-classifying same file with same products
+    try {
+      const productNames = rows.map(row =>
+        (colMap.product_name ? row[colMap.product_name] : '') || ''
+      ).filter(n => n);
+      const { isDuplicate } = await checkDuplicateRun(user.id, fileToUpload.name, productNames);
+      if (isDuplicate) {
+        setErrorMessage('This file has already been classified with the same products. Upload a different file or modify the contents.');
+        setProcessing(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Duplicate check failed, continuing:', err);
+    }
 
     // Create Supabase classification run for persistence
     let runId: number | null = null;
@@ -561,6 +583,7 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
             itemError = 'No HTS match found or 0% confidence';
           } else {
             itemStatus = 'complete';
+            classifiedCountRef.current++;
             itemHts = topRule.hts || '';
             itemConfidence = maxConf;
             itemTariff = topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '';
@@ -644,13 +667,258 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
     // prevents rate-limit / timeout cascades that cause blanket failures.
     await runWithConcurrency(tasks, 2, () => cancelledRef.current);
 
-    // Mark run as completed/cancelled in Supabase and clear localStorage
+    // Mark run as completed/cancelled/failed in Supabase and clear localStorage
     if (runIdRef.current) {
       try {
-        await updateClassificationRunStatus(
-          runIdRef.current,
-          cancelledRef.current ? 'cancelled' : 'completed'
-        );
+        let finalStatus: 'completed' | 'cancelled' | 'failed';
+        if (cancelledRef.current) {
+          finalStatus = 'cancelled';
+        } else if (classifiedCountRef.current === 0) {
+          finalStatus = 'failed';
+        } else {
+          finalStatus = 'completed';
+        }
+        await updateClassificationRunStatus(runIdRef.current, finalStatus);
+      } catch (err) {
+        console.error('Failed to update run status:', err);
+      }
+      localStorage.removeItem(BULK_RUN_KEY);
+    }
+
+    setProcessing(false);
+  };
+
+  // Rerun classification using products from a previous failed run
+  const startRerunClassification = async () => {
+    if (!rerunProducts || rerunProducts.length === 0) return;
+
+    setProcessing(true);
+    setErrorMessage(null);
+    setItems([]);
+    setProgressCurrent(0);
+    setProgressTotal(rerunProducts.length);
+    setFileMetadata(null);
+    cancelledRef.current = false;
+    classifiedCountRef.current = 0;
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setErrorMessage('You must be logged in to classify products.');
+      setProcessing(false);
+      return;
+    }
+
+    // Pre-fetch the user's confidence threshold
+    let confidenceThreshold = 0.75;
+    try {
+      const userMeta = await getUserMetadata(user.id);
+      confidenceThreshold = userMeta?.confidence_threshold ?? 0.75;
+    } catch (err) {
+      console.warn('Could not fetch user confidence threshold, using default 0.75:', err);
+    }
+
+    // Create a NEW classification run (old failed run preserved as audit trail)
+    let runId: number | null = null;
+    try {
+      runId = await createClassificationRun(user.id, 'bulk', {
+        fileName: rerunFileName || 'Rerun',
+        totalItems: rerunProducts.length,
+      });
+      runIdRef.current = runId;
+      localStorage.setItem(BULK_RUN_KEY, JSON.stringify({
+        runId,
+        fileName: rerunFileName || 'Rerun',
+        totalItems: rerunProducts.length,
+        startedAt: new Date().toISOString(),
+      }));
+    } catch (err) {
+      console.error('Failed to create rerun classification run:', err);
+    }
+
+    // Build initial items from rerun products
+    const initialItems: BulkItem[] = rerunProducts.map((product, idx) => ({
+      id: idx + 1,
+      productName: product.product_name || `Item ${idx + 1}`,
+      description: product.product_description || '',
+      origin: product.country_of_origin || '',
+      materials: typeof product.materials === 'string' ? product.materials : '',
+      cost: product.unit_cost?.toString() || '',
+      status: 'pending' as const,
+      extracted_data: {
+        product_name: product.product_name,
+        product_description: product.product_description,
+        country_of_origin: product.country_of_origin,
+        materials: typeof product.materials === 'string' ? product.materials : '',
+        unit_cost: product.unit_cost?.toString() || '',
+      },
+    }));
+    setItems(initialItems);
+
+    // Classify each product — same pipeline as CSV classification
+    let completed = 0;
+
+    const tasks = rerunProducts.map((product, idx) => async () => {
+      if (cancelledRef.current) return;
+
+      const description = [
+        product.product_name,
+        product.product_description,
+        product.materials ? `Material: ${typeof product.materials === 'string' ? product.materials : ''}` : '',
+        product.country_of_origin ? `Country of origin: ${product.country_of_origin}` : '',
+      ].filter(Boolean).join('. ');
+
+      if (!description.trim()) {
+        completed++;
+        setProgressCurrent(completed);
+        if (runIdRef.current) {
+          try {
+            await saveProduct(user.id, runIdRef.current, {
+              product_name: product.product_name,
+              product_description: '',
+              country_of_origin: product.country_of_origin || undefined,
+              materials: product.materials || undefined,
+              unit_cost: product.unit_cost,
+            });
+          } catch (e) { console.error('Supabase save error:', e); }
+        }
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: 'No product description available' }
+            : item
+        ));
+        return;
+      }
+
+      try {
+        const result = await retryWithBackoff(
+          async () => {
+            const res = await classifyProduct(description, user.id, confidenceThreshold);
+            if (res === null) throw new Error('Classification returned null');
+            return res;
+          },
+          2, 1500,
+        ).catch(() => null);
+
+        completed++;
+        setProgressCurrent(completed);
+        if (cancelledRef.current) return;
+
+        let itemStatus: 'complete' | 'exception' = 'exception';
+        let itemHts = '';
+        let itemConfidence = 0;
+        let itemTariff = '';
+        let itemError = '';
+        let rawConfidence = 0;
+        let rawTariffRate: number | undefined;
+        let topRuleForSave: any = null;
+
+        if (!result) {
+          itemError = 'Classification returned no result';
+        } else if (result.type === 'exception') {
+          const exceptionData = result.data;
+          const exceptionRules = exceptionData?.matched_rules || [];
+          const topExRule = exceptionRules[0];
+          itemHts = topExRule?.hts || '';
+          itemConfidence = Math.round((result.confidence || 0) * 100);
+          itemError = result.reason || 'Low confidence';
+          rawConfidence = result.confidence || 0;
+          rawTariffRate = topExRule?.tariff_rate;
+          topRuleForSave = topExRule;
+        } else {
+          let matchedRules: any[] = [];
+          if (result.type === 'answer' && result.matches) {
+            if (Array.isArray(result.matches)) matchedRules = result.matches;
+            else if (result.matches.matched_rules) matchedRules = result.matches.matched_rules;
+          } else if (result.candidates) {
+            matchedRules = result.candidates;
+          }
+
+          const sortedMatches = [...matchedRules].sort((a: any, b: any) =>
+            (b.confidence || b.score || 0) - (a.confidence || a.score || 0)
+          );
+          const topRule = sortedMatches[0];
+          const rawConf = topRule ? (topRule.confidence || topRule.score || 0) : 0;
+          const maxConf = rawConf > 0 ? Math.round(rawConf * 100) : Math.round((result.max_confidence || 0) * 100);
+
+          if (!topRule || maxConf === 0) {
+            itemError = 'No HTS match found or 0% confidence';
+          } else {
+            itemStatus = 'complete';
+            classifiedCountRef.current++;
+            itemHts = topRule.hts || '';
+            itemConfidence = maxConf;
+            itemTariff = topRule.tariff_rate != null ? `${(topRule.tariff_rate * 100).toFixed(1)}%` : '';
+            rawConfidence = rawConf;
+            rawTariffRate = topRule.tariff_rate;
+            topRuleForSave = topRule;
+          }
+        }
+
+        // Persist to Supabase
+        if (runIdRef.current) {
+          try {
+            const productId = await saveProduct(user.id, runIdRef.current, {
+              product_name: product.product_name,
+              product_description: description,
+              country_of_origin: product.country_of_origin || undefined,
+              materials: product.materials || undefined,
+              unit_cost: product.unit_cost,
+            });
+            if (itemHts || rawConfidence > 0 || result) {
+              await saveClassificationResult(productId, runIdRef.current, {
+                hts_classification: itemHts || undefined,
+                confidence: rawConfidence || undefined,
+                tariff_rate: rawTariffRate,
+                description: topRuleForSave?.description || result?.description,
+                reasoning: result?.reasoning,
+                cbp_rulings: result?.cbp_rulings,
+                rule_verification: result?.rule_verification,
+                rule_confidence: topRuleForSave?.rule_confidence,
+                similarity_score: topRuleForSave?.similarity_score,
+              });
+            }
+          } catch (e) {
+            console.error('Supabase save error:', e);
+          }
+        }
+
+        setItems(prev => prev.map(item => {
+          if (item.id !== idx + 1) return item;
+          return { ...item, status: itemStatus, hts: itemHts, confidence: itemConfidence, tariff: itemTariff, error: itemError || undefined };
+        }));
+      } catch (err: any) {
+        completed++;
+        setProgressCurrent(completed);
+        const errorMsg = err?.message || String(err);
+        if (runIdRef.current) {
+          try {
+            await saveProduct(user.id, runIdRef.current, {
+              product_name: product.product_name,
+              product_description: description,
+              country_of_origin: product.country_of_origin || undefined,
+              materials: product.materials || undefined,
+              unit_cost: product.unit_cost,
+            });
+          } catch (e) { console.error('Supabase save error:', e); }
+        }
+        setItems(prev => prev.map(item =>
+          item.id === idx + 1
+            ? { ...item, status: 'exception' as const, error: `Classification failed: ${errorMsg}` }
+            : item
+        ));
+      }
+    });
+
+    await runWithConcurrency(tasks, 2, () => cancelledRef.current);
+
+    // Mark run as completed/cancelled/failed
+    if (runIdRef.current) {
+      try {
+        let finalStatus: 'completed' | 'cancelled' | 'failed';
+        if (cancelledRef.current) finalStatus = 'cancelled';
+        else if (classifiedCountRef.current === 0) finalStatus = 'failed';
+        else finalStatus = 'completed';
+        await updateClassificationRunStatus(runIdRef.current, finalStatus);
       } catch (err) {
         console.error('Failed to update run status:', err);
       }

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { ClassificationView } from './ClassificationView';
 import { BulkUpload } from './BulkUpload';
-import { getUserBulkRuns, type BulkRunSummary } from '../lib/classificationService';
+import { BulkRunDetailView } from './BulkRunDetailView';
+import { getUserBulkRuns, getRunProductsForRerun, type BulkRunSummary, type RerunProduct } from '../lib/classificationService';
 import { supabase } from '../lib/supabase';
 
 type InputMode = 'manual' | 'file';
@@ -38,6 +39,14 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   // Bulk runs history
   const [bulkRuns, setBulkRuns] = useState<BulkRunSummary[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
+
+  // Run detail view (click on completed run)
+  const [selectedRun, setSelectedRun] = useState<BulkRunSummary | null>(null);
+
+  // Rerun state
+  const [rerunningRunId, setRerunningRunId] = useState<number | null>(null);
+  const [rerunProducts, setRerunProducts] = useState<RerunProduct[] | null>(null);
+  const [rerunFileName, setRerunFileName] = useState<string | null>(null);
 
   // Check for active bulk run in localStorage (for resume banner)
   const [activeBulkRun, setActiveBulkRun] = useState<{
@@ -142,35 +151,59 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     setShowBulkResults(true);
   };
 
-  const formatTimeAgo = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const formatRunDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  };
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  const getEstimatedTime = (run: BulkRunSummary) => {
+    if (run.classifiedCount === 0 || run.totalItems === 0) return 'Estimating...';
+    const elapsed = Date.now() - new Date(run.created_at).getTime();
+    const avgPerItem = elapsed / run.classifiedCount;
+    const remaining = run.totalItems - run.classifiedCount;
+    const remainingMs = avgPerItem * remaining;
+    const remainingMins = Math.ceil(remainingMs / 60000);
+    if (remainingMins < 1) return '< 1 min remaining';
+    return `~${remainingMins} min remaining`;
+  };
+
+  const handleRunClick = (run: BulkRunSummary) => {
+    if (run.status !== 'completed') return;
+    setSelectedRun(selectedRun?.id === run.id ? null : run);
+  };
+
+  const handleRerun = async (run: BulkRunSummary) => {
+    setRerunningRunId(run.id);
+    try {
+      const products = await getRunProductsForRerun(run.id);
+      if (products.length === 0) {
+        setRerunningRunId(null);
+        return;
+      }
+      setRerunProducts(products);
+      setRerunFileName(run.fileName);
+      setInputMode('file');
+      setShowBulkResults(true);
+    } catch (err) {
+      console.error('Error loading products for rerun:', err);
+      setRerunningRunId(null);
+    }
   };
 
   const getRunStatusDisplay = (run: BulkRunSummary) => {
-    if (run.status === 'completed' && run.classifiedCount > 0) {
+    if (run.status === 'completed') {
       return { label: 'Classified', color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle className="w-4 h-4 text-green-600" /> };
     }
-    if (run.status === 'completed' && run.classifiedCount === 0) {
+    if (run.status === 'failed') {
       return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
     }
     if (run.status === 'cancelled') {
-      return { label: 'Cancelled', color: 'text-red-700 bg-red-50 border-red-200', icon: <X className="w-4 h-4 text-red-600" /> };
+      return { label: 'Cancelled', color: 'text-slate-600 bg-slate-50 border-slate-200', icon: <X className="w-4 h-4 text-slate-500" /> };
     }
     if (run.status === 'in_progress') {
       return { label: 'In Progress', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Clock className="w-4 h-4 text-blue-600" /> };
     }
-    // Fallback — treat as failed if no classifiedCount
     return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
   };
 
@@ -183,6 +216,8 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             initialFile={uploadedFile}
             initialSupportingFiles={supportingFiles}
             autoStart={!!uploadedFile}
+            rerunProducts={rerunProducts || undefined}
+            rerunFileName={rerunFileName || undefined}
           />
         </div>
       </div>
@@ -410,54 +445,98 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
 
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="text-slate-900">Bulk Classification Runs</h3>
-            </div>
+          <>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h3 className="text-slate-900">Bulk Classification Runs</h3>
+              </div>
 
-            {loadingRuns ? (
-              <div className="p-6 text-center text-slate-500">Loading runs...</div>
-            ) : bulkRuns.length === 0 ? (
-              <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {bulkRuns.map((run) => {
-                  const statusDisplay = getRunStatusDisplay(run);
-                  return (
-                    <div
-                      key={run.id}
-                      className="px-6 py-4 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
-                            {statusDisplay.icon}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-slate-900 truncate block">
-                              {run.fileName}
-                            </span>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-                              <span>
-                                {run.classifiedCount} product{run.classifiedCount !== 1 ? 's' : ''} classified
+              {loadingRuns ? (
+                <div className="p-6 text-center text-slate-500">Loading runs...</div>
+              ) : bulkRuns.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {bulkRuns.map((run) => {
+                    const statusDisplay = getRunStatusDisplay(run);
+                    const isClickable = run.status === 'completed';
+                    const isSelected = selectedRun?.id === run.id;
+                    return (
+                      <div
+                        key={run.id}
+                        onClick={() => isClickable && handleRunClick(run)}
+                        className={`px-6 py-4 transition-colors ${
+                          isClickable ? 'cursor-pointer hover:bg-slate-50' : ''
+                        } ${isSelected ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
+                              {statusDisplay.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-slate-900 truncate block">
+                                {run.fileName}
                               </span>
-                              <span>·</span>
-                              <span>
-                                {formatTimeAgo(run.created_at)}
-                              </span>
+                              <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                                <span>
+                                  {run.totalProducts} product{run.totalProducts !== 1 ? 's' : ''}
+                                </span>
+                                <span>&middot;</span>
+                                <span>
+                                  {formatRunDate(run.created_at)}
+                                </span>
+                                {run.status === 'in_progress' && (
+                                  <>
+                                    <span>&middot;</span>
+                                    <span className="text-blue-600">
+                                      {getEstimatedTime(run)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            {run.status === 'failed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRerun(run);
+                                }}
+                                disabled={rerunningRunId === run.id}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                {rerunningRunId === run.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="w-3 h-3" />
+                                )}
+                                Rerun
+                              </button>
+                            )}
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
+                              {statusDisplay.label}
+                            </span>
+                          </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${statusDisplay.color}`}>
-                          {statusDisplay.label}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Detail view for selected completed run */}
+            {selectedRun && (
+              <div className="mt-4">
+                <BulkRunDetailView
+                  run={selectedRun}
+                  onClose={() => setSelectedRun(null)}
+                />
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
     </div>
