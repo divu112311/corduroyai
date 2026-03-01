@@ -487,7 +487,8 @@ export async function getUserBulkRuns(userId: string): Promise<BulkRunSummary[]>
     // 4. Build summaries
     return runs.map((run: any) => {
       // Extract file name and totalItems from conversations metadata
-      let fileName = 'Bulk Run';
+      const runDate = new Date(run.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let fileName = `Bulk Run ${runDate}`;
       let totalItems = 0;
       const conversations = run.conversations as ClarificationMessage[] | null;
       if (conversations && conversations.length > 0) {
@@ -500,15 +501,24 @@ export async function getUserBulkRuns(userId: string): Promise<BulkRunSummary[]>
         }
       }
 
+      const classifiedCount = resultCountMap.get(run.id) || 0;
+      const totalProducts = productCountMap.get(run.id) || 0;
+
+      // Normalize status: old runs marked 'completed' with 0 classifications are really 'failed'
+      let status = run.status as BulkRunSummary['status'];
+      if (status === 'completed' && classifiedCount === 0) {
+        status = 'failed';
+      }
+
       return {
         id: run.id,
-        status: run.status,
+        status,
         created_at: run.created_at,
         completed_at: run.completed_at,
         fileName,
-        totalProducts: productCountMap.get(run.id) || 0,
-        classifiedCount: resultCountMap.get(run.id) || 0,
-        totalItems,
+        totalProducts,
+        classifiedCount,
+        totalItems: totalItems || totalProducts, // fallback to product count if no metadata
       };
     });
   } catch (error) {
