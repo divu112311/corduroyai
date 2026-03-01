@@ -20,6 +20,7 @@ import { recordLogin, upsertSession, heartbeat, removeCurrentSession } from './l
 import { logActivity } from './lib/activityLogger';
 import { setSentryUser } from './lib/sentry';
 import { useIdleTimeout } from './hooks/useIdleTimeout';
+import { BulkClassificationProvider } from './lib/BulkClassificationContext';
 
 type View = 'dashboard' | 'classify' | 'profile' | 'settings' | 'activity';
 type AuthView = 'login' | 'signup' | 'reset-password' | 'new-password';
@@ -447,6 +448,7 @@ export default function App() {
         onLogout={handleLogout}
       />
     )}
+    <BulkClassificationProvider>
     <div className="app-shell bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Sidebar */}
       <aside className="app-sidebar bg-white border-r border-slate-200 p-6 flex flex-col">
@@ -586,6 +588,7 @@ export default function App() {
         }}
       />
     </div>
+    </BulkClassificationProvider>
     </>
   );
 }

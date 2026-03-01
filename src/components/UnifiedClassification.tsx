@@ -1,32 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { ClassificationView } from './ClassificationView';
 import { BulkUpload } from './BulkUpload';
 import { BulkRunDetailView } from './BulkRunDetailView';
 import { getUserBulkRuns, getRunProductsForRerun, type BulkRunSummary, type RerunProduct } from '../lib/classificationService';
+import { useBulkClassification } from '../lib/BulkClassificationContext';
 import { supabase } from '../lib/supabase';
 
 type InputMode = 'manual' | 'file';
-
-interface BulkItem {
-  id: number;
-  productName: string;
-  description: string;
-  status: 'pending' | 'complete' | 'exception';
-  hts?: string;
-  confidence?: number;
-  tariff?: string;
-  origin?: string;
-  materials?: string;
-  cost?: string;
-}
 
 interface UnifiedClassificationProps {
   chatClassificationResult?: any;
   onChatResultConsumed?: () => void;
 }
-
-const BULK_RUN_KEY = 'corduroy_bulk_run';
 
 export function UnifiedClassification({ chatClassificationResult, onChatResultConsumed }: UnifiedClassificationProps = {}) {
   const [inputMode, setInputMode] = useState<InputMode>('manual');
@@ -48,33 +34,63 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   const [rerunProducts, setRerunProducts] = useState<RerunProduct[] | null>(null);
   const [rerunFileName, setRerunFileName] = useState<string | null>(null);
 
-  // Check for active bulk run in localStorage (for resume banner)
-  const [activeBulkRun, setActiveBulkRun] = useState<{
-    runId: number; fileName: string; totalItems: number;
-  } | null>(() => {
-    try {
-      const stored = localStorage.getItem(BULK_RUN_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
+  // Context — bulk classification loop state (persists across navigation)
+  const { processing, progressCurrent, progressTotal, items, fileName: contextFileName } = useBulkClassification();
 
-  // Load bulk runs history on mount
-  useEffect(() => {
-    const loadBulkRuns = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const runs = await getUserBulkRuns(user.id);
-          setBulkRuns(runs);
-        }
-      } catch (err) {
-        console.error('Error loading bulk runs:', err);
-      } finally {
-        setLoadingRuns(false);
+  // ── Load bulk runs ────────────────────────────────────────────────────────
+
+  const loadBulkRuns = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const runs = await getUserBulkRuns(user.id);
+        setBulkRuns(runs);
       }
-    };
-    loadBulkRuns();
+    } catch (err) {
+      console.error('Error loading bulk runs:', err);
+    } finally {
+      setLoadingRuns(false);
+    }
   }, []);
+
+  // Load on mount
+  useEffect(() => {
+    loadBulkRuns();
+  }, [loadBulkRuns]);
+
+  // ── Poll every 5 seconds while any run is in_progress ─────────────────────
+
+  useEffect(() => {
+    const hasInProgress = bulkRuns.some(r => r.status === 'in_progress') || processing;
+    if (!hasInProgress) return;
+
+    const interval = setInterval(() => {
+      loadBulkRuns();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [bulkRuns, processing, loadBulkRuns]);
+
+  // ── Refresh runs when processing finishes ─────────────────────────────────
+
+  const prevProcessing = useRef(processing);
+  useEffect(() => {
+    if (prevProcessing.current && !processing) {
+      // Run just finished — refresh the list
+      loadBulkRuns();
+    }
+    prevProcessing.current = processing;
+  }, [processing, loadBulkRuns]);
+
+  // ── If context is processing and user navigates back, show BulkUpload ─────
+
+  useEffect(() => {
+    if (processing && inputMode === 'manual' && !showBulkResults) {
+      // Auto-switch to bulk view so user sees progress
+      setInputMode('file');
+      setShowBulkResults(true);
+    }
+  }, [processing]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -145,12 +161,6 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     setShowBulkResults(true);
   };
 
-  const handleResumeBulkRun = () => {
-    // Switch to BulkUpload view — it will auto-resume from localStorage
-    setInputMode('file');
-    setShowBulkResults(true);
-  };
-
   const formatRunDate = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
@@ -208,6 +218,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   };
 
   // Show bulk results if we're in file mode and user has started classification
+  // OR if a bulk run is active in the context (navigated back from another page)
   if (inputMode === 'file' && showBulkResults) {
     return (
       <div className="p-8">
@@ -233,39 +244,40 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
           <p className="text-slate-600">Classify products with natural language or upload bulk files for AI-powered HS/HTS classification</p>
         </div>
 
-        {/* Resume Bulk Run Banner */}
-        {activeBulkRun && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 mb-6 border-2 border-amber-200 shadow-sm">
+        {/* Active Classification Banner — shows when a run is processing in the background */}
+        {processing && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 mb-6 border-2 border-blue-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="bg-amber-100 p-3 rounded-lg">
-                  <RefreshCw className="w-6 h-6 text-amber-600" />
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                 </div>
                 <div>
-                  <h3 className="text-amber-900 mb-1">Bulk Run In Progress</h3>
-                  <p className="text-amber-700 text-sm">
-                    {activeBulkRun.fileName} &mdash; {activeBulkRun.totalItems} products
+                  <h3 className="text-blue-900 mb-1">Bulk Classification In Progress</h3>
+                  <p className="text-blue-700 text-sm">
+                    {contextFileName || 'File'} &mdash; {progressCurrent} of {progressTotal} products classified
                   </p>
+                  {progressTotal > 0 && (
+                    <div className="mt-2 w-48">
+                      <div className="w-full h-2 bg-blue-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(progressCurrent / progressTotal) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    localStorage.removeItem(BULK_RUN_KEY);
-                    setActiveBulkRun(null);
-                  }}
-                  className="px-4 py-2 text-amber-700 hover:text-amber-900 transition-colors text-sm"
-                >
-                  Dismiss
-                </button>
-                <button
-                  onClick={handleResumeBulkRun}
-                  className="px-5 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Resume
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setInputMode('file');
+                  setShowBulkResults(true);
+                }}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                View Progress
+              </button>
             </div>
           </div>
         )}
@@ -490,7 +502,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                                   <>
                                     <span>&middot;</span>
                                     <span className="text-blue-600">
-                                      {getEstimatedTime(run)}
+                                      {run.classifiedCount}/{run.totalItems} classified &mdash; {getEstimatedTime(run)}
                                     </span>
                                   </>
                                 )}
