@@ -13,7 +13,6 @@ import {
   ClarificationMessage
 } from '../lib/classificationService';
 import { getUserMetadata } from '../lib/userService';
-import { getTradeFlowCountries, getTradePartners } from '../lib/tradeFlowService';
 import { supabase } from '../lib/supabase';
 
 interface MaterialComposition {
@@ -55,12 +54,6 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
   const [vendor, setVendor] = useState('');
   const [unitCost, setUnitCost] = useState('');
 
-  // Trade flow state
-  const [tradeFlowCountry, setTradeFlowCountry] = useState<{ id: number; name: string } | null>(null);
-  const [tradeDirection, setTradeDirection] = useState<'IMPORT' | 'EXPORT' | ''>('');
-  const [tradeFlowCountries, setTradeFlowCountries] = useState<{ id: number; name: string }[]>([]);
-  const [originCountries, setOriginCountries] = useState<string[]>([]);
-
   // Classification flow state
   const [classificationRunId, setClassificationRunId] = useState<number | null>(null);
   const [clarificationMessages, setClarificationMessages] = useState<ClarificationMessage[]>([]);
@@ -90,21 +83,6 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
     }, 3000);
     return () => clearInterval(interval);
   }, [loading]);
-
-  // Load trade flow countries on mount
-  useEffect(() => {
-    getTradeFlowCountries().then(setTradeFlowCountries);
-  }, []);
-
-  // Fetch partner countries when both trade flow dropdowns are selected
-  useEffect(() => {
-    if (tradeFlowCountry && tradeDirection) {
-      getTradePartners(tradeFlowCountry.id, tradeDirection).then(setOriginCountries);
-      setOriginCountry(''); // reset when options change
-    } else {
-      setOriginCountries([]);
-    }
-  }, [tradeFlowCountry, tradeDirection]);
 
   // Accept classification result from chat panel
   useEffect(() => {
@@ -672,38 +650,6 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
       <div className="max-w-4xl mx-auto">
         {/* Query Input */}
         <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">
-          {/* Trade Flow Selection */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-slate-700 mb-2">Country</label>
-              <select
-                value={tradeFlowCountry?.id?.toString() || ''}
-                onChange={(e) => {
-                  const selected = tradeFlowCountries.find(c => c.id === Number(e.target.value));
-                  setTradeFlowCountry(selected || null);
-                }}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select country...</option>
-                {tradeFlowCountries.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-slate-700 mb-2">Import / Export</label>
-              <select
-                value={tradeDirection}
-                onChange={(e) => setTradeDirection(e.target.value as 'IMPORT' | 'EXPORT' | '')}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select direction...</option>
-                <option value="IMPORT">Import</option>
-                <option value="EXPORT">Export</option>
-              </select>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-slate-700 mb-2">Product Name</label>
@@ -728,21 +674,14 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select country...</option>
-                {originCountries.length > 0
-                  ? originCountries.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))
-                  : <>
-                      <option value="China">China</option>
-                      <option value="Mexico">Mexico</option>
-                      <option value="Canada">Canada</option>
-                      <option value="Vietnam">Vietnam</option>
-                      <option value="India">India</option>
-                      <option value="South Korea">South Korea</option>
-                      <option value="Japan">Japan</option>
-                      <option value="Germany">Germany</option>
-                    </>
-                }
+                <option value="China">China</option>
+                <option value="Mexico">Mexico</option>
+                <option value="Canada">Canada</option>
+                <option value="Vietnam">Vietnam</option>
+                <option value="India">India</option>
+                <option value="South Korea">South Korea</option>
+                <option value="Japan">Japan</option>
+                <option value="Germany">Germany</option>
               </select>
             </div>
           </div>
