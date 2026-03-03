@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
 import { ClassificationView } from './ClassificationView';
 import { BulkUpload } from './BulkUpload';
+import { IntendedUseModal, IntendedUseAnswers, buildIntendedUseText } from './IntendedUseModal';
 import { getUserBulkRuns, type BulkRunSummary } from '../lib/classificationService';
 import { supabase } from '../lib/supabase';
 
@@ -38,6 +39,10 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   // Bulk runs history
   const [bulkRuns, setBulkRuns] = useState<BulkRunSummary[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
+
+  // Intended use modal state for bulk flow
+  const [showBulkIntendedUseModal, setShowBulkIntendedUseModal] = useState(false);
+  const [intendedUseContext, setIntendedUseContext] = useState('');
 
   // Check for active bulk run in localStorage (for resume banner)
   const [activeBulkRun, setActiveBulkRun] = useState<{
@@ -136,6 +141,17 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     setShowBulkResults(true);
   };
 
+  const handleBulkClassifyClick = () => {
+    setShowBulkIntendedUseModal(true);
+  };
+
+  const handleBulkModalConfirm = (answers: IntendedUseAnswers) => {
+    setShowBulkIntendedUseModal(false);
+    const ctx = answers.primaryUse ? buildIntendedUseText(answers) : '';
+    setIntendedUseContext(ctx);
+    startBulkClassification();
+  };
+
   const handleResumeBulkRun = () => {
     // Switch to BulkUpload view — it will auto-resume from localStorage
     setInputMode('file');
@@ -183,6 +199,7 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             initialFile={uploadedFile}
             initialSupportingFiles={supportingFiles}
             autoStart={!!uploadedFile}
+            intendedUseContext={intendedUseContext}
           />
         </div>
       </div>
@@ -193,9 +210,9 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-slate-900 mb-2">Product Classification</h1>
-          <p className="text-slate-600">Classify products with natural language or upload bulk files for AI-powered HS/HTS classification</p>
+        <div className="mb-8 pb-6 border-b border-slate-200">
+          <h1 className="text-slate-900 mb-1">Product Classification</h1>
+          <p className="text-slate-500 text-sm">AI-powered HTS classification for single products and bulk imports</p>
         </div>
 
         {/* Resume Bulk Run Banner */}
@@ -387,11 +404,11 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   </p>
                 </div>
                 <button
-                  onClick={startBulkClassification}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  onClick={handleBulkClassifyClick}
+                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center gap-2 shadow-sm font-medium"
                 >
-                  <CheckCircle className="w-5 h-5" />
-                  Start Classification
+                  <Sparkles className="w-5 h-5" />
+                  Run Classification
                 </button>
               </div>
             </div>
@@ -420,6 +437,12 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             ) : bulkRuns.length === 0 ? (
               <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
             ) : (
+              <>
+                <div className="px-6 py-2 bg-slate-50 border-b border-slate-100 grid grid-cols-3 text-xs text-slate-500 font-medium uppercase tracking-wide">
+                  <span>File</span>
+                  <span>Results</span>
+                  <span className="text-right">Status</span>
+                </div>
               <div className="divide-y divide-slate-100">
                 {bulkRuns.map((run) => {
                   const statusDisplay = getRunStatusDisplay(run);
@@ -456,10 +479,19 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
                   );
                 })}
               </div>
+              </>
             )}
           </div>
         )}
       </div>
+
+      <IntendedUseModal
+        isOpen={showBulkIntendedUseModal}
+        onClose={() => setShowBulkIntendedUseModal(false)}
+        onConfirm={handleBulkModalConfirm}
+        productName={uploadedFile?.name}
+        mode="bulk"
+      />
     </div>
   );
 }

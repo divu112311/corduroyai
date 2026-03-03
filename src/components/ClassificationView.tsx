@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, MessageSquare, Plus, X, Upload, FileText, File, Package, MapPin, DollarSign, Calendar, Edit2, Loader2 } from 'lucide-react';
 import { ClarificationChatbot } from './ClarificationChatbot';
 import { ClassificationResults, ClassificationResultData } from './ClassificationResults';
+import { IntendedUseModal, IntendedUseAnswers, buildIntendedUseText } from './IntendedUseModal';
 import { classifyProduct } from '../lib/supabaseFunctions';
 import {
   createClassificationRun,
@@ -64,6 +65,7 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
   const [loadingStepIndex, setLoadingStepIndex] = useState(0);
   const [partialMatches, setPartialMatches] = useState<Array<{hts: string; description: string; score: number}>>([]);
   const [wasAutoApproved, setWasAutoApproved] = useState(false);
+  const [showIntendedUseModal, setShowIntendedUseModal] = useState(false);
 
   const loadingSteps = [
     'Preprocessing the input...',
@@ -134,9 +136,19 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
     return items.reduce((sum, item) => sum + item.percentage, 0);
   };
 
-  const handleClassify = async () => {
+  const handleClassifyClick = () => {
     if (!query.trim()) return;
-    
+    setShowIntendedUseModal(true);
+  };
+
+  const handleModalConfirm = (answers: IntendedUseAnswers) => {
+    setShowIntendedUseModal(false);
+    handleClassify(answers);
+  };
+
+  const handleClassify = async (intendedUseAnswers?: IntendedUseAnswers) => {
+    if (!query.trim()) return;
+
     try {
       setLoading(true);
       setNeedsClarification(false);
@@ -177,6 +189,10 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
       }
       if (sku) {
         productDescriptionText += `. SKU: ${sku}`;
+      }
+      // Append intended use context if provided
+      if (intendedUseAnswers?.primaryUse) {
+        productDescriptionText += `. ${buildIntendedUseText(intendedUseAnswers)}`;
       }
 
       // Call unified classification function
@@ -659,7 +675,7 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleClassify()}
+                  onKeyPress={(e) => e.key === 'Enter' && handleClassifyClick()}
                   placeholder="e.g., Wireless bluetooth speaker"
                   className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
@@ -877,12 +893,12 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
           </div>
 
           <button
-            onClick={handleClassify}
+            onClick={handleClassifyClick}
             disabled={loading || !query.trim()}
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg hover:from-blue-700 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-4"
+            className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-4 shadow-sm font-medium"
           >
             <Sparkles className="w-5 h-5" />
-            {loading ? 'Classifying...' : 'Classify Product'}
+            {loading ? 'Classifying...' : 'Run Classification'}
           </button>
           
           <div className="mt-3 flex flex-wrap gap-2">
@@ -1026,6 +1042,14 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
           </div>
         )}
       </div>
+
+      <IntendedUseModal
+        isOpen={showIntendedUseModal}
+        onClose={() => setShowIntendedUseModal(false)}
+        onConfirm={handleModalConfirm}
+        productName={query}
+        mode="single"
+      />
     </div>
   );
 }
