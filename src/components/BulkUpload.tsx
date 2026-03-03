@@ -191,9 +191,10 @@ interface BulkUploadProps {
   initialFile?: File | null;
   initialSupportingFiles?: File[];
   autoStart?: boolean;
+  intendedUseContext?: string;
 }
 
-export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false }: BulkUploadProps = {}) {
+export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart = false, intendedUseContext = '' }: BulkUploadProps = {}) {
   const [dragActive, setDragActive] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [items, setItems] = useState<BulkItem[]>([]);
@@ -445,7 +446,10 @@ export function BulkUpload({ initialFile, initialSupportingFiles = [], autoStart
 
       // Build a clean product description using detected column mapping,
       // mirroring what the single-item ClassificationView sends.
-      const description = buildProductDescription(row, colMap);
+      const baseDescription = buildProductDescription(row, colMap);
+      const description = intendedUseContext
+        ? `${baseDescription}${baseDescription ? '. ' : ''}${intendedUseContext}`
+        : baseDescription;
       const productName = (colMap.product_name ? row[colMap.product_name] : '') || `Row ${idx + 2}`;
       const origin = colMap.origin ? row[colMap.origin] : '';
       const materials = colMap.materials ? row[colMap.materials] : '';

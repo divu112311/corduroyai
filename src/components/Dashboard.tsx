@@ -176,13 +176,13 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                 stats.map((stat) => (
                   <div key={stat.label} className="bg-white rounded-xl p-4 lg:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-3">
-                      <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
+                      <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
                         <stat.icon className="w-5 h-5" />
                       </div>
                     </div>
-                    <div className={`${stat.color} mb-1 text-2xl lg:text-3xl`}>{stat.value}</div>
-                    <div className="text-slate-600 text-sm">{stat.label}</div>
-                    <div className="text-slate-500 text-xs mt-1">{stat.subtext}</div>
+                    <div className={`${stat.color} mb-1 text-3xl font-semibold tracking-tight`}>{stat.value}</div>
+                    <div className="text-slate-600 text-sm font-medium">{stat.label}</div>
+                    <div className="text-slate-400 text-xs mt-1">{stat.subtext}</div>
                   </div>
                 ))
               )}
@@ -197,7 +197,7 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     <p className="text-slate-600 text-sm">Review and resolve exceptions to keep imports moving</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-sm">
+                    <span className="px-3 py-1.5 bg-red-500 text-white rounded-full text-sm font-medium shadow-sm">
                       {activeExceptions.length} urgent
                     </span>
                   </div>
@@ -299,8 +299,14 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
             {/* Recent Activity */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-slate-900">Recent Activity</h3>
+                <button
+                  onClick={() => onNavigate('activity')}
+                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 transition-colors"
+                >
+                  View all <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
               <div className="divide-y divide-slate-100">
                 {resolvedItems.length > 0 && (
@@ -372,15 +378,6 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                   ))
                 )}
-              </div>
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <button 
-                  onClick={() => onNavigate('activity')}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
-                >
-                  View all activity
-                  <ChevronRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </div>

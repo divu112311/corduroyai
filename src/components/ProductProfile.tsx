@@ -195,10 +195,10 @@ export function ProductProfile() {
   return (
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
           <div>
-            <h1 className="text-slate-900 mb-2">Product Compliance Profiles</h1>
-            <p className="text-slate-600">Manage product data, materials, origin, and vendor information</p>
+            <h1 className="text-slate-900 mb-1">Product Compliance Profiles</h1>
+            <p className="text-slate-500 text-sm">Manage product data, materials, origin, and vendor information</p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -206,9 +206,9 @@ export function ProductProfile() {
                 setEditingProduct(null);
                 setShowAddModal(true);
               }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm text-sm font-medium"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               Add Product
             </button>
           </div>
@@ -402,10 +402,13 @@ export function ProductProfile() {
           {/* Product List */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="p-4 border-b border-slate-200 bg-slate-50">
-                <div className="text-sm text-slate-700">
-                  Showing {filteredProducts.length} of {products.length} products
-                </div>
+              <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                <span className="text-sm text-slate-500">
+                  {filteredProducts.length} of {products.length} products
+                </span>
+                {filteredProducts.length !== products.length && (
+                  <span className="text-xs text-blue-600 font-medium">Filtered</span>
+                )}
               </div>
               
               <div className="divide-y divide-slate-200 max-h-[600px] overflow-y-auto">
@@ -418,21 +421,32 @@ export function ProductProfile() {
                     <button
                       key={product.id}
                       onClick={() => handleProductClick(product)}
-                      className={`w-full p-4 text-left hover:bg-slate-50 transition-colors ${
-                        selectedProduct?.id === product.id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''
+                      className={`w-full p-4 text-left transition-colors ${
+                        selectedProduct?.id === product.id
+                          ? 'bg-blue-50/70 border-l-4 border-l-blue-600'
+                          : 'hover:bg-slate-50/80 border-l-4 border-l-transparent'
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-slate-900">{product.name}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          product.confidence >= 95 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {product.confidence}%
+                      <div className="flex items-start justify-between mb-1.5">
+                        <span className={`text-sm font-medium truncate pr-2 ${selectedProduct?.id === product.id ? 'text-blue-700' : 'text-slate-900'}`}>
+                          {product.name}
                         </span>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            product.confidence >= 90 ? 'bg-green-500' :
+                            product.confidence >= 70 ? 'bg-amber-400' : 'bg-red-400'
+                          }`} />
+                          <span className={`text-xs font-medium ${
+                            product.confidence >= 90 ? 'text-green-700' :
+                            product.confidence >= 70 ? 'text-amber-600' : 'text-red-600'
+                          }`}>
+                            {product.confidence}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-slate-600 text-sm space-y-1">
-                        <div>SKU: {product.sku}</div>
-                        <div>HTS: {product.hts}</div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{product.hts}</span>
+                        {product.sku && <span className="truncate">SKU: {product.sku}</span>}
                       </div>
                     </button>
                   ))
