@@ -54,6 +54,9 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
   const [vendor, setVendor] = useState('');
   const [unitCost, setUnitCost] = useState('');
 
+  // Dynamic country of origin options from lookup_countries
+  const [originCountryOptions, setOriginCountryOptions] = useState<string[]>([]);
+
   // Classification flow state
   const [classificationRunId, setClassificationRunId] = useState<number | null>(null);
   const [clarificationMessages, setClarificationMessages] = useState<ClarificationMessage[]>([]);
@@ -83,6 +86,29 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
     }, 3000);
     return () => clearInterval(interval);
   }, [loading]);
+
+  // Load country of origin options from lookup_countries (United States + IMPORT)
+  useEffect(() => {
+    (async () => {
+      const { data: lookup } = await supabase
+        .from('lookups')
+        .select('id')
+        .eq('type', 'trade_flow')
+        .eq('name', 'United States')
+        .single();
+      if (lookup) {
+        const { data: partners } = await supabase
+          .from('lookup_countries')
+          .select('country_name')
+          .eq('lookup_id', lookup.id)
+          .eq('trade_type', 'IMPORT')
+          .order('country_name');
+        if (partners) {
+          setOriginCountryOptions(partners.map(p => p.country_name));
+        }
+      }
+    })();
+  }, []);
 
   // Accept classification result from chat panel
   useEffect(() => {
@@ -674,14 +700,21 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="">Select country...</option>
-                <option value="China">China</option>
-                <option value="Mexico">Mexico</option>
-                <option value="Canada">Canada</option>
-                <option value="Vietnam">Vietnam</option>
-                <option value="India">India</option>
-                <option value="South Korea">South Korea</option>
-                <option value="Japan">Japan</option>
-                <option value="Germany">Germany</option>
+                {originCountryOptions.length > 0
+                  ? originCountryOptions.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))
+                  : <>
+                      <option value="China">China</option>
+                      <option value="Mexico">Mexico</option>
+                      <option value="Canada">Canada</option>
+                      <option value="Vietnam">Vietnam</option>
+                      <option value="India">India</option>
+                      <option value="South Korea">South Korea</option>
+                      <option value="Japan">Japan</option>
+                      <option value="Germany">Germany</option>
+                    </>
+                }
               </select>
             </div>
           </div>
