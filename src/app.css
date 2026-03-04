@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+/* ── Tailwind v4 theme (maps CSS vars → utility classes) ─────────── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* ── CSS variable values (light + dark) ──────────────────────────── */
+:root {
+  --font-size: 16px;
+  --background: #fff;
+  --foreground: oklch(.145 0 0);
+  --card: #fff;
+  --card-foreground: oklch(.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(.145 0 0);
+  --primary: #030213;
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(.95 .0058 264.53);
+  --secondary-foreground: #030213;
+  --muted: #ececf0;
+  --muted-foreground: #717182;
+  --accent: #e9ebef;
+  --accent-foreground: #030213;
+  --destructive: #d4183d;
+  --destructive-foreground: #fff;
+  --border: #0000001a;
+  --input: transparent;
+  --input-background: #f3f3f5;
+  --switch-background: #cbced4;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: oklch(.708 0 0);
+  --chart-1: oklch(.646 .222 41.116);
+  --chart-2: oklch(.6 .118 184.704);
+  --chart-3: oklch(.398 .07 227.392);
+  --chart-4: oklch(.828 .189 84.429);
+  --chart-5: oklch(.769 .188 70.08);
+  --radius: .625rem;
+  --sidebar: oklch(.985 0 0);
+  --sidebar-foreground: oklch(.145 0 0);
+  --sidebar-primary: #030213;
+  --sidebar-primary-foreground: oklch(.985 0 0);
+  --sidebar-accent: oklch(.97 0 0);
+  --sidebar-accent-foreground: oklch(.205 0 0);
+  --sidebar-border: oklch(.922 0 0);
+  --sidebar-ring: oklch(.708 0 0);
+  --chat-panel-bg: #ffffff;
+  --chat-panel-border: #e2e8f0;
+}
+
+.dark {
+  --background: oklch(.145 0 0);
+  --foreground: oklch(.985 0 0);
+  --card: oklch(.145 0 0);
+  --card-foreground: oklch(.985 0 0);
+  --popover: oklch(.145 0 0);
+  --popover-foreground: oklch(.985 0 0);
+  --primary: oklch(.985 0 0);
+  --primary-foreground: oklch(.205 0 0);
+  --secondary: oklch(.269 0 0);
+  --secondary-foreground: oklch(.985 0 0);
+  --muted: oklch(.269 0 0);
+  --muted-foreground: oklch(.708 0 0);
+  --accent: oklch(.269 0 0);
+  --accent-foreground: oklch(.985 0 0);
+  --destructive: oklch(.396 .141 25.723);
+  --destructive-foreground: oklch(.637 .237 25.331);
+  --border: oklch(.269 0 0);
+  --input: oklch(.269 0 0);
+  --ring: oklch(.439 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --chart-1: oklch(.488 .243 264.376);
+  --chart-2: oklch(.696 .17 162.48);
+  --chart-3: oklch(.769 .188 70.08);
+  --chart-4: oklch(.627 .265 303.9);
+  --chart-5: oklch(.645 .246 16.439);
+  --sidebar: oklch(.205 0 0);
+  --sidebar-foreground: oklch(.985 0 0);
+  --sidebar-primary: oklch(.488 .243 264.376);
+  --sidebar-primary-foreground: oklch(.985 0 0);
+  --sidebar-accent: oklch(.269 0 0);
+  --sidebar-accent-foreground: oklch(.985 0 0);
+  --sidebar-border: oklch(.269 0 0);
+  --sidebar-ring: oklch(.439 0 0);
+}
+
+html {
+  font-size: var(--font-size);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--ring);
+  }
+  @supports (color: color-mix(in lab, red, red)) {
+    * {
+      outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+    }
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ── App layout ────────────────────────────────────────────────── */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-shell {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+.app-sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+.app-main::-webkit-scrollbar { width: 6px; }
+.app-main::-webkit-scrollbar-track { background: transparent; }
+.app-main::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.12); border-radius: 3px; }
+.app-main::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.25); }
+
+/* ── Reusable component styles ─────────────────────────────────── */
+.dynamic-bar { width: var(--bar-width, 0%); }
+.dynamic-bar-color { background-color: var(--bar-color); }
+
+/* ── Chat panel — docked right sidebar ──────────────────────────── */
+.chat-panel-docked {
+  flex-shrink: 0;
+  width: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.chat-panel-docked.chat-panel-open { width: 400px; }
+.chat-panel-inner {
+  min-width: 400px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--chat-panel-bg);
+  border-left: 1px solid var(--chat-panel-border);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1A1A2E;
+}
+.dark .chat-panel-inner { color: #f3f4f6; }
+.chat-header { border-bottom: 1px solid var(--chat-panel-border); }
+.chat-msg-user { align-self: flex-end; max-width: 85%; }
+.chat-msg-ai { align-self: flex-start; max-width: 85%; }
+.chat-bubble-ai {
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  color: #1A1A2E;
+}
+.dark .chat-bubble-ai { background: #2C2C2E; color: #d1d5db; }
+.chat-input-wrap {
+  border: 1.5px solid #E5E7EB;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: border-color 150ms;
+}
+.chat-input-wrap:focus-within { border-color: #3B82F6; }
+.dark .chat-input-wrap { background: #1C1C1E; border-color: rgba(255, 255, 255, 0.1); }
+.dark .chat-input-wrap:focus-within { border-color: #3B82F6; }
+.chat-textarea {
+  border: none;
+  outline: none;
+  background: transparent;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 24px;
+  padding: 0;
+  color: #1A1A2E;
+}
+.chat-textarea::placeholder { color: #9ca3af; }
+.chat-textarea:disabled { opacity: 0.5; }
+.dark .chat-textarea { color: #f3f4f6; }
+.dark .chat-textarea::placeholder { color: #6b7280; }
+.chat-send-btn { color: #3B82F6; transition: all 150ms; }
+.chat-send-btn:hover { background: rgba(59, 130, 246, 0.1); }
+.chat-send-btn:disabled { opacity: 0.3; pointer-events: none; }
+.chat-send-btn:active { transform: scale(0.95); }
+.chat-close-btn { color: #9ca3af; transition: color 150ms, background-color 150ms; }
+.chat-close-btn:hover { color: #4b5563; background: #f3f4f6; }
+.dark .chat-close-btn { color: #6b7280; }
+.dark .chat-close-btn:hover { color: #d1d5db; background: #1f2937; }
+.chat-typing-dots { background: #F7F7F8; }
+.dark .chat-typing-dots { background: #2C2C2E; }
+.chat-dot { background: #9ca3af; }
+.dark .chat-dot { background: #6b7280; }
+.chat-error-bubble { background: #fef2f2; color: #b91c1c; }
+.dark .chat-error-bubble { background: rgba(127, 29, 29, 0.2); color: #f87171; }
+.chat-skeleton { background: #f3f4f6; }
+.dark .chat-skeleton { background: #1f2937; }
+.chat-messages { overflow-x: hidden; min-height: 0; }
+.chat-trigger:hover { background: #F5F5F5; }
+.dark .chat-trigger:hover { background: #2C2C2E; }
+.chat-trigger:active { transform: scale(0.97); }
+.chat-scrollbar-hidden {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.chat-scrollbar-hidden:hover { scrollbar-color: rgba(0, 0, 0, 0.15) transparent; }
+.dark .chat-scrollbar-hidden:hover { scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+.chat-scrollbar-hidden::-webkit-scrollbar { width: 4px; }
+.chat-scrollbar-hidden::-webkit-scrollbar-track { background: transparent; }
+.chat-scrollbar-hidden::-webkit-scrollbar-thumb { background: transparent; border-radius: 4px; }
+.chat-scrollbar-hidden:hover::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.15); }
+
+@keyframes chat-dot-fade {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.chat-dot-fade { animation: chat-dot-fade 1.2s ease-in-out infinite; }
+.chat-dot-delay-0 { animation-delay: 0ms; }
+.chat-dot-delay-1 { animation-delay: 120ms; }
+.chat-dot-delay-2 { animation-delay: 240ms; }
+
+@keyframes chat-msg-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.chat-msg-enter { animation: chat-msg-enter 200ms ease-out both; }
+
+@media (max-width: 1440px) {
+  .chat-panel-docked.chat-panel-open { width: 340px; }
+  .chat-panel-inner { min-width: 340px; }
+}
