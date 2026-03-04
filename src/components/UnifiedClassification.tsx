@@ -1,31 +1,18 @@
-import { useState, useEffect } from 'react';
-import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Package, Upload, FileSpreadsheet, X, File, FileText, Plus, CheckCircle, Sparkles, AlertCircle, Clock, Loader2, RefreshCw, RotateCcw } from 'lucide-react';
 import { ClassificationView } from './ClassificationView';
 import { BulkUpload } from './BulkUpload';
-import { getUserBulkRuns, type BulkRunSummary } from '../lib/classificationService';
+import { BulkRunDetailView } from './BulkRunDetailView';
+import { getUserBulkRuns, getRunProductsForRerun, type BulkRunSummary, type RerunProduct } from '../lib/classificationService';
+import { useBulkClassification } from '../lib/BulkClassificationContext';
 import { supabase } from '../lib/supabase';
 
 type InputMode = 'manual' | 'file';
-
-interface BulkItem {
-  id: number;
-  productName: string;
-  description: string;
-  status: 'pending' | 'complete' | 'exception';
-  hts?: string;
-  confidence?: number;
-  tariff?: string;
-  origin?: string;
-  materials?: string;
-  cost?: string;
-}
 
 interface UnifiedClassificationProps {
   chatClassificationResult?: any;
   onChatResultConsumed?: () => void;
 }
-
-const BULK_RUN_KEY = 'corduroy_bulk_run';
 
 export function UnifiedClassification({ chatClassificationResult, onChatResultConsumed }: UnifiedClassificationProps = {}) {
   const [inputMode, setInputMode] = useState<InputMode>('manual');
@@ -39,33 +26,71 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
   const [bulkRuns, setBulkRuns] = useState<BulkRunSummary[]>([]);
   const [loadingRuns, setLoadingRuns] = useState(true);
 
-  // Check for active bulk run in localStorage (for resume banner)
-  const [activeBulkRun, setActiveBulkRun] = useState<{
-    runId: number; fileName: string; totalItems: number;
-  } | null>(() => {
-    try {
-      const stored = localStorage.getItem(BULK_RUN_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch { return null; }
-  });
+  // Run detail view (click on completed run)
+  const [selectedRun, setSelectedRun] = useState<BulkRunSummary | null>(null);
 
-  // Load bulk runs history on mount
-  useEffect(() => {
-    const loadBulkRuns = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const runs = await getUserBulkRuns(user.id);
-          setBulkRuns(runs);
-        }
-      } catch (err) {
-        console.error('Error loading bulk runs:', err);
-      } finally {
-        setLoadingRuns(false);
+  // Rerun state
+  const [rerunningRunId, setRerunningRunId] = useState<number | null>(null);
+  const [rerunProducts, setRerunProducts] = useState<RerunProduct[] | null>(null);
+  const [rerunFileName, setRerunFileName] = useState<string | null>(null);
+
+  // Context — bulk classification loop state (persists across navigation)
+  const { processing, progressCurrent, progressTotal, items, fileName: contextFileName } = useBulkClassification();
+
+  // ── Load bulk runs ────────────────────────────────────────────────────────
+
+  const loadBulkRuns = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const runs = await getUserBulkRuns(user.id);
+        setBulkRuns(runs);
       }
-    };
-    loadBulkRuns();
+    } catch (err) {
+      console.error('Error loading bulk runs:', err);
+    } finally {
+      setLoadingRuns(false);
+    }
   }, []);
+
+  // Load on mount
+  useEffect(() => {
+    loadBulkRuns();
+  }, [loadBulkRuns]);
+
+  // ── Poll every 5 seconds while any run is in_progress ─────────────────────
+
+  useEffect(() => {
+    const hasInProgress = bulkRuns.some(r => r.status === 'in_progress') || processing;
+    if (!hasInProgress) return;
+
+    const interval = setInterval(() => {
+      loadBulkRuns();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [bulkRuns, processing, loadBulkRuns]);
+
+  // ── Refresh runs when processing finishes ─────────────────────────────────
+
+  const prevProcessing = useRef(processing);
+  useEffect(() => {
+    if (prevProcessing.current && !processing) {
+      // Run just finished — refresh the list
+      loadBulkRuns();
+    }
+    prevProcessing.current = processing;
+  }, [processing, loadBulkRuns]);
+
+  // ── If context is processing and user navigates back, show BulkUpload ─────
+
+  useEffect(() => {
+    if (processing && inputMode === 'manual' && !showBulkResults) {
+      // Auto-switch to bulk view so user sees progress
+      setInputMode('file');
+      setShowBulkResults(true);
+    }
+  }, [processing]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -136,45 +161,64 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
     setShowBulkResults(true);
   };
 
-  const handleResumeBulkRun = () => {
-    // Switch to BulkUpload view — it will auto-resume from localStorage
-    setInputMode('file');
-    setShowBulkResults(true);
+  const formatRunDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+      ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatTimeAgo = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const getEstimatedTime = (run: BulkRunSummary) => {
+    if (run.classifiedCount === 0 || run.totalItems === 0) return 'Estimating...';
+    const elapsed = Date.now() - new Date(run.created_at).getTime();
+    const avgPerItem = elapsed / run.classifiedCount;
+    const remaining = run.totalItems - run.classifiedCount;
+    const remainingMs = avgPerItem * remaining;
+    const remainingMins = Math.ceil(remainingMs / 60000);
+    if (remainingMins < 1) return '< 1 min remaining';
+    return `~${remainingMins} min remaining`;
+  };
 
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+  const handleRunClick = (run: BulkRunSummary) => {
+    if (run.status !== 'completed') return;
+    setSelectedRun(selectedRun?.id === run.id ? null : run);
+  };
+
+  const handleRerun = async (run: BulkRunSummary) => {
+    setRerunningRunId(run.id);
+    try {
+      const products = await getRunProductsForRerun(run.id);
+      if (products.length === 0) {
+        setRerunningRunId(null);
+        return;
+      }
+      setRerunProducts(products);
+      setRerunFileName(run.fileName);
+      setInputMode('file');
+      setShowBulkResults(true);
+    } catch (err) {
+      console.error('Error loading products for rerun:', err);
+      setRerunningRunId(null);
+    }
   };
 
   const getRunStatusDisplay = (run: BulkRunSummary) => {
-    if (run.status === 'completed' && run.classifiedCount > 0) {
+    if (run.status === 'completed') {
       return { label: 'Classified', color: 'text-green-700 bg-green-50 border-green-200', icon: <CheckCircle className="w-4 h-4 text-green-600" /> };
     }
-    if (run.status === 'completed' && run.classifiedCount === 0) {
+    if (run.status === 'failed') {
       return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
     }
     if (run.status === 'cancelled') {
-      return { label: 'Cancelled', color: 'text-red-700 bg-red-50 border-red-200', icon: <X className="w-4 h-4 text-red-600" /> };
+      return { label: 'Cancelled', color: 'text-slate-600 bg-slate-50 border-slate-200', icon: <X className="w-4 h-4 text-slate-500" /> };
     }
     if (run.status === 'in_progress') {
       return { label: 'In Progress', color: 'text-blue-700 bg-blue-50 border-blue-200', icon: <Clock className="w-4 h-4 text-blue-600" /> };
     }
-    // Fallback — treat as failed if no classifiedCount
     return { label: 'Failed', color: 'text-red-700 bg-red-50 border-red-200', icon: <AlertCircle className="w-4 h-4 text-red-600" /> };
   };
 
   // Show bulk results if we're in file mode and user has started classification
+  // OR if a bulk run is active in the context (navigated back from another page)
   if (inputMode === 'file' && showBulkResults) {
     return (
       <div className="p-8">
@@ -183,6 +227,22 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
             initialFile={uploadedFile}
             initialSupportingFiles={supportingFiles}
             autoStart={!!uploadedFile}
+            rerunProducts={rerunProducts || undefined}
+            rerunFileName={rerunFileName || undefined}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Show full-screen detail view when a completed run is selected
+  if (selectedRun) {
+    return (
+      <div className="p-8">
+        <div className="max-w-7xl mx-auto">
+          <BulkRunDetailView
+            run={selectedRun}
+            onClose={() => setSelectedRun(null)}
           />
         </div>
       </div>
@@ -198,39 +258,40 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
           <p className="text-slate-600">Classify products with natural language or upload bulk files for AI-powered HS/HTS classification</p>
         </div>
 
-        {/* Resume Bulk Run Banner */}
-        {activeBulkRun && (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-5 mb-6 border-2 border-amber-200 shadow-sm">
+        {/* Active Classification Banner — shows when a run is processing in the background */}
+        {processing && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-5 mb-6 border-2 border-blue-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="bg-amber-100 p-3 rounded-lg">
-                  <RefreshCw className="w-6 h-6 text-amber-600" />
+                <div className="bg-blue-100 p-3 rounded-lg">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                 </div>
                 <div>
-                  <h3 className="text-amber-900 mb-1">Bulk Run In Progress</h3>
-                  <p className="text-amber-700 text-sm">
-                    {activeBulkRun.fileName} &mdash; {activeBulkRun.totalItems} products
+                  <h3 className="text-blue-900 mb-1">Bulk Classification In Progress</h3>
+                  <p className="text-blue-700 text-sm">
+                    {contextFileName || 'File'} &mdash; {progressCurrent} of {progressTotal} products classified
                   </p>
+                  {progressTotal > 0 && (
+                    <div className="mt-2 w-48">
+                      <div className="w-full h-2 bg-blue-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(progressCurrent / progressTotal) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => {
-                    localStorage.removeItem(BULK_RUN_KEY);
-                    setActiveBulkRun(null);
-                  }}
-                  className="px-4 py-2 text-amber-700 hover:text-amber-900 transition-colors text-sm"
-                >
-                  Dismiss
-                </button>
-                <button
-                  onClick={handleResumeBulkRun}
-                  className="px-5 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors flex items-center gap-2"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Resume
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setInputMode('file');
+                  setShowBulkResults(true);
+                }}
+                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                View Progress
+              </button>
             </div>
           </div>
         )}
@@ -410,54 +471,89 @@ export function UnifiedClassification({ chatClassificationResult, onChatResultCo
 
         {/* Bulk Classification Runs History */}
         {!uploadedFile && (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
-              <h3 className="text-slate-900">Bulk Classification Runs</h3>
-            </div>
+          <>
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100">
+                <h3 className="text-slate-900">Bulk Classification Runs</h3>
+              </div>
 
-            {loadingRuns ? (
-              <div className="p-6 text-center text-slate-500">Loading runs...</div>
-            ) : bulkRuns.length === 0 ? (
-              <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {bulkRuns.map((run) => {
-                  const statusDisplay = getRunStatusDisplay(run);
-                  return (
-                    <div
-                      key={run.id}
-                      className="px-6 py-4 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
-                            {statusDisplay.icon}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <span className="text-slate-900 truncate block">
-                              {run.fileName}
-                            </span>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
-                              <span>
-                                {run.classifiedCount} product{run.classifiedCount !== 1 ? 's' : ''} classified
+              {loadingRuns ? (
+                <div className="p-6 text-center text-slate-500">Loading runs...</div>
+              ) : bulkRuns.length === 0 ? (
+                <div className="p-6 text-center text-slate-500">No bulk classification runs yet</div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {bulkRuns.map((run) => {
+                    const statusDisplay = getRunStatusDisplay(run);
+                    const isClickable = run.status === 'completed';
+                    const isSelected = selectedRun?.id === run.id;
+                    return (
+                      <div
+                        key={run.id}
+                        onClick={() => isClickable && handleRunClick(run)}
+                        className={`px-6 py-4 transition-colors ${
+                          isClickable ? 'cursor-pointer hover:bg-slate-50' : ''
+                        } ${isSelected ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <div className={`p-2 rounded-lg border ${statusDisplay.color}`}>
+                              {statusDisplay.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="text-slate-900 truncate block">
+                                {run.fileName}
                               </span>
-                              <span>·</span>
-                              <span>
-                                {formatTimeAgo(run.created_at)}
-                              </span>
+                              <div className="flex items-center gap-3 mt-1 text-sm text-slate-500">
+                                <span>
+                                  {run.totalProducts} product{run.totalProducts !== 1 ? 's' : ''}
+                                </span>
+                                <span>&middot;</span>
+                                <span>
+                                  {formatRunDate(run.created_at)}
+                                </span>
+                                {run.status === 'in_progress' && (
+                                  <>
+                                    <span>&middot;</span>
+                                    <span className="text-blue-600">
+                                      {run.classifiedCount}/{run.totalItems} classified &mdash; {getEstimatedTime(run)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            {run.status === 'failed' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRerun(run);
+                                }}
+                                disabled={rerunningRunId === run.id}
+                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs hover:bg-blue-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                              >
+                                {rerunningRunId === run.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <RotateCcw className="w-3 h-3" />
+                                )}
+                                Rerun
+                              </button>
+                            )}
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusDisplay.color}`}>
+                              {statusDisplay.label}
+                            </span>
+                          </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border flex-shrink-0 ${statusDisplay.color}`}>
-                          {statusDisplay.label}
-                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+          </>
         )}
       </div>
     </div>

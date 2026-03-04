@@ -11,7 +11,7 @@ export interface ClarificationMessage {
 export interface ClassificationRun {
   id?: number;
   user_id: string;
-  status: 'in_progress' | 'completed' | 'cancelled';
+  status: 'in_progress' | 'completed' | 'cancelled' | 'failed';
   run_type: 'single' | 'bulk';
   conversations?: ClarificationMessage[];
   created_at?: string;
@@ -106,12 +106,12 @@ export async function addClarificationMessage(
  */
 export async function updateClassificationRunStatus(
   runId: number,
-  status: 'in_progress' | 'completed' | 'cancelled'
+  status: 'in_progress' | 'completed' | 'cancelled' | 'failed'
 ): Promise<void> {
   try {
     const updateData: any = { status };
-    
-    if (status === 'completed') {
+
+    if (status === 'completed' || status === 'failed') {
       updateData.completed_at = new Date().toISOString();
     }
 
@@ -418,12 +418,26 @@ export async function getBulkRunResults(runId: number): Promise<{
  */
 export interface BulkRunSummary {
   id: number;
-  status: 'in_progress' | 'completed' | 'cancelled';
+  status: 'in_progress' | 'completed' | 'cancelled' | 'failed';
   created_at: string;
   completed_at: string | null;
   fileName: string;
   totalProducts: number;
   classifiedCount: number;
+  totalItems: number; // original CSV row count from metadata
+}
+
+/**
+ * Product data needed for rerunning a failed classification run.
+ */
+export interface RerunProduct {
+  product_name: string;
+  product_description?: string;
+  country_of_origin?: string;
+  materials?: any;
+  unit_cost?: number;
+  vendor?: string;
+  sku?: string;
 }
 
 /**
@@ -472,29 +486,130 @@ export async function getUserBulkRuns(userId: string): Promise<BulkRunSummary[]>
 
     // 4. Build summaries
     return runs.map((run: any) => {
-      // Extract file name from conversations metadata
-      let fileName = 'Bulk Run';
+      // Extract file name and totalItems from conversations metadata
+      const runDate = new Date(run.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      let fileName = `Bulk Run ${runDate}`;
+      let totalItems = 0;
       const conversations = run.conversations as ClarificationMessage[] | null;
       if (conversations && conversations.length > 0) {
         const firstMsg = conversations[0];
         if (firstMsg.metadata?.fileName) {
           fileName = firstMsg.metadata.fileName;
         }
+        if (firstMsg.metadata?.totalItems) {
+          totalItems = firstMsg.metadata.totalItems;
+        }
+      }
+
+      const classifiedCount = resultCountMap.get(run.id) || 0;
+      const totalProducts = productCountMap.get(run.id) || 0;
+
+      // Normalize status: old runs marked 'completed' with 0 classifications are really 'failed'
+      let status = run.status as BulkRunSummary['status'];
+      if (status === 'completed' && classifiedCount === 0) {
+        status = 'failed';
       }
 
       return {
         id: run.id,
-        status: run.status,
+        status,
         created_at: run.created_at,
         completed_at: run.completed_at,
         fileName,
-        totalProducts: productCountMap.get(run.id) || 0,
-        classifiedCount: resultCountMap.get(run.id) || 0,
+        totalProducts,
+        classifiedCount,
+        totalItems: totalItems || totalProducts, // fallback to product count if no metadata
       };
     });
   } catch (error) {
     console.error('Error fetching user bulk runs:', error);
     return [];
+  }
+}
+
+/**
+ * Get products from a classification run for rerunning.
+ */
+export async function getRunProductsForRerun(runId: number): Promise<RerunProduct[]> {
+  try {
+    const { data, error } = await supabase
+      .from('user_products')
+      .select('product_name, product_description, country_of_origin, materials, unit_cost, vendor, sku')
+      .eq('classification_run_id', runId)
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching products for rerun:', error);
+      return [];
+    }
+
+    return (data || []).map((p: any) => ({
+      product_name: p.product_name,
+      product_description: p.product_description || undefined,
+      country_of_origin: p.country_of_origin || undefined,
+      materials: p.materials || undefined,
+      unit_cost: p.unit_cost || undefined,
+      vendor: p.vendor || undefined,
+      sku: p.sku || undefined,
+    }));
+  } catch (error) {
+    console.error('Error fetching products for rerun:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if a user already has a successful run with the same file name and same products.
+ * Prevents accidental duplicate classifications.
+ */
+export async function checkDuplicateRun(
+  userId: string,
+  fileName: string,
+  productNames: string[]
+): Promise<{ isDuplicate: boolean; existingRunId?: number }> {
+  try {
+    // 1. Get completed bulk runs for this user
+    const { data: runs, error } = await supabase
+      .from('classification_runs')
+      .select('id, conversations')
+      .eq('user_id', userId)
+      .eq('run_type', 'bulk')
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error || !runs || runs.length === 0) return { isDuplicate: false };
+
+    // 2. Filter runs with matching file name
+    const matchingRuns = runs.filter((run: any) => {
+      const conversations = run.conversations as ClarificationMessage[] | null;
+      if (!conversations || conversations.length === 0) return false;
+      return conversations[0]?.metadata?.fileName === fileName;
+    });
+
+    if (matchingRuns.length === 0) return { isDuplicate: false };
+
+    // 3. For each matching run, compare product names
+    const sortedNewNames = [...productNames].sort().join('|');
+
+    for (const run of matchingRuns) {
+      const { data: products } = await supabase
+        .from('user_products')
+        .select('product_name')
+        .eq('classification_run_id', run.id);
+
+      if (!products) continue;
+
+      const sortedExistingNames = products.map((p: any) => p.product_name).sort().join('|');
+      if (sortedNewNames === sortedExistingNames) {
+        return { isDuplicate: true, existingRunId: run.id };
+      }
+    }
+
+    return { isDuplicate: false };
+  } catch (error) {
+    console.error('Error checking duplicate run:', error);
+    return { isDuplicate: false }; // Don't block on errors
   }
 }
 
