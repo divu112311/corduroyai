@@ -3134,3 +3134,54 @@ html, body, #root {
     min-width: 340px;
   }
 }
+
+/* ── Missing Radix Dialog / IntendedUseModal classes ────────────── */
+/* These classes are used by dialog.tsx and IntendedUseModal.tsx but
+   were absent from the pre-compiled Tailwind output. */
+
+/* Dialog centering */
+.top-\[50\%\] { top: 50%; }
+.left-\[50\%\] { left: 50%; }
+.translate-x-\[-50\%\] {
+  --tw-translate-x: -50%;
+  translate: var(--tw-translate-x) var(--tw-translate-y);
+}
+.translate-y-\[-50\%\] {
+  --tw-translate-y: -50%;
+  translate: var(--tw-translate-x) var(--tw-translate-y);
+}
+
+/* Dialog sizing */
+.max-w-\[calc\(100\%-2rem\)\] { max-width: calc(100% - 2rem); }
+.max-h-\[60vh\] { max-height: 60vh; }
+.gap-0 { gap: 0px; }
+.duration-200 { --tw-duration: .2s; }
+
+@media (min-width: 640px) {
+  .sm\:max-w-lg { max-width: 32rem; }
+  .sm\:max-w-2xl { max-width: 42rem; }
+}
+
+/* Radix data-state animation variants */
+@property --tw-enter-opacity { syntax: "*"; inherits: false; initial-value: 1; }
+@property --tw-enter-scale   { syntax: "*"; inherits: false; initial-value: 1; }
+@property --tw-exit-opacity  { syntax: "*"; inherits: false; initial-value: 1; }
+@property --tw-exit-scale    { syntax: "*"; inherits: false; initial-value: 1; }
+
+@keyframes exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), 1);
+  }
+}
+
+.data-\[state\=open\]\:animate-in[data-state="open"] {
+  animation: enter var(--tw-duration, .15s) var(--tw-ease, ease);
+}
+.data-\[state\=closed\]\:animate-out[data-state="closed"] {
+  animation: exit var(--tw-duration, .15s) var(--tw-ease, ease) forwards;
+}
+.data-\[state\=open\]\:fade-in-0[data-state="open"]   { --tw-enter-opacity: 0; }
+.data-\[state\=closed\]\:fade-out-0[data-state="closed"] { --tw-exit-opacity: 0; }
+.data-\[state\=open\]\:zoom-in-95[data-state="open"]  { --tw-enter-scale: .95; }
+.data-\[state\=closed\]\:zoom-out-95[data-state="closed"] { --tw-exit-scale: .95; }
