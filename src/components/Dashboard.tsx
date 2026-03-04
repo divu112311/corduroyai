@@ -124,65 +124,73 @@ export function Dashboard({ onNavigate }: DashboardProps) {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-[1600px] mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-slate-900 mb-1">{getGreeting()} 👋</h1>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                <p className="text-slate-600">
-                  You have {activeExceptions.length} item{activeExceptions.length !== 1 ? 's' : ''} requiring your attention
-                </p>
-                {resolvedItems.length > 0 && (
-                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm flex items-center gap-1.5 w-fit">
-                    <CheckCircle className="w-4 h-4" />
-                    {resolvedItems.length} resolved today
-                  </span>
-                )}
-              </div>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Page header */}
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-8 py-5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">{getGreeting()}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {activeExceptions.length > 0
+                ? `${activeExceptions.length} item${activeExceptions.length !== 1 ? 's' : ''} need your attention`
+                : 'Everything looks good — no open exceptions'}
+              {resolvedItems.length > 0 && (
+                <span className="ml-2 inline-flex items-center gap-1 text-emerald-600">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {resolvedItems.length} resolved today
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <div className="text-sm font-medium text-slate-700">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
             </div>
-            <div className="text-left sm:text-right flex-shrink-0">
-              <div className="text-slate-600 text-sm whitespace-nowrap">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-              <div className="text-slate-500 text-sm whitespace-nowrap">
-                {lastSyncTime ? `Last sync: ${lastSyncTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'Syncing...'}
-              </div>
+            <div className="text-xs text-slate-400 mt-0.5">
+              {lastSyncTime ? `Synced ${lastSyncTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}` : 'Syncing...'}
             </div>
           </div>
         </div>
+      </div>
 
-        {loadError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <span className="text-red-700 text-sm flex-1">{loadError}</span>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
 
-        <div className="grid grid-cols-1 gap-6">
-          {/* Main Content - Full Width */}
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {loadError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <span className="text-red-700 text-sm flex-1">{loadError}</span>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {isLoadingStats ? (
-                <div className="col-span-4 text-center text-slate-500 py-4">Loading stats...</div>
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl p-5 border border-slate-200 animate-pulse">
+                    <div className="h-8 w-16 bg-slate-100 rounded mb-2" />
+                    <div className="h-4 w-24 bg-slate-100 rounded" />
+                  </div>
+                ))
               ) : (
                 stats.map((stat) => (
-                  <div key={stat.label} className="bg-white rounded-xl p-4 lg:p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className={`${stat.bg} ${stat.color} p-3 rounded-xl`}>
-                        <stat.icon className="w-5 h-5" />
+                  <div key={stat.label} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`${stat.bg} ${stat.color} p-2.5 rounded-lg`}>
+                        <stat.icon className="w-4 h-4" />
                       </div>
                     </div>
-                    <div className={`${stat.color} mb-1 text-3xl font-semibold tracking-tight`}>{stat.value}</div>
-                    <div className="text-slate-600 text-sm font-medium">{stat.label}</div>
-                    <div className="text-slate-400 text-xs mt-1">{stat.subtext}</div>
+                    <div className={`text-3xl font-bold tracking-tight mb-0.5 ${stat.color}`}>{stat.value}</div>
+                    <div className="text-sm font-medium text-slate-700">{stat.label}</div>
+                    <div className="text-xs text-slate-400 mt-0.5">{stat.subtext}</div>
                   </div>
                 ))
               )}
@@ -190,25 +198,33 @@ export function Dashboard({ onNavigate }: DashboardProps) {
 
             {/* Actions Required */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 border-b border-red-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-slate-900 mb-1">Actions Required</h2>
-                    <p className="text-slate-600 text-sm">Review and resolve exceptions to keep imports moving</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1.5 bg-red-500 text-white rounded-full text-sm font-medium shadow-sm">
-                      {activeExceptions.length} urgent
-                    </span>
-                  </div>
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Actions Required</h2>
+                  <p className="text-xs text-slate-400 mt-0.5 uppercase tracking-wider font-medium">Exceptions needing review</p>
                 </div>
+                {activeExceptions.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-sm font-semibold">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {activeExceptions.length} open
+                  </span>
+                )}
               </div>
 
               <div className="divide-y divide-slate-100">
                 {isLoadingExceptions ? (
-                  <div className="p-5 text-center text-slate-500">Loading exceptions...</div>
+                  <div className="p-8 text-center">
+                    <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-sm text-slate-500">Loading exceptions...</p>
+                  </div>
                 ) : activeExceptions.length === 0 ? (
-                  <div className="p-5 text-center text-slate-500">No exceptions requiring review</div>
+                  <div className="p-10 text-center">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <CheckCircle className="w-6 h-6 text-emerald-500" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">All clear — no exceptions</p>
+                    <p className="text-xs text-slate-400 mt-1">Your classifications are in good shape</p>
+                  </div>
                 ) : (
                   <>
                     {(() => {
@@ -231,61 +247,50 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                           {displayedExceptions.map((item) => (
                             <div
                               key={item.id}
-                              className="p-5 hover:bg-slate-50 transition-colors cursor-pointer group"
+                              className={`flex items-center gap-0 hover:bg-slate-50 transition-colors cursor-pointer group border-l-4 ${
+                                item.priority === 'high' ? 'border-l-red-500' :
+                                item.priority === 'medium' ? 'border-l-amber-400' : 'border-l-blue-400'
+                              }`}
                               onClick={() => setSelectedException(item)}
                             >
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2 mb-2">
-                                    <AlertCircle className={`w-5 h-5 flex-shrink-0 ${
-                                      item.priority === 'high' ? 'text-red-600' :
-                                      item.priority === 'medium' ? 'text-amber-600' : 'text-blue-600'
-                                    }`} />
-                                    <span className="text-slate-900 truncate">{item.product}</span>
-                                    <span className={`px-2 py-0.5 rounded text-xs border flex-shrink-0 ${getPriorityColor(item.priority)}`}>
-                                      {item.priority}
-                                    </span>
-                                  </div>
-
-                                  <div className="ml-0 sm:ml-8 space-y-1">
-                                    <div className="text-sm text-slate-600">
-                                      <span className="text-red-700">⚠ {item.reason}</span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
-                                      <span className="whitespace-nowrap">SKU: {item.sku}</span>
-                                      <span className="hidden sm:inline">•</span>
-                                      <span className="whitespace-nowrap">HTS: {item.hts}</span>
-                                      <span className="hidden sm:inline">•</span>
-                                      <span className="whitespace-nowrap">Origin: {item.origin}</span>
-                                      <span className="hidden sm:inline">•</span>
-                                      <span className="whitespace-nowrap">Value: {item.value}</span>
-                                    </div>
-                                  </div>
+                              <div className="flex-1 min-w-0 px-6 py-4">
+                                <div className="flex items-center gap-2.5 mb-1.5">
+                                  <span className="text-sm font-medium text-slate-900 truncate">{item.product}</span>
+                                  <span className={`px-2 py-0.5 rounded-md text-xs font-semibold flex-shrink-0 ${getPriorityColor(item.priority)}`}>
+                                    {item.priority}
+                                  </span>
                                 </div>
-
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedException(item);
-                                    }}
-                                    className="hidden sm:block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm opacity-0 group-hover:opacity-100"
-                                  >
-                                    Review Now
-                                  </button>
-                                  <ChevronRight className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <p className="text-xs text-red-600 mb-1.5">⚠ {item.reason}</p>
+                                <div className="flex items-center gap-3 text-xs text-slate-400">
+                                  <span>SKU: {item.sku}</span>
+                                  <span>·</span>
+                                  <span className="font-mono">{item.hts}</span>
+                                  <span>·</span>
+                                  <span>{item.origin}</span>
                                 </div>
+                              </div>
+                              <div className="pr-5 flex-shrink-0 flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedException(item);
+                                  }}
+                                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium opacity-0 group-hover:opacity-100"
+                                >
+                                  Review
+                                </button>
+                                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
                               </div>
                             </div>
                           ))}
                           {remainingCount > 0 && (
-                            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+                            <div className="px-6 py-3.5 bg-slate-50 border-t border-slate-100">
                               <button
                                 onClick={() => setShowAllReviewModal(true)}
-                                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-2"
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1.5"
                               >
-                                Review {remainingCount} more exception{remainingCount > 1 ? 's' : ''}
-                                <ChevronRight className="w-4 h-4" />
+                                View {remainingCount} more exception{remainingCount > 1 ? 's' : ''}
+                                <ChevronRight className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           )}
@@ -300,45 +305,51 @@ export function Dashboard({ onNavigate }: DashboardProps) {
             {/* Recent Activity */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="text-slate-900">Recent Activity</h3>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Recent Activity</h2>
+                  <p className="text-xs text-slate-400 mt-0.5 uppercase tracking-wider font-medium">Latest classifications</p>
+                </div>
                 <button
                   onClick={() => onNavigate('activity')}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 transition-colors"
+                  className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 transition-colors"
                 >
                   View all <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
               <div className="divide-y divide-slate-100">
-                {resolvedItems.length > 0 && (
-                  <>
-                    {resolvedItems.slice().reverse().map((item, idx) => (
-                      <div 
-                        key={`resolved-${idx}`} 
-                        className="flex items-center gap-3 p-4 bg-green-50 border-l-4 border-green-500 cursor-pointer hover:bg-green-100 transition-colors group"
-                        onClick={() => onNavigate('profile')}
-                      >
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-slate-900 text-sm truncate">{item.product}</div>
-                          <div className="text-green-600 text-xs">Exception resolved • Classification approved</div>
-                        </div>
-                        <div className="text-slate-400 text-xs whitespace-nowrap">Just now</div>
-                        <ChevronRight className="w-4 h-4 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    ))}
-                  </>
-                )}
+                {resolvedItems.length > 0 && resolvedItems.slice().reverse().map((item, idx) => (
+                  <div
+                    key={`resolved-${idx}`}
+                    className="flex items-center gap-4 px-6 py-4 bg-emerald-50/60 border-l-4 border-l-emerald-500 cursor-pointer hover:bg-emerald-50 transition-colors group"
+                    onClick={() => onNavigate('profile')}
+                  >
+                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-slate-900 truncate">{item.product}</div>
+                      <div className="text-xs text-emerald-600">Exception resolved · Classification approved</div>
+                    </div>
+                    <div className="text-xs text-slate-400 whitespace-nowrap">Just now</div>
+                    <ChevronRight className="w-4 h-4 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                ))}
                 {isLoadingRecentActivity ? (
-                  <div className="p-4 text-center text-slate-500">Loading recent activity...</div>
+                  <div className="p-6 text-center text-sm text-slate-500">Loading activity...</div>
                 ) : recentClassifications.length === 0 ? (
-                  <div className="p-4 text-center text-slate-500">No recent activity</div>
+                  <div className="p-10 text-center">
+                    <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Package className="w-6 h-6 text-slate-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">No activity yet</p>
+                    <p className="text-xs text-slate-400 mt-1">Classified products will appear here</p>
+                  </div>
                 ) : (
                   recentClassifications.map((activity, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-colors cursor-pointer group"
+                      className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer group"
                       onClick={() => {
-                        // Open ExceptionReview with the activity's data
                         if (activity.classification_result_id) {
                           setSelectedException({
                             id: activity.classification_result_id,
@@ -368,18 +379,23 @@ export function Dashboard({ onNavigate }: DashboardProps) {
                         }
                       }}
                     >
-                      <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="text-slate-900 text-sm">{activity.product}</div>
-                        <div className="text-slate-500 text-xs">HTS: {activity.hts} • Confidence: {activity.confidence}</div>
+                        <div className="text-sm font-medium text-slate-900 truncate">{activity.product}</div>
+                        <div className="text-xs text-slate-400">
+                          <span className="font-mono">{activity.hts}</span>
+                          <span className="mx-1.5">·</span>
+                          <span>{activity.confidence} confidence</span>
+                        </div>
                       </div>
-                      <div className="text-slate-400 text-xs whitespace-nowrap">{activity.time}</div>
-                      <ChevronRight className="w-4 h-4 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <div className="text-xs text-slate-400 whitespace-nowrap">{activity.time}</div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   ))
                 )}
               </div>
             </div>
+
           </div>
         </div>
       </div>

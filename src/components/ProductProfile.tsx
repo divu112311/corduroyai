@@ -193,532 +193,426 @@ export function ProductProfile() {
   }, []);
 
   return (
-    <div className="p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-200">
-          <div>
-            <h1 className="text-slate-900 mb-1">Product Compliance Profiles</h1>
-            <p className="text-slate-500 text-sm">Manage product data, materials, origin, and vendor information</p>
-          </div>
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Page header */}
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-8 py-5">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-lg font-semibold text-slate-900">Product Profile Library</h1>
+              <p className="text-sm text-slate-400 mt-0.5">System of record for all classified products</p>
+            </div>
+            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full border border-emerald-200">
+              {products.length} profiles
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => {
-                setEditingProduct(null);
-                setShowAddModal(true);
-              }}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm text-sm font-medium"
+              onClick={() => { setEditingProduct(null); setShowAddModal(true); }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 text-sm font-semibold shadow-sm"
             >
               <Plus className="w-4 h-4" />
-              Add Product
+              New Product
             </button>
-          </div>
-        </div>
-
-        {/* Search and Filters Section */}
-        <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products by name, SKU, or HTS..."
-                  className="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Filter Toggle Button */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 border border-slate-300 rounded-lg text-sm hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <Filter className="w-4 h-4 text-slate-600" />
-              <span className="text-slate-700">Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="px-2 py-0.5 bg-blue-600 text-white rounded-full text-xs">
-                  {activeFilterCount}
-                </span>
-              )}
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
-            </button>
-          </div>
-
-          {/* Expandable Filter Panel */}
-          {showFilters && (
-            <div className="mt-4 pt-4 border-t border-slate-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-slate-900 text-sm">Filter Products</h3>
-                {activeFilterCount > 0 && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                  >
-                    <X className="w-3 h-3" />
-                    Clear all
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* Category Filter */}
-                <div>
-                  <label className="text-xs text-slate-600 mb-2 block">Category</label>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {categories.map(category => (
-                      <label key={category} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedCategories.includes(category)}
-                          onChange={() => toggleFilter(selectedCategories, category, setSelectedCategories)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-slate-700">{category}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Vendor Filter */}
-                <div>
-                  <label className="text-xs text-slate-600 mb-2 block">Vendor</label>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {vendors.map(vendor => (
-                      <label key={vendor} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedVendors.includes(vendor)}
-                          onChange={() => toggleFilter(selectedVendors, vendor, setSelectedVendors)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-slate-700">{vendor}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Origin Filter */}
-                <div>
-                  <label className="text-xs text-slate-600 mb-2 block">Country of Origin</label>
-                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                    {origins.map(origin => (
-                      <label key={origin} className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedOrigins.includes(origin)}
-                          onChange={() => toggleFilter(selectedOrigins, origin, setSelectedOrigins)}
-                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-slate-700">{origin}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Date Range Filter */}
-                <div>
-                  <label className="text-xs text-slate-600 mb-2 block">Last Updated</label>
-                  <select
-                    value={selectedDateRange}
-                    onChange={(e) => setSelectedDateRange(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All time</option>
-                    <option value="7">Last 7 days</option>
-                    <option value="30">Last 30 days</option>
-                    <option value="90">Last 90 days</option>
-                  </select>
-                </div>
-
-                {/* Confidence Filter */}
-                <div>
-                  <label className="text-xs text-slate-600 mb-2 block">Confidence Level</label>
-                  <select
-                    value={selectedConfidence}
-                    onChange={(e) => setSelectedConfidence(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all">All levels</option>
-                    <option value="high">High (95%+)</option>
-                    <option value="medium">Medium (85-94%)</option>
-                    <option value="low">Low (&lt;85%)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Active Filter Pills */}
-          {activeFilterCount > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {selectedCategories.map(category => (
-                <span key={category} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                  {category}
-                  <button onClick={() => toggleFilter(selectedCategories, category, setSelectedCategories)} className="hover:text-blue-900">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {selectedVendors.map(vendor => (
-                <span key={vendor} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                  {vendor}
-                  <button onClick={() => toggleFilter(selectedVendors, vendor, setSelectedVendors)} className="hover:text-blue-900">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {selectedOrigins.map(origin => (
-                <span key={origin} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                  {origin}
-                  <button onClick={() => toggleFilter(selectedOrigins, origin, setSelectedOrigins)} className="hover:text-blue-900">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-              {selectedDateRange !== 'all' && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                  Last {selectedDateRange} days
-                  <button onClick={() => setSelectedDateRange('all')} className="hover:text-blue-900">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-              {selectedConfidence !== 'all' && (
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs flex items-center gap-1">
-                  {selectedConfidence === 'high' ? 'High confidence' : selectedConfidence === 'medium' ? 'Medium confidence' : 'Low confidence'}
-                  <button onClick={() => setSelectedConfidence('all')} className="hover:text-blue-900">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Product List */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                <span className="text-sm text-slate-500">
-                  {filteredProducts.length} of {products.length} products
-                </span>
-                {filteredProducts.length !== products.length && (
-                  <span className="text-xs text-blue-600 font-medium">Filtered</span>
-                )}
-              </div>
-              
-              <div className="divide-y divide-slate-200 max-h-[600px] overflow-y-auto">
-                {isLoadingProducts ? (
-                  <div className="p-8 text-center text-slate-500">Loading products...</div>
-                ) : filteredProducts.length === 0 ? (
-                  <div className="p-8 text-center text-slate-500">No approved products found</div>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <button
-                      key={product.id}
-                      onClick={() => handleProductClick(product)}
-                      className={`w-full p-4 text-left transition-colors ${
-                        selectedProduct?.id === product.id
-                          ? 'bg-blue-50/70 border-l-4 border-l-blue-600'
-                          : 'hover:bg-slate-50/80 border-l-4 border-l-transparent'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-1.5">
-                        <span className={`text-sm font-medium truncate pr-2 ${selectedProduct?.id === product.id ? 'text-blue-700' : 'text-slate-900'}`}>
-                          {product.name}
-                        </span>
-                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                            product.confidence >= 90 ? 'bg-green-500' :
-                            product.confidence >= 70 ? 'bg-amber-400' : 'bg-red-400'
-                          }`} />
-                          <span className={`text-xs font-medium ${
-                            product.confidence >= 90 ? 'text-green-700' :
-                            product.confidence >= 70 ? 'text-amber-600' : 'text-red-600'
-                          }`}>
-                            {product.confidence}%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{product.hts}</span>
-                        {product.sku && <span className="truncate">SKU: {product.sku}</span>}
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Product Details - Hidden on mobile, shown on desktop */}
-          <div className="hidden lg:block lg:col-span-2">
-            {selectedProduct ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <div className="flex items-start justify-between mb-6">
-                  <div>
-                    <h2 className="text-slate-900 mb-1">{selectedProduct.name}</h2>
-                    <p className="text-slate-600">SKU: {selectedProduct.sku}</p>
-                    {selectedProduct.description && (
-                      <p className="text-slate-500 text-sm mt-1">{selectedProduct.description}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Classification Info */}
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-green-900 text-sm">Current Classification</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-700 text-sm">Confidence:</span>
-                      <span className="text-green-900">{selectedProduct.confidence}%</span>
-                    </div>
-                  </div>
-                  <div className="text-green-800 text-lg mb-3">HTS Code: {selectedProduct.hts}</div>
-
-                  {(selectedProduct.sectionCode || selectedProduct.chapterCode) && (
-                    <div className="space-y-1 text-xs mb-3">
-                      {selectedProduct.sectionCode && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-green-700 min-w-[60px]">Section</span>
-                          <span className="text-green-800">{selectedProduct.sectionCode}{selectedProduct.sectionTitle ? ` — ${selectedProduct.sectionTitle}` : ''}</span>
-                        </div>
-                      )}
-                      {selectedProduct.chapterCode && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-green-700 min-w-[60px]">Chapter</span>
-                          <span className="text-green-800">{selectedProduct.chapterCode}{selectedProduct.chapterTitle ? ` — ${selectedProduct.chapterTitle}` : ''}</span>
-                        </div>
-                      )}
-                      <div className="flex items-start gap-2">
-                        <span className="text-green-700 min-w-[60px]">HTS Code</span>
-                        <span className="text-green-800">{selectedProduct.hts}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-green-700 text-sm">
-                    Last updated: {new Date(selectedProduct.lastUpdated).toLocaleDateString()}
-                  </div>
-                </div>
-
-                {/* CBP Rulings */}
-                {selectedProduct.cbpRulings && selectedProduct.cbpRulings.length > 0 && (
-                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h3 className="text-blue-900 mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4" />
-                      CBP Rulings ({selectedProduct.cbpRulings.length})
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedProduct.cbpRulings.map((ruling: any, idx: number) => (
-                        <div key={idx} className="bg-white rounded-lg p-3 border border-blue-200">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <span className="text-blue-900 text-sm font-medium">{ruling.ruling_number}</span>
-                              {ruling.ruling_date && (
-                                <span className="text-blue-600 text-xs ml-2">
-                                  {new Date(ruling.ruling_date).toLocaleDateString()}
-                                </span>
-                              )}
-                              <p className="text-blue-800 text-sm mt-1">{ruling.subject}</p>
-                            </div>
-                            {ruling.url && (
-                              <a href={ruling.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-600 hover:text-blue-700">
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Rule Verification */}
-                {selectedProduct.ruleVerification && (
-                  <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                    <h3 className="text-indigo-900 mb-3 flex items-center gap-2">
-                      Rule Verification
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${
-                        selectedProduct.ruleVerification.status === 'verified'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {selectedProduct.ruleVerification.status}
-                      </span>
-                    </h3>
-                    {selectedProduct.ruleVerification.gri_applied?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {selectedProduct.ruleVerification.gri_applied.map((gri: string, idx: number) => (
-                          <span key={idx} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-lg border border-indigo-200">{gri}</span>
-                        ))}
-                      </div>
-                    )}
-                    {selectedProduct.ruleVerification.checks_passed?.length > 0 && (
-                      <div className="mb-2">
-                        {selectedProduct.ruleVerification.checks_passed.map((check: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-green-700 mb-1">
-                            <span className="w-3.5 h-3.5 flex-shrink-0 text-green-600">✓</span>
-                            <span>{check}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {selectedProduct.ruleVerification.checks_failed?.length > 0 && (
-                      <div className="mb-2">
-                        {selectedProduct.ruleVerification.checks_failed.map((check: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-2 text-sm text-red-700 mb-1">
-                            <span className="w-3.5 h-3.5 flex-shrink-0 text-red-600">✗</span>
-                            <span>{check}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Product Details Grid */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Package className="w-5 h-5 text-slate-600" />
-                      <span className="text-slate-700">Materials</span>
-                    </div>
-                    <p className="text-slate-900 text-sm">{selectedProduct.materials}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="w-5 h-5 text-slate-600" />
-                      <span className="text-slate-700">Country of Origin</span>
-                    </div>
-                    <p className="text-slate-900 text-sm">{selectedProduct.origin}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="w-5 h-5 text-slate-600" />
-                      <span className="text-slate-700">Unit Cost</span>
-                    </div>
-                    <p className="text-slate-900 text-sm">{selectedProduct.cost}</p>
-                  </div>
-
-                  <div className="p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-5 h-5 text-slate-600" />
-                      <span className="text-slate-700">Vendor</span>
-                    </div>
-                    <p className="text-slate-900 text-sm">{selectedProduct.vendor}</p>
-                  </div>
-                </div>
-
-                {/* Trade Analysis */}
-                <div className="border-t border-slate-200 pt-6">
-                  <h3 className="text-slate-900 mb-4">Trade Analysis</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-blue-900">Standard Tariff Rate (MFN)</span>
-                      <span className="text-blue-700">
-                        {selectedProduct.tariffRate !== null && selectedProduct.tariffRate !== undefined
-                          ? `${(selectedProduct.tariffRate * 100).toFixed(2)}%`
-                          : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-blue-900">Tariff Amount</span>
-                      <span className="text-blue-700">
-                        {selectedProduct.tariffAmount !== null && selectedProduct.tariffAmount !== undefined
-                          ? `$${selectedProduct.tariffAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : 'N/A'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="text-blue-900">Total Cost (Unit Cost + Tariff)</span>
-                      <span className="text-blue-700">
-                        {selectedProduct.totalCost !== null && selectedProduct.totalCost !== undefined
-                          ? `$${selectedProduct.totalCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : selectedProduct.unitCost && selectedProduct.tariffAmount
-                          ? `$${(Number(selectedProduct.unitCost) + Number(selectedProduct.tariffAmount)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : 'N/A'}
-                      </span>
-                    </div>
-                    {selectedProduct.alternateClassifications && selectedProduct.alternateClassifications.length > 0 ? (
-                      <div className="p-3 bg-amber-50 rounded-lg">
-                        <span className="text-amber-900 text-sm font-medium block mb-2">Alternate Classifications</span>
-                        <div className="space-y-2">
-                          {selectedProduct.alternateClassifications.map((alt: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between text-sm">
-                              <div>
-                                <span className="text-amber-800 font-mono">{alt.hts}</span>
-                                <span className="text-amber-700 ml-2">{alt.description}</span>
-                              </div>
-                              <span className="text-amber-600 text-xs">{alt.confidence}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : selectedProduct.alternateClassification ? (
-                      <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
-                        <span className="text-amber-900">Alternate Classification</span>
-                        <span className="text-amber-700">{selectedProduct.alternateClassification}</span>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Compliance History */}
-                <div className="border-t border-slate-200 pt-6 mt-6">
-                  <h3 className="text-slate-900 mb-4">Classification History</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between p-3 bg-slate-50 rounded">
-                      <div>
-                        <div className="text-slate-900">HTS {selectedProduct.hts}</div>
-                        <div className="text-slate-600">
-                          Confidence: {selectedProduct.confidence}%
-                        </div>
-                      </div>
-                      <div className="text-slate-600">{new Date(selectedProduct.lastUpdated).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowDetailsModal(true)}
-                    className="w-full mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <FileText className="w-5 h-5" />
-                    View Full Details
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
-                <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Package className="w-8 h-8 text-slate-400" />
-                </div>
-                <h3 className="text-slate-900 mb-2">Select a Product</h3>
-                <p className="text-slate-600">Choose a product from the list to view its compliance profile</p>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Add/Edit Product Modal */}
+      {/* Search + filter bar */}
+      <div className="flex-shrink-0 bg-white border-b border-slate-200 px-6 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, SKU, or HTS code..."
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-700 placeholder:text-slate-300"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors ${showFilters ? 'bg-slate-900 text-white border-slate-900' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+          >
+            <Filter className="w-4 h-4" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="w-5 h-5 flex items-center justify-center bg-blue-600 text-white rounded-full text-xs">{activeFilterCount}</span>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+
+        {/* Active filters as chips */}
+        {activeFilterCount > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+            {selectedCategories.map(category => (
+              <span key={category} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                {category}
+                <button onClick={() => toggleFilter(selectedCategories, category, setSelectedCategories)} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {selectedVendors.map(vendor => (
+              <span key={vendor} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                {vendor}
+                <button onClick={() => toggleFilter(selectedVendors, vendor, setSelectedVendors)} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {selectedOrigins.map(origin => (
+              <span key={origin} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                {origin}
+                <button onClick={() => toggleFilter(selectedOrigins, origin, setSelectedOrigins)} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            ))}
+            {selectedDateRange !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                Last {selectedDateRange} days
+                <button onClick={() => setSelectedDateRange('all')} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {selectedConfidence !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-100">
+                {selectedConfidence === 'high' ? 'High confidence' : selectedConfidence === 'medium' ? 'Medium confidence' : 'Low confidence'}
+                <button onClick={() => setSelectedConfidence('all')} className="hover:text-blue-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            <button onClick={clearAllFilters} className="text-xs text-slate-400 hover:text-slate-600 ml-1">Clear all</button>
+          </div>
+        )}
+
+        {/* Expanded filter panel */}
+        {showFilters && (
+          <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Category</label>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {categories.map(category => (
+                  <label key={category} className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 hover:text-slate-900">
+                    <input type="checkbox" checked={selectedCategories.includes(category)} onChange={() => toggleFilter(selectedCategories, category, setSelectedCategories)} className="rounded border-slate-300 text-blue-600 w-3.5 h-3.5" />
+                    {category}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Vendor</label>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {vendors.map(vendor => (
+                  <label key={vendor} className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 hover:text-slate-900">
+                    <input type="checkbox" checked={selectedVendors.includes(vendor)} onChange={() => toggleFilter(selectedVendors, vendor, setSelectedVendors)} className="rounded border-slate-300 text-blue-600 w-3.5 h-3.5" />
+                    {vendor}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Origin</label>
+              <div className="space-y-1 max-h-28 overflow-y-auto">
+                {origins.map(origin => (
+                  <label key={origin} className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 hover:text-slate-900">
+                    <input type="checkbox" checked={selectedOrigins.includes(origin)} onChange={() => toggleFilter(selectedOrigins, origin, setSelectedOrigins)} className="rounded border-slate-300 text-blue-600 w-3.5 h-3.5" />
+                    {origin}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Updated</label>
+              <select value={selectedDateRange} onChange={(e) => setSelectedDateRange(e.target.value)} className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700">
+                <option value="all">All time</option>
+                <option value="7">Last 7 days</option>
+                <option value="30">Last 30 days</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5 block">Confidence</label>
+              <select value={selectedConfidence} onChange={(e) => setSelectedConfidence(e.target.value)} className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700">
+                <option value="all">All levels</option>
+                <option value="high">High (95%+)</option>
+                <option value="medium">Medium (85-94%)</option>
+                <option value="low">Low (&lt;85%)</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main content area: table + detail drawer */}
+      <div className="flex-1 overflow-hidden flex">
+        {/* Product table */}
+        <div className="flex-1 overflow-y-auto">
+          {isLoadingProducts ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <Package className="w-7 h-7 text-slate-300" />
+              </div>
+              <p className="text-base font-semibold text-slate-700">
+                {products.length === 0 ? 'No products yet' : 'No products match your filters'}
+              </p>
+              <p className="text-sm text-slate-400 mt-1">
+                {products.length === 0 ? 'Classify a product to see it here' : 'Try adjusting your search or filters'}
+              </p>
+              {products.length === 0 && (
+                <button
+                  onClick={() => { setEditingProduct(null); setShowAddModal(true); }}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add First Product
+                </button>
+              )}
+            </div>
+          ) : (
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Product</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">HTS Code</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Origin</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Vendor</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Confidence</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredProducts.map((product) => (
+                  <tr
+                    key={product.id}
+                    onClick={() => handleProductClick(product)}
+                    className={`cursor-pointer transition-colors group ${
+                      selectedProduct?.id === product.id
+                        ? 'bg-blue-50 border-l-2 border-l-blue-600'
+                        : 'hover:bg-slate-50 border-l-2 border-l-transparent'
+                    }`}
+                  >
+                    <td className="px-6 py-3.5">
+                      <div className="font-medium text-sm text-slate-900 truncate max-w-[200px]">{product.name}</div>
+                      {product.sku && <div className="text-xs text-slate-400 mt-0.5">SKU: {product.sku}</div>}
+                    </td>
+                    <td className="px-6 py-3.5">
+                      <span className="font-mono text-sm font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{product.hts}</span>
+                    </td>
+                    <td className="px-6 py-3.5 hidden md:table-cell">
+                      <span className="text-sm text-slate-600">{product.origin || '—'}</span>
+                    </td>
+                    <td className="px-6 py-3.5 hidden lg:table-cell">
+                      <span className="text-sm text-slate-500 truncate max-w-[120px] block">{product.vendor || '—'}</span>
+                    </td>
+                    <td className="px-6 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                          product.confidence >= 90 ? 'bg-emerald-500' :
+                          product.confidence >= 70 ? 'bg-amber-400' : 'bg-red-400'
+                        }`} />
+                        <span className={`text-sm font-semibold ${
+                          product.confidence >= 90 ? 'text-emerald-700' :
+                          product.confidence >= 70 ? 'text-amber-600' : 'text-red-600'
+                        }`}>{product.confidence}%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Detail drawer — slides in from right */}
+        {selectedProduct && (
+          <div className="w-[420px] flex-shrink-0 border-l border-slate-200 overflow-y-auto bg-white">
+            {/* Drawer header */}
+            <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-start justify-between z-10">
+              <div className="min-w-0 flex-1 pr-3">
+                <h3 className="text-base font-semibold text-slate-900 truncate">{selectedProduct.name}</h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {selectedProduct.sku && <span className="text-xs text-slate-400">SKU: {selectedProduct.sku}</span>}
+                  <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
+                    selectedProduct.confidence >= 90 ? 'bg-emerald-50 text-emerald-700' :
+                    selectedProduct.confidence >= 70 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'
+                  }`}>
+                    {selectedProduct.confidence}% confidence
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedProduct(null)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* HTS hero card */}
+              <div className="bg-slate-900 rounded-xl p-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">HTS Classification</p>
+                <p className="font-mono text-3xl font-bold text-white tracking-tight">{selectedProduct.hts}</p>
+                {selectedProduct.chapterCode && (
+                  <div className="mt-2 space-y-0.5">
+                    {selectedProduct.sectionCode && (
+                      <p className="text-xs text-slate-400">Section {selectedProduct.sectionCode}{selectedProduct.sectionTitle ? ` — ${selectedProduct.sectionTitle}` : ''}</p>
+                    )}
+                    <p className="text-xs text-slate-400">Chapter {selectedProduct.chapterCode}{selectedProduct.chapterTitle ? ` — ${selectedProduct.chapterTitle}` : ''}</p>
+                  </div>
+                )}
+                <p className="text-xs text-slate-500 mt-2">Updated {new Date(selectedProduct.lastUpdated).toLocaleDateString()}</p>
+              </div>
+
+              {/* Trade metrics */}
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Tariff Rate</p>
+                  <p className="text-sm font-bold text-slate-800">
+                    {selectedProduct.tariffRate != null ? `${(selectedProduct.tariffRate * 100).toFixed(1)}%` : 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Unit Cost</p>
+                  <p className="text-sm font-bold text-slate-800">{selectedProduct.cost || 'N/A'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-3 text-center">
+                  <p className="text-xs text-slate-400 mb-1">Origin</p>
+                  <p className="text-sm font-bold text-slate-800 truncate">{selectedProduct.origin || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Product info */}
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Product Details</p>
+                <div className="space-y-2">
+                  {selectedProduct.materials && (
+                    <div className="flex items-start gap-2">
+                      <Package className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-slate-400">Materials</p>
+                        <p className="text-sm text-slate-700">{selectedProduct.materials}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedProduct.vendor && (
+                    <div className="flex items-start gap-2">
+                      <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-slate-400">Vendor</p>
+                        <p className="text-sm text-slate-700">{selectedProduct.vendor}</p>
+                      </div>
+                    </div>
+                  )}
+                  {selectedProduct.description && (
+                    <div className="flex items-start gap-2">
+                      <FileText className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs text-slate-400">Description</p>
+                        <p className="text-sm text-slate-600 leading-relaxed">{selectedProduct.description}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Alternate classifications */}
+              {(selectedProduct.alternateClassifications?.length > 0 || selectedProduct.alternateClassification) && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Alternate Classifications</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+                    {selectedProduct.alternateClassifications?.map((alt: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div>
+                          <span className="font-mono text-sm font-semibold text-amber-800">{alt.hts}</span>
+                          {alt.description && <p className="text-xs text-amber-700 mt-0.5">{alt.description}</p>}
+                        </div>
+                        <span className="text-xs font-semibold text-amber-600">{alt.confidence}%</span>
+                      </div>
+                    ))}
+                    {!selectedProduct.alternateClassifications && selectedProduct.alternateClassification && (
+                      <span className="font-mono text-sm font-semibold text-amber-800">{selectedProduct.alternateClassification}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Rule verification */}
+              {selectedProduct.ruleVerification && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Rule Verification</p>
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        selectedProduct.ruleVerification.status === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                      }`}>
+                        {selectedProduct.ruleVerification.status}
+                      </span>
+                      {selectedProduct.ruleVerification.gri_applied?.map((gri: string, idx: number) => (
+                        <span key={idx} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-lg">{gri}</span>
+                      ))}
+                    </div>
+                    {selectedProduct.ruleVerification.checks_passed?.map((check: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-xs text-emerald-700 mb-0.5">
+                        <span>✓</span>{check}
+                      </div>
+                    ))}
+                    {selectedProduct.ruleVerification.checks_failed?.map((check: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-1.5 text-xs text-red-600 mb-0.5">
+                        <span>✗</span>{check}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CBP Rulings */}
+              {selectedProduct.cbpRulings && selectedProduct.cbpRulings.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">CBP Rulings ({selectedProduct.cbpRulings.length})</p>
+                  <div className="space-y-2">
+                    {selectedProduct.cbpRulings.map((ruling: any, idx: number) => (
+                      <div key={idx} className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-blue-900">{ruling.ruling_number}</span>
+                              {ruling.ruling_date && <span className="text-xs text-blue-500">{new Date(ruling.ruling_date).toLocaleDateString()}</span>}
+                            </div>
+                            <p className="text-xs text-blue-700 mt-0.5 leading-relaxed">{ruling.subject}</p>
+                          </div>
+                          {ruling.url && (
+                            <a href={ruling.url} target="_blank" rel="noopener noreferrer" className="ml-2 text-blue-500 hover:text-blue-700 flex-shrink-0">
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* View full details CTA */}
+              <button
+                onClick={() => setShowDetailsModal(true)}
+                className="w-full py-2.5 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                View Full Details
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
       {showAddModal && (
         <AddProductModal
-          onClose={() => {
-            setShowAddModal(false);
-            setEditingProduct(null);
-          }}
+          onClose={() => { setShowAddModal(false); setEditingProduct(null); }}
           onSave={handleSaveProduct}
           editingProduct={editingProduct}
         />
       )}
-
-      {/* Product Details Modal */}
       {showDetailsModal && selectedProduct && (
         <ProductDetailsModal
           product={selectedProduct}

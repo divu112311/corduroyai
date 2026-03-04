@@ -447,119 +447,71 @@ export default function App() {
         onLogout={handleLogout}
       />
     )}
-    <div className="app-shell bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Sidebar */}
-      <aside className="app-sidebar bg-slate-50 border-r border-slate-200/80 px-4 py-6 flex flex-col">
-        <div className="mb-6 pb-5 border-b border-slate-200">
-          <img src={logo} alt="Corduroy AI" className="w-full max-w-[160px]" />
+    <div className="app-shell">
+      {/* Sidebar — dark navy */}
+      <aside className="app-sidebar bg-slate-900 flex flex-col border-r border-white/5">
+        {/* Logo */}
+        <div className="px-5 pt-6 pb-5 border-b border-white/10 flex-shrink-0">
+          <img src={logo} alt="Corduroy AI" className="w-36 brightness-0 invert opacity-90" />
         </div>
 
-        <nav className="flex-1 space-y-1">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-              currentView === 'dashboard'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`p-1 rounded-md ${currentView === 'dashboard' ? 'bg-blue-100' : ''}`}>
-              <LayoutDashboard className="w-4 h-4" />
-            </div>
-            <span>Dashboard</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentView('classify')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-              currentView === 'classify'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`p-1 rounded-md ${currentView === 'classify' ? 'bg-blue-100' : ''}`}>
-              <Package className="w-4 h-4" />
-            </div>
-            <span>Classify Product</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentView('profile')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-              currentView === 'profile'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`p-1 rounded-md ${currentView === 'profile' ? 'bg-blue-100' : ''}`}>
-              <FileText className="w-4 h-4" />
-            </div>
-            <span>Product Profiles</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentView('activity')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-              currentView === 'activity'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`p-1 rounded-md ${currentView === 'activity' ? 'bg-blue-100' : ''}`}>
-              <History className="w-4 h-4" />
-            </div>
-            <span>Activity</span>
-          </button>
-
-          <button
-            onClick={() => setCurrentView('settings')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-              currentView === 'settings'
-                ? 'bg-white text-blue-600 shadow-sm border border-slate-200'
-                : 'text-slate-500 hover:bg-white hover:text-slate-700 hover:shadow-sm'
-            }`}
-          >
-            <div className={`p-1 rounded-md ${currentView === 'settings' ? 'bg-blue-100' : ''}`}>
-              <SettingsIcon className="w-4 h-4" />
-            </div>
-            <span>Settings</span>
-          </button>
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+          {([
+            { view: 'dashboard' as const, icon: LayoutDashboard, label: 'Dashboard' },
+            { view: 'classify' as const, icon: Package, label: 'Classify' },
+            { view: 'profile' as const, icon: FileText, label: 'Product Library' },
+            { view: 'activity' as const, icon: History, label: 'Activity' },
+            { view: 'settings' as const, icon: SettingsIcon, label: 'Settings' },
+          ]).map((item) => (
+            <button
+              key={item.view}
+              onClick={() => setCurrentView(item.view)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                currentView === item.view
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+              }`}
+            >
+              <item.icon className="w-4 h-4 flex-shrink-0" />
+              <span>{item.label}</span>
+            </button>
+          ))}
         </nav>
 
-        {/* User Profile Section */}
-        <div className="mt-auto pt-5 border-t border-slate-200">
+        {/* User section */}
+        <div className="flex-shrink-0 px-3 py-4 border-t border-white/10">
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white hover:shadow-sm transition-all text-left"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 transition-all text-left"
             >
-              <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                <User className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                <User className="w-3.5 h-3.5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 truncate">
+                <p className="text-sm font-medium text-slate-200 truncate">
                   {user && user.firstName ? user.firstName : (user && user.email ? user.email.split('@')[0] : 'User')}
                 </p>
-                <p className="text-xs text-slate-400 truncate">{user && user.email ? user.email : ''}</p>
+                <p className="text-xs text-slate-500 truncate">{user && user.email ? user.email : ''}</p>
               </div>
             </button>
 
-            {/* User Menu Dropdown */}
             {showUserMenu && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
                 <div className="p-3 border-b border-slate-100">
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-semibold text-slate-900">
                     {user && user.firstName && user.lastName
                       ? `${user.firstName} ${user.lastName}`
                       : (user && user.email ? user.email : '')}
                   </p>
                   {user && user.company && (
-                    <p className="text-xs text-slate-500 mt-1">{user.company}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{user.company}</p>
                   )}
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                  className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 font-medium"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign Out
@@ -567,16 +519,12 @@ export default function App() {
               </div>
             )}
           </div>
-
-          <div className="mt-3 text-slate-400 text-xs px-3">
-            <p>Corduroy AI v0.1</p>
-            <p className="mt-0.5">Made with love in the USA</p>
-          </div>
+          <p className="text-slate-600 text-xs px-3 mt-3">Corduroy AI v0.1</p>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="app-main">
+      <main className="app-main bg-slate-50">
         {currentView === 'dashboard' && <Dashboard onNavigate={setCurrentView} />}
         {currentView === 'classify' && (
           <UnifiedClassification

@@ -662,32 +662,76 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
   };
 
   return (
-    <div>
-      <div className="max-w-4xl mx-auto">
-        {/* Query Input */}
-        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-slate-700 mb-2">Product Name</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleClassifyClick()}
-                  placeholder="e.g., Wireless bluetooth speaker"
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+    <div className="space-y-5">
+      {/* Input Card */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Card header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900">New Product Intake</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Fill in the details below for an accurate AI classification</p>
+          </div>
+          <span className="px-2.5 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">Single Product</span>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {/* Product Name — required, primary */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-sm font-semibold text-slate-700">Product Name</label>
+              <span className="text-xs text-red-400 font-medium">Required</span>
             </div>
-            
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleClassifyClick()}
+                placeholder="e.g. Wireless Bluetooth Speaker, Organic Cotton T-Shirt..."
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-800 placeholder:text-slate-300"
+              />
+            </div>
+            {!query.trim() && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {['Organic cotton t-shirt', 'Stainless steel water bottle', 'LED desk lamp'].map((example) => (
+                  <button
+                    key={example}
+                    onClick={() => setQuery(example)}
+                    className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full text-xs hover:bg-slate-200 transition-colors"
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Product Description */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+              Product Description <span className="text-slate-400 font-normal">— optional but strongly recommended</span>
+            </label>
+            <textarea
+              value={productDescription}
+              onChange={(e) => setProductDescription(e.target.value)}
+              placeholder="Describe the product's intended use, materials, and function in detail. More context = higher classification accuracy.&#10;&#10;e.g. Portable wireless speaker with Bluetooth 5.0. ABS plastic body with aluminum grille. Built-in 2,000mAh rechargeable battery, dual 10W drivers, IPX7 waterproof rating. Designed for outdoor recreational use."
+              rows={4}
+              className="w-full px-3.5 py-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-slate-700 placeholder:text-slate-300 leading-relaxed"
+            />
+          </div>
+
+          {/* Row: Origin + SKU */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 mb-2">Country of Origin</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <MapPin className="w-3.5 h-3.5 inline-block mr-1 text-slate-400" />
+                Country of Origin
+              </label>
               <select
                 value={originCountry}
                 onChange={(e) => setOriginCountry(e.target.value)}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 bg-white"
               >
                 <option value="">Select country...</option>
                 <option value="China">China</option>
@@ -700,348 +744,286 @@ export function ClassificationView({ chatClassificationResult, onChatResultConsu
                 <option value="Germany">Germany</option>
               </select>
             </div>
-          </div>
-          
-          {/* Product Description Text Area */}
-          <div className="mb-4">
-            <label className="block text-slate-700 mb-2">Product Description (Optional)</label>
-            <textarea
-              value={productDescription}
-              onChange={(e) => setProductDescription(e.target.value)}
-              placeholder="Describe the product's intended use, materials, function, or any other relevant details...&#10;&#10;Example: Portable wireless speaker with Bluetooth 5.0. ABS plastic body with aluminum grille. Built-in rechargeable battery, dual 10W drivers, IPX7 waterproof. For outdoor recreational use."
-              rows={4}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Providing details about intended use, materials, and function helps improve classification accuracy
-            </p>
-          </div>
-          
-          {/* File Upload Section */}
-          <div className="mt-4 p-4 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Upload className="w-5 h-5 text-slate-600" />
-                <div>
-                  <h4 className="text-slate-900">Upload Supporting Documents (Optional)</h4>
-                  <p className="text-slate-600 text-sm">Specs, BOMs, datasheets, or other product details</p>
-                </div>
-              </div>
-              <label
-                htmlFor="file-upload-single"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-2 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Files
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <Package className="w-3.5 h-3.5 inline-block mr-1 text-slate-400" />
+                SKU Number
               </label>
               <input
-                id="file-upload-single"
-                type="file"
-                multiple
-                accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.jpg,.jpeg,.png"
-                onChange={handleFileUpload}
-                className="hidden"
+                type="text"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="e.g. PROD-12345"
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 placeholder:text-slate-300"
               />
             </div>
+          </div>
 
+          {/* Row: Unit Cost + Vendor */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                <DollarSign className="w-3.5 h-3.5 inline-block mr-1 text-slate-400" />
+                Unit Value
+              </label>
+              <input
+                type="text"
+                value={unitCost}
+                onChange={(e) => setUnitCost(e.target.value)}
+                placeholder="e.g. $24.99"
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 placeholder:text-slate-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Vendor</label>
+              <input
+                type="text"
+                value={vendor}
+                onChange={(e) => setVendor(e.target.value)}
+                placeholder="e.g. TechSupply Co."
+                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 placeholder:text-slate-300"
+              />
+            </div>
+          </div>
+
+          {/* Materials accordion */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-500" />
+                <span className="text-sm font-semibold text-slate-700">Material Composition</span>
+                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded-full">Improves Accuracy</span>
+                {materials.length > 0 && (
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs rounded-full">{materials.length} added</span>
+                )}
+              </div>
+              {showAdvanced ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+
+            {showAdvanced && (
+              <div className="p-4 bg-white space-y-3 border-t border-slate-100">
+                <p className="text-xs text-slate-400">Textile, metals, and plastics classifications often depend on material breakdown.</p>
+                {materials.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-1">
+                    {materials.map((material, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">
+                        {material.material} {material.percentage}%
+                        <button onClick={() => removeMaterial(idx)} className="hover:text-red-500 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <span className={`text-xs font-medium ${getTotalPercentage(materials) === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      Total: {getTotalPercentage(materials)}%
+                    </span>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Material (e.g. Cotton, Steel, ABS Plastic)"
+                    value={newMaterial.material}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, material: e.target.value })}
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="number"
+                    placeholder="%"
+                    min="0"
+                    max="100"
+                    value={newMaterial.percentage || ''}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, percentage: parseFloat(e.target.value) || 0 })}
+                    className="w-16 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                  <button
+                    onClick={addMaterial}
+                    disabled={!newMaterial.material || newMaterial.percentage <= 0}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 text-sm font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* File upload */}
+          <div className="border-2 border-dashed border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Upload className="w-4 h-4 text-slate-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Supporting Documents <span className="text-slate-400 font-normal">(optional)</span></p>
+                  <p className="text-xs text-slate-400">Specs, BOMs, datasheets — PDF, Excel, CSV, Word</p>
+                </div>
+              </div>
+              <label htmlFor="file-upload-single" className="px-3 py-1.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-lg text-xs font-medium transition-colors cursor-pointer">
+                Browse
+              </label>
+              <input id="file-upload-single" type="file" multiple accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.txt,.jpg,.jpeg,.png" onChange={handleFileUpload} className="hidden" />
+            </div>
             {uploadedFiles.length > 0 && (
-              <div className="space-y-2">
+              <div className="px-4 pb-4 space-y-2 border-t border-dashed border-slate-200 pt-3">
                 {uploadedFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-3 p-2 bg-white rounded border border-slate-200">
+                  <div key={idx} className="flex items-center gap-3 p-2.5 bg-white rounded-lg border border-slate-100">
                     {getFileIcon(file.name)}
                     <div className="flex-1 min-w-0">
-                      <p className="text-slate-900 text-sm truncate">{file.name}</p>
-                      <p className="text-slate-500 text-xs">
-                        {(file.size / 1024).toFixed(1)} KB
-                      </p>
+                      <p className="text-sm text-slate-700 truncate">{file.name}</p>
+                      <p className="text-xs text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
                     </div>
-                    <button
-                      onClick={() => removeFile(idx)}
-                      className="p-1 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                    >
-                      <X className="w-4 h-4 text-red-600" />
+                    <button onClick={() => removeFile(idx)} className="p-1 hover:bg-red-50 rounded transition-colors flex-shrink-0">
+                      <X className="w-3.5 h-3.5 text-red-500" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
-
-            {uploadedFiles.length === 0 && (
-              <div className="text-center py-4">
-                <p className="text-slate-500 text-sm">
-                  PDF, Excel, CSV, Word, images • Max 10MB per file
-                </p>
-              </div>
-            )}
           </div>
-          
-          {/* Advanced: Material Composition */}
-          <div className="mt-4">
+
+          {/* Action row */}
+          <div className="flex items-center justify-between pt-1 border-t border-slate-100">
             <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors text-left"
+              onClick={handleReviewLater}
+              disabled={!result}
+              className="px-4 py-2.5 text-slate-500 hover:text-slate-700 text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-slate-200 rounded-lg hover:bg-slate-50"
             >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span className="text-slate-900">Add Product Details & Material Composition (Optional)</span>
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">Improves Accuracy</span>
-              </div>
-              {showAdvanced ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              Save as Draft
             </button>
-
-            {showAdvanced && (
-              <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50 space-y-4">
-                {/* Product Details */}
-                <div>
-                  <h4 className="text-slate-900 mb-3">Product Details</h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-slate-700 text-sm mb-1">SKU Number</label>
-                      <input
-                        type="text"
-                        value={sku}
-                        onChange={(e) => setSku(e.target.value)}
-                        placeholder="e.g., PROD-12345"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-slate-700 text-sm mb-1">Vendor Name</label>
-                      <input
-                        type="text"
-                        value={vendor}
-                        onChange={(e) => setVendor(e.target.value)}
-                        placeholder="e.g., TechSupply Co."
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-slate-700 text-sm mb-1">Product Cost</label>
-                      <input
-                        type="text"
-                        value={unitCost}
-                        onChange={(e) => setUnitCost(e.target.value)}
-                        placeholder="e.g., $12.50"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Material Composition */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-slate-900">Material Composition</h4>
-                    <span className={`text-xs ${getTotalPercentage(materials) === 100 ? 'text-green-600' : 'text-amber-600'}`}>
-                      Total: {getTotalPercentage(materials)}%
-                    </span>
-                  </div>
-                  
-                  {materials.length > 0 && (
-                    <div className="space-y-2 mb-3">
-                      {materials.map((material, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-2 bg-white rounded border border-slate-200">
-                          <div className="flex-1 flex items-center gap-2">
-                            <span className="text-slate-900 text-sm">{material.material}</span>
-                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">{material.percentage}%</span>
-                          </div>
-                          <button
-                            onClick={() => removeMaterial(idx)}
-                            className="p-1 hover:bg-red-50 rounded transition-colors"
-                          >
-                            <X className="w-4 h-4 text-red-600" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Material (e.g., Cotton, Polyester, Steel)"
-                      value={newMaterial.material}
-                      onChange={(e) => setNewMaterial({ ...newMaterial, material: e.target.value })}
-                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="number"
-                      placeholder="%"
-                      min="0"
-                      max="100"
-                      value={newMaterial.percentage || ''}
-                      onChange={(e) => setNewMaterial({ ...newMaterial, percentage: parseFloat(e.target.value) || 0 })}
-                      className="w-20 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      onClick={addMaterial}
-                      disabled={!newMaterial.material || newMaterial.percentage <= 0}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add
-                    </button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">
-                    Many HTS codes depend on material composition (e.g., textiles, metals). Adding percentages improves classification accuracy.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={handleClassifyClick}
-            disabled={loading || !query.trim()}
-            className="w-full px-6 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-4 shadow-sm font-medium"
-          >
-            <Sparkles className="w-5 h-5" />
-            {loading ? 'Classifying...' : 'Run Classification'}
-          </button>
-          
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="text-slate-500 text-sm">Try:</span>
-            {['Organic cotton t-shirt', 'Stainless steel water bottle', 'LED desk lamp'].map((example) => (
-              <button
-                key={example}
-                onClick={() => setQuery(example)}
-                className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm hover:bg-slate-200 transition-colors"
-              >
-                {example}
-              </button>
-            ))}
+            <button
+              onClick={handleClassifyClick}
+              disabled={loading || !query.trim()}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 text-sm font-semibold shadow-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              {loading ? 'Classifying...' : 'Run Classification'}
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Clarification Chatbot or Results Display */}
-        {(needsClarification || result || loading) && (
-          <div className="mb-6">
-            {needsClarification ? (
+      {/* Loading state */}
+      {loading && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-10 text-center">
+          <div className="w-12 h-12 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm font-semibold text-slate-800">{loadingSteps[loadingStepIndex] || 'Classifying...'}</p>
+          <p className="text-xs text-slate-400 mt-1">Analyzing product data and fetching CBP rulings</p>
+        </div>
+      )}
+
+      {/* Clarification chatbot */}
+      {needsClarification && !loading && (
+        <ClarificationChatbot
+          messages={clarificationMessages}
+          onSendMessage={handleClarificationResponse}
+          isLoading={isProcessingClarification}
+          partialMatches={partialMatches}
+        />
+      )}
+
+      {/* Results */}
+      {result && !loading && !needsClarification && (
+        <div className="space-y-4">
+          {/* Clarification history (if applicable) */}
+          {clarificationMessages.length > 0 && (
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Clarification History</p>
               <ClarificationChatbot
                 messages={clarificationMessages}
-                onSendMessage={handleClarificationResponse}
-                isLoading={isProcessingClarification}
-                partialMatches={partialMatches}
+                onSendMessage={async () => {}}
+                isLoading={false}
               />
-            ) : result ? (
-              <div className="space-y-6">
-                {/* Show clarification history if there were any */}
-                {clarificationMessages.length > 0 && (
-                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                    <h4 className="text-slate-900 text-sm font-semibold mb-3">Clarification History</h4>
-                    <ClarificationChatbot
-                      messages={clarificationMessages}
-                      onSendMessage={async () => {}}
-                      isLoading={false}
-                    />
-                  </div>
-                )}
-                {/* Auto-approved banner */}
-                {wasAutoApproved && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <CheckCircle className="w-6 h-6 text-emerald-600" />
-                    </div>
-                    <div>
-                      <h4 className="text-emerald-900 font-medium">Auto-Approved</h4>
-                      <p className="text-emerald-700 text-sm">
-                        This classification was automatically approved because the confidence ({result.confidence}%) meets your threshold. You can manage this in Settings &gt; Auto Approve.
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {/* Show results */}
-                <ClassificationResults
-                  result={result}
-                  onApprove={wasAutoApproved ? undefined : async () => {
-                    // Handle approve - mark as approved in database
-                    if (result && classificationRunId) {
-                      const { data: { user } } = await supabase.auth.getUser();
-                      if (user) {
-                        try {
-                          // Re-fetch productId and classResultId from the DB for this run
-                          const { data: products } = await supabase
-                            .from('user_products')
-                            .select('id')
-                            .eq('classification_run_id', classificationRunId)
-                            .eq('user_id', user.id)
-                            .limit(1)
-                            .single();
-
-                          const { data: classResult } = await supabase
-                            .from('user_product_classification_results')
-                            .select('id')
-                            .eq('classification_run_id', classificationRunId)
-                            .limit(1)
-                            .single();
-
-                          if (products && classResult) {
-                            await saveClassificationApproval(
-                              products.id,
-                              classResult.id,
-                              true,
-                              'Manually approved by user'
-                            );
-                          }
-                        } catch (error) {
-                          console.error('Error saving approval:', error);
-                        }
-
-                        // Reset form
-                        setResult(null);
-                        setQuery('');
-                        setProductDescription('');
-                        setOriginCountry('');
-                        setMaterials([]);
-                        setSku('');
-                        setVendor('');
-                        setUnitCost('');
-                        setClarificationMessages([]);
-                        setClassificationRunId(null);
-                        setWasAutoApproved(false);
-                      }
-                    }
-                  }}
-                  onReviewLater={wasAutoApproved ? undefined : handleReviewLater}
-                />
-              </div>
-            ) : loading ? (
-              <div className="bg-white rounded-xl p-12 border border-slate-200 shadow-sm text-center">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-                <h3 className="text-slate-900 mb-2">
-                  {loadingSteps[loadingStepIndex] || 'Classifying...'}
-                </h3>
-                <p className="text-slate-600">Processing your product information</p>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {!result && !loading && !needsClarification && (
-          <div className="bg-white rounded-xl p-12 border border-slate-200 shadow-sm text-center">
-            <div className="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-slate-900 mb-2">Ready to Classify</h3>
-            <p className="text-slate-600">Enter a product description above to get AI-powered HS/HTS classification with confidence scoring and tariff information.</p>
-          </div>
-        )}
+          )}
 
-        {/* Review Later Confirmation Toast */}
-        {showReviewLaterConfirmation && (
-          <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top">
-            <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3">
-              <CheckCircle className="w-6 h-6" />
+          {/* Auto-approved banner */}
+          {wasAutoApproved && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-3">
+              <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <CheckCircle className="w-5 h-5 text-emerald-600" />
+              </div>
               <div>
-                <p className="font-medium">Added to Priority Review</p>
-                <p className="text-sm text-green-100">Product saved for later review</p>
+                <p className="text-sm font-semibold text-emerald-900">Auto-Approved</p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  Confidence ({result.confidence}%) meets your threshold. Manage this in Settings › Auto Approve.
+                </p>
               </div>
             </div>
+          )}
+
+          <ClassificationResults
+            result={result}
+            onApprove={wasAutoApproved ? undefined : async () => {
+              if (result && classificationRunId) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  try {
+                    const { data: products } = await supabase
+                      .from('user_products')
+                      .select('id')
+                      .eq('classification_run_id', classificationRunId)
+                      .eq('user_id', user.id)
+                      .limit(1)
+                      .single();
+                    const { data: classResult } = await supabase
+                      .from('user_product_classification_results')
+                      .select('id')
+                      .eq('classification_run_id', classificationRunId)
+                      .limit(1)
+                      .single();
+                    if (products && classResult) {
+                      await saveClassificationApproval(products.id, classResult.id, true, 'Manually approved by user');
+                    }
+                  } catch (error) {
+                    console.error('Error saving approval:', error);
+                  }
+                  setResult(null);
+                  setQuery('');
+                  setProductDescription('');
+                  setOriginCountry('');
+                  setMaterials([]);
+                  setSku('');
+                  setVendor('');
+                  setUnitCost('');
+                  setClarificationMessages([]);
+                  setClassificationRunId(null);
+                  setWasAutoApproved(false);
+                }
+              }
+            }}
+            onReviewLater={wasAutoApproved ? undefined : handleReviewLater}
+          />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!result && !loading && !needsClarification && (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-10 text-center">
+          <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Search className="w-6 h-6 text-slate-300" />
           </div>
-        )}
-      </div>
+          <p className="text-sm font-semibold text-slate-700">Ready to classify</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">Enter a product name above and click Run Classification to get an AI-powered HTS code with confidence scoring and tariff data.</p>
+        </div>
+      )}
+
+      {/* Review Later toast */}
+      {showReviewLaterConfirmation && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-emerald-600 text-white px-5 py-4 rounded-xl shadow-lg flex items-center gap-3">
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold">Saved for Review</p>
+              <p className="text-xs text-emerald-100 mt-0.5">Added to your priority review list</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <IntendedUseModal
         isOpen={showIntendedUseModal}
