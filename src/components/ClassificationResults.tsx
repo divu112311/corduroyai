@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Loader2, AlertTriangle } from 'lucide-react';
+import { getTariffDetails, TariffDetails } from '../lib/tariffService';
 
 export interface CbpRuling {
   ruling_number: string;
@@ -68,6 +69,29 @@ interface ClassificationResultsProps {
 export function ClassificationResults({ result, onApprove, onReviewLater }: ClassificationResultsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [expandedAlternates, setExpandedAlternates] = useState<Set<number>>(new Set());
+  const [tariffDetails, setTariffDetails] = useState<TariffDetails | null>(null);
+  const [tariffLoading, setTariffLoading] = useState(false);
+
+  // Fetch tariff details when HTS code is available
+  useEffect(() => {
+    if (!result.hts || result.hts === 'N/A') return;
+
+    let cancelled = false;
+    setTariffLoading(true);
+
+    getTariffDetails(result.hts, result.parsed_data?.country_of_origin)
+      .then((details) => {
+        if (!cancelled) setTariffDetails(details);
+      })
+      .catch((err) => {
+        console.error('Tariff details fetch error:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setTariffLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [result.hts, result.parsed_data?.country_of_origin]);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -177,32 +201,143 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
             </div>
           )}
           
-          {result.tariff_rate !== null && result.tariff_rate !== undefined && (
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-green-200">
-              <div>
-                <div className="text-green-600 text-xs mb-1">Tariff Rate</div>
-                <div className="text-green-900 font-semibold">
-                  {(result.tariff_rate * 100).toFixed(2)}%
-                </div>
+          {/* Tariff Information */}
+          <div className="pt-4 border-t border-green-200">
+            {tariffLoading ? (
+              <div className="flex items-center gap-2 text-green-600 text-sm py-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading tariff details...</span>
               </div>
-              {result.tariff_amount !== null && result.tariff_amount !== undefined && (
-                <div>
-                  <div className="text-green-600 text-xs mb-1">Tariff Amount</div>
-                  <div className="text-green-900 font-semibold">
-                    ${result.tariff_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ) : tariffDetails ? (
+              <div className="space-y-3">
+                {/* Header row with title + treatment badge */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-700" />
+                    <h5 className="text-green-900 font-semibold text-sm">Tariff Information</h5>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                    tariffDetails.isFree
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : tariffDetails.treatmentApplied.includes('Column 2')
+                      ? 'bg-red-100 text-red-700'
+                      : tariffDetails.treatmentApplied.includes('MFN')
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {tariffDetails.treatmentApplied}
+                  </span>
+                </div>
+
+                {/* Rate details grid */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-green-600 text-xs mb-1">General (MFN) Rate</div>
+                    <div className="text-green-900 font-semibold text-sm">
+                      {tariffDetails.mfnTextRate || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-green-600 text-xs mb-1">Applicable Rate</div>
+                    <div className="text-green-900 font-semibold text-sm">
+                      {tariffDetails.isFree
+                        ? 'Free'
+                        : tariffDetails.adValRate !== null && tariffDetails.adValRate > 0
+                        ? `${(tariffDetails.adValRate * 100).toFixed(2)}%`
+                        : tariffDetails.specificRate !== null && tariffDetails.specificRate > 0
+                        ? `${tariffDetails.specificRate} per unit`
+                        : tariffDetails.mfnTextRate || 'See HTS'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-green-600 text-xs mb-1">Rate Type</div>
+                    <div className="text-green-900 font-semibold text-sm">
+                      {tariffDetails.rateTypeCode ? `${tariffDetails.rateTypeCode} — ${tariffDetails.rateTypeDescription}` : 'N/A'}
+                    </div>
                   </div>
                 </div>
-              )}
-              {result.total_cost !== null && result.total_cost !== undefined && (
-                <div>
-                  <div className="text-green-600 text-xs mb-1">Total Cost</div>
-                  <div className="text-green-900 font-semibold">
-                    ${result.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+
+                {/* Computed tariff amount if available from classification */}
+                {(result.tariff_amount !== null && result.tariff_amount !== undefined) && (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <div className="text-green-600 text-xs mb-1">Tariff Amount</div>
+                      <div className="text-green-900 font-semibold text-sm">
+                        ${result.tariff_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                    {result.total_cost !== null && result.total_cost !== undefined && (
+                      <div>
+                        <div className="text-green-600 text-xs mb-1">Total Landed Cost</div>
+                        <div className="text-green-900 font-semibold text-sm">
+                          ${result.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    )}
                   </div>
+                )}
+
+                {/* Special programs */}
+                {tariffDetails.specialProgramsText && (
+                  <div>
+                    <div className="text-green-600 text-xs mb-1">Special Programs</div>
+                    <div className="text-green-800 text-xs font-mono bg-green-100 rounded px-2 py-1">
+                      {tariffDetails.specialProgramsText}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional duty flags */}
+                {tariffDetails.additionalDutyFlags.length > 0 && (
+                  <div className="space-y-1">
+                    {tariffDetails.additionalDutyFlags.map((flag, idx) => (
+                      <div key={idx} className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                        <span>{flag}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Notes */}
+                {tariffDetails.notes.length > 0 && (
+                  <div className="text-green-600 text-xs">
+                    {tariffDetails.notes.map((note, idx) => (
+                      <div key={idx}>{note}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Fallback: show old basic tariff if available, or nothing */
+              result.tariff_rate !== null && result.tariff_rate !== undefined ? (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-green-600 text-xs mb-1">Tariff Rate</div>
+                    <div className="text-green-900 font-semibold">
+                      {(result.tariff_rate * 100).toFixed(2)}%
+                    </div>
+                  </div>
+                  {result.tariff_amount !== null && result.tariff_amount !== undefined && (
+                    <div>
+                      <div className="text-green-600 text-xs mb-1">Tariff Amount</div>
+                      <div className="text-green-900 font-semibold">
+                        ${result.tariff_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  )}
+                  {result.total_cost !== null && result.total_cost !== undefined && (
+                    <div>
+                      <div className="text-green-600 text-xs mb-1">Total Cost</div>
+                      <div className="text-green-900 font-semibold">
+                        ${result.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              ) : null
+            )}
+          </div>
         </div>
 
         {/* Rule Verification */}
