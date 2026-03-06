@@ -21,6 +21,7 @@ from app.services.bulk_orchestrator import (
     cancel_bulk_run,
 )
 from app.services.chat import handle_chat
+from app.services.tariff import TariffCalculator
 from app.models import PreprocessRequest
 load_dotenv()
 
@@ -245,3 +246,38 @@ def delete_bulk_run(run_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Run not found or already completed")
     return {"success": True}
+
+
+# ============================================================================
+# Tariff Calculation Endpoint
+# ============================================================================
+
+class TariffRequest(BaseModel):
+    hts_code: str
+    country: str
+    value: Optional[float] = None
+    quantity_1: Optional[float] = None
+    quantity_2: Optional[float] = None
+
+
+@app.post("/calculate-tariff")
+def calculate_tariff(req: TariffRequest):
+    """
+    Calculate US import tariff duty for a given HTS code and country of origin.
+    Returns applicable rate, treatment, duty computation, and additional duty flags.
+    """
+    calc = TariffCalculator()
+    try:
+        result = calc.calculate(
+            hts_code=req.hts_code,
+            country=req.country,
+            value=req.value,
+            quantity_1=req.quantity_1,
+            quantity_2=req.quantity_2,
+        )
+        return result.to_dict()
+    except Exception as e:
+        print(f"Tariff calculation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Tariff calculation failed: {str(e)}")
+    finally:
+        calc.close()
