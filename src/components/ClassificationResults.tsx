@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { CheckCircle, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Loader2 } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Loader2, AlertTriangle } from 'lucide-react';
 import { getTariffDetails, TariffDetails, computeDutyEstimate } from '../lib/tariffService';
 
 export interface CbpRuling {
@@ -214,7 +214,7 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
             </div>
           )}
           
-          {/* Duty Estimate */}
+          {/* Tariff Summary */}
           <div className="pt-4 border-t border-green-200">
             {tariffLoading ? (
               <div className="flex items-center gap-2 text-green-600 text-sm py-2">
@@ -222,127 +222,167 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
                 <span>Loading tariff details...</span>
               </div>
             ) : dutyEstimate ? (
-              <div className="space-y-3">
-                {/* Header: title + treatment badge */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-green-700" />
-                    <h5 className="text-green-900 font-semibold text-sm">
-                      {dutyEstimate.mode === 'rate_only' || dutyEstimate.mode === 'needs_quantity'
-                        ? 'Duty Rate'
-                        : 'Duty Estimate'}
-                    </h5>
+              <div className="space-y-4">
+                {/* Header */}
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-green-700" />
+                  <h5 className="text-green-900 font-semibold text-sm">Tariff Summary</h5>
+                </div>
+
+                {/* Column 2 warning */}
+                {dutyEstimate.isColumn2 && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm font-medium">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    Non-MFN Rate (Column 2)
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                    dutyEstimate.isFree
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : dutyEstimate.treatmentShort === 'Col 2'
-                      ? 'bg-red-100 text-red-700'
-                      : dutyEstimate.treatmentShort === 'MFN'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-purple-100 text-purple-700'
+                )}
+
+                {/* ── Section: BASE DUTY ── */}
+                <div>
+                  <div className="text-green-600 text-[11px] font-semibold uppercase tracking-wider mb-1.5">Base Duty</div>
+                  {dutyEstimate.mode === 'free' ? (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
+                        <CheckCircle className="w-4 h-4 text-emerald-600" />
+                        <span>
+                          DUTY FREE
+                          {dutyEstimate.treatmentName !== 'Standard Rate' && ` under ${dutyEstimate.treatmentName}`}
+                        </span>
+                      </div>
+                      {dutyEstimate.savingsAmount !== null && (
+                        <p className="text-emerald-600 text-xs mt-1.5 ml-6">
+                          Saving ${dutyEstimate.savingsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs standard {dutyEstimate.savingsRateDisplay} MFN rate
+                        </p>
+                      )}
+                      {dutyEstimate.savingsAmount === null && dutyEstimate.savingsRateDisplay && (
+                        <p className="text-emerald-600 text-xs mt-1.5 ml-6">
+                          Free vs standard {dutyEstimate.savingsRateDisplay} MFN rate
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-green-800">{dutyEstimate.dutyLines[0]?.rateDisplay || 'N/A'}</span>
+                        {dutyEstimate.dutyLines[0]?.amount !== null && dutyEstimate.dutyLines[0]?.amount !== undefined && (
+                          <span className="text-green-900 font-semibold tabular-nums">
+                            ${dutyEstimate.dutyLines[0].amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                      {/* Quantity input for specific rates */}
+                      {dutyEstimate.needsQuantity && (
+                        <div className="mt-2">
+                          <div className="flex items-center gap-3">
+                            <label className="text-green-700 text-xs font-medium">Quantity</label>
+                            <input
+                              type="number"
+                              value={quantity}
+                              onChange={(e) => setQuantity(e.target.value)}
+                              placeholder="Enter quantity"
+                              min="0"
+                              className="w-28 px-2.5 py-1 border border-green-300 rounded text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                            />
+                            <span className="text-green-600 text-xs">{dutyEstimate.quantityUnit || 'units'}</span>
+                          </div>
+                          {!quantity && (
+                            <p className="text-green-400 text-[11px] mt-1">
+                              Enter quantity to calculate exact duty
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Section: ADDITIONAL DUTIES ── */}
+                <div>
+                  <div className="text-green-600 text-[11px] font-semibold uppercase tracking-wider mb-1.5">Additional Duties</div>
+                  {dutyEstimate.dutyLines.length > 1 ? (
+                    <div className="space-y-1">
+                      {dutyEstimate.dutyLines.slice(1).map((line, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-sm">
+                          <span className="text-green-800">{line.label}</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-green-700 tabular-nums">{line.rateDisplay}</span>
+                            {line.amount !== null && (
+                              <span className="text-green-900 font-semibold tabular-nums">
+                                +${line.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-green-500 text-sm">None</span>
+                  )}
+                </div>
+
+                {/* ── Section: PREFERENTIAL RATES ── */}
+                <div>
+                  <div className="text-green-600 text-[11px] font-semibold uppercase tracking-wider mb-1.5">Preferential Rates</div>
+                  <span className={`text-sm ${
+                    dutyEstimate.preferentialDisplay.startsWith('None') ? 'text-green-500' : 'text-green-800 font-medium'
                   }`}>
-                    {dutyEstimate.treatmentShort}
+                    {dutyEstimate.preferentialDisplay}
                   </span>
                 </div>
 
-                {/* FREE mode: green highlight box */}
-                {dutyEstimate.mode === 'free' ? (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-emerald-800 font-semibold">
-                      <CheckCircle className="w-5 h-5 text-emerald-600" />
-                      <span>
-                        DUTY FREE
-                        {dutyEstimate.treatmentName !== 'Standard Rate' && ` under ${dutyEstimate.treatmentName}`}
-                      </span>
-                    </div>
-                    {dutyEstimate.savingsAmount !== null && (
-                      <p className="text-emerald-600 text-sm mt-2 ml-7">
-                        Saving ${dutyEstimate.savingsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs standard {dutyEstimate.savingsRateDisplay} rate
-                      </p>
-                    )}
-                    {dutyEstimate.savingsAmount === null && dutyEstimate.savingsRateDisplay && (
-                      <p className="text-emerald-600 text-sm mt-2 ml-7">
-                        Free vs standard {dutyEstimate.savingsRateDisplay} rate
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  /* CALCULATED or RATE_ONLY: duty breakdown */
-                  <div className="space-y-2">
-                    {dutyEstimate.dutyLines.map((line, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-green-800">{line.label}</span>
-                        <div className="flex items-center gap-4">
-                          <span className="text-green-700 tabular-nums">{line.rateDisplay}</span>
-                          {line.amount !== null && (
-                            <span className="text-green-900 font-semibold w-28 text-right tabular-nums">
-                              ${line.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </span>
+                {/* ── Section: ESTIMATED TOTAL DUTY ── */}
+                <div className="pt-3 border-t-2 border-green-300">
+                  <div className="flex items-center justify-between">
+                    <span className="text-green-900 font-bold text-sm">Estimated Total Duty</span>
+                    <div className="flex items-center gap-3">
+                      {dutyEstimate.isFree ? (
+                        <span className="text-emerald-700 font-bold text-sm">Free</span>
+                      ) : (
+                        <>
+                          {dutyEstimate.totalRate && (
+                            <span className="text-green-800 font-semibold text-sm tabular-nums">{dutyEstimate.totalRate}</span>
                           )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Total line (if multiple duty lines) */}
-                    {dutyEstimate.totalRate && (
-                      <div className="flex items-center justify-between text-sm pt-2 mt-1 border-t border-green-200 font-semibold">
-                        <span className="text-green-900">
-                          {dutyEstimate.mode === 'rate_only' || dutyEstimate.mode === 'needs_quantity'
-                            ? 'Effective Rate'
-                            : 'Total Duty'}
-                        </span>
-                        <div className="flex items-center gap-4">
-                          <span className="text-green-800 tabular-nums">{dutyEstimate.totalRate}</span>
+                          {!dutyEstimate.totalRate && dutyEstimate.dutyLines[0] && (
+                            <span className="text-green-800 font-semibold text-sm tabular-nums">{dutyEstimate.dutyLines[0].rateDisplay}</span>
+                          )}
                           {dutyEstimate.totalDuty !== null && (
-                            <span className="text-green-900 w-28 text-right tabular-nums">
+                            <span className="text-green-900 font-bold text-sm tabular-nums">
                               ${dutyEstimate.totalDuty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                           )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Quantity input (specific rates only) */}
-                {dutyEstimate.needsQuantity && (
-                  <div className="mt-3 pt-3 border-t border-green-100">
-                    <div className="flex items-center gap-3">
-                      <label className="text-green-800 text-sm font-medium">Quantity</label>
-                      <input
-                        type="number"
-                        value={quantity}
-                        onChange={(e) => setQuantity(e.target.value)}
-                        placeholder="Enter quantity"
-                        min="0"
-                        className="w-32 px-3 py-1.5 border border-green-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
-                      />
-                      <span className="text-green-600 text-sm">{dutyEstimate.quantityUnit || 'units'}</span>
+                        </>
+                      )}
                     </div>
-                    {!quantity && (
-                      <p className="text-green-500 text-xs mt-1.5 ml-0">
-                        Enter quantity to calculate exact duty amount
-                      </p>
-                    )}
                   </div>
-                )}
 
-                {/* Total Landed Cost */}
-                {dutyEstimate.totalLandedCost !== null && (
-                  <div className="flex items-center justify-between pt-3 mt-1 border-t border-green-200">
-                    <span className="text-green-900 font-semibold text-sm">Total Landed Cost</span>
-                    <span className="text-green-900 font-bold text-base tabular-nums">
-                      ${dutyEstimate.totalLandedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                )}
+                  {/* Total Landed Cost */}
+                  {dutyEstimate.totalLandedCost !== null && (
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-green-700 text-sm">Total Landed Cost</span>
+                      <span className="text-green-900 font-bold tabular-nums">
+                        ${dutyEstimate.totalLandedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-                {/* FTA savings note (non-free, but FTA savings exist) */}
+                {/* FTA savings note (non-free) */}
                 {!dutyEstimate.isFree && dutyEstimate.savingsAmount !== null && (
-                  <p className="text-emerald-600 text-sm mt-1">
+                  <p className="text-emerald-600 text-xs">
                     Saving ${dutyEstimate.savingsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs standard {dutyEstimate.savingsRateDisplay} rate
                   </p>
+                )}
+
+                {/* Notes */}
+                {tariffDetails && tariffDetails.notes.length > 0 && (
+                  <div className="pt-2">
+                    {tariffDetails.notes.map((note, idx) => (
+                      <div key={idx} className="flex items-start gap-1.5 text-green-500 text-xs">
+                        <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                        <span>{note}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             ) : null}

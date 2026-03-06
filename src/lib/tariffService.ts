@@ -430,6 +430,7 @@ export interface DutyEstimate {
   treatmentName: string;
   treatmentShort: string;
   isFree: boolean;
+  isColumn2: boolean;
   dutyLines: DutyLine[];
   totalRate: string | null;
   totalDuty: number | null;
@@ -439,6 +440,7 @@ export interface DutyEstimate {
   needsQuantity: boolean;
   quantityUnit: string | null;
   quantityLabel: string | null;
+  preferentialDisplay: string;
 }
 
 // ── Unit code → human label ──────────────────────────────
@@ -641,11 +643,26 @@ export function computeDutyEstimate(
     mode = 'rate_only';
   }
 
+  // ── Preferential rate display ──────────────────────────
+  const isColumn2 = treatmentShort === 'Col 2';
+  let preferentialDisplay: string;
+  if (isColumn2) {
+    preferentialDisplay = 'None applicable';
+  } else if (treatmentShort !== 'MFN') {
+    // An FTA or special program is applied
+    preferentialDisplay = treatmentName;
+  } else if (countryOfOrigin) {
+    preferentialDisplay = `None applicable for ${countryOfOrigin}`;
+  } else {
+    preferentialDisplay = 'None applicable';
+  }
+
   return {
     mode,
     treatmentName,
     treatmentShort,
     isFree: tariff.isFree,
+    isColumn2,
     dutyLines,
     totalRate,
     totalDuty,
@@ -655,5 +672,6 @@ export function computeDutyEstimate(
     needsQuantity,
     quantityUnit: qtyUnit,
     quantityLabel: needsQuantity ? `Enter quantity in ${qtyUnit || 'units'} to calculate exact duty` : null,
+    preferentialDisplay,
   };
 }
