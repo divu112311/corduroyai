@@ -18,6 +18,9 @@ export interface TariffDetails {
   quantity2Code: string | null;
   additionalDutyFlags: string[];
   notes: string[];
+  // MFN pass-through for FTA savings calculation
+  _mfnAdValRate?: number | null;
+  _mfnSpecificRate?: number | null;
 }
 
 interface CountryTreatment {
@@ -407,5 +410,250 @@ export async function getTariffDetails(
     quantity2Code: (htsData.quantity_2_code as string) || null,
     additionalDutyFlags: additionalFlags,
     notes,
+    // Pass through MFN rates for savings calculation
+    _mfnAdValRate: toNum(htsData.mfn_ad_val_rate),
+    _mfnSpecificRate: toNum(htsData.mfn_specific_rate),
+  };
+}
+
+
+// ── Duty Estimate (display-ready computation) ────────────
+
+export interface DutyLine {
+  label: string;
+  rateDisplay: string;
+  amount: number | null;
+}
+
+export interface DutyEstimate {
+  mode: 'free' | 'calculated' | 'rate_only' | 'needs_quantity';
+  treatmentName: string;
+  treatmentShort: string;
+  isFree: boolean;
+  dutyLines: DutyLine[];
+  totalRate: string | null;
+  totalDuty: number | null;
+  totalLandedCost: number | null;
+  savingsAmount: number | null;
+  savingsRateDisplay: string | null;
+  needsQuantity: boolean;
+  quantityUnit: string | null;
+  quantityLabel: string | null;
+}
+
+// ── Unit code → human label ──────────────────────────────
+
+const UNIT_LABELS: Record<string, string> = {
+  KG: 'kg',
+  DOZ: 'dozen',
+  NO: 'units',
+  'NO.': 'units',
+  PCS: 'pieces',
+  M2: 'm²',
+  M: 'meters',
+  LTR: 'liters',
+  L: 'liters',
+  T: 'metric tons',
+  GRS: 'gross',
+  BBL: 'barrels',
+  'M3': 'm³',
+};
+
+function unitLabel(code: string | null): string | null {
+  if (!code) return null;
+  return UNIT_LABELS[code.toUpperCase().trim()] || code.toLowerCase();
+}
+
+// ── Treatment name cleanup ───────────────────────────────
+
+function cleanTreatmentName(raw: string): { name: string; short: string } {
+  if (raw.includes('MFN') || raw.includes('Most Favored')) {
+    return { name: 'Standard Rate', short: 'MFN' };
+  }
+  if (raw.includes('USMCA')) return { name: 'USMCA', short: 'USMCA' };
+  if (raw.includes('KORUS') || raw.includes('Korea FTA')) return { name: 'Korea FTA (KORUS)', short: 'KORUS' };
+  if (raw.includes('GSP')) return { name: 'GSP', short: 'GSP' };
+  if (raw.includes('AGOA')) return { name: 'AGOA', short: 'AGOA' };
+  if (raw.includes('CBI')) return { name: 'CBI', short: 'CBI' };
+  if (raw.includes('CBTPA')) return { name: 'CBTPA', short: 'CBTPA' };
+  if (raw.includes('Column 2')) return { name: 'Column 2', short: 'Col 2' };
+  if (raw.includes('Australia')) return { name: 'US-Australia FTA', short: 'AUSFTA' };
+  if (raw.includes('Chile')) return { name: 'US-Chile FTA', short: 'Chile FTA' };
+  if (raw.includes('Colombia')) return { name: 'US-Colombia TPA', short: 'Colombia' };
+  if (raw.includes('Japan')) return { name: 'US-Japan Trade Agreement', short: 'Japan' };
+  if (raw.includes('Singapore')) return { name: 'US-Singapore FTA', short: 'Singapore' };
+  if (raw.includes('Panama')) return { name: 'US-Panama TPA', short: 'Panama' };
+  if (raw.includes('Peru')) return { name: 'US-Peru TPA', short: 'Peru' };
+  if (raw.includes('Jordan')) return { name: 'US-Jordan FTA', short: 'Jordan' };
+  if (raw.includes('Morocco')) return { name: 'US-Morocco FTA', short: 'Morocco' };
+  if (raw.includes('Bahrain')) return { name: 'US-Bahrain FTA', short: 'Bahrain' };
+  if (raw.includes('Oman')) return { name: 'US-Oman FTA', short: 'Oman' };
+  if (raw.includes('DR-CAFTA') || raw.includes('CAFTA')) return { name: 'DR-CAFTA', short: 'CAFTA' };
+  if (raw.includes('Israel')) return { name: 'US-Israel FTA', short: 'Israel' };
+  // Fallback
+  const short = raw.length > 12 ? raw.substring(0, 10) + '…' : raw;
+  return { name: raw, short };
+}
+
+// ── Format rate for display ──────────────────────────────
+
+function formatRate(adVal: number | null, specific: number | null, qtyUnit: string | null, mfnText: string | null): string {
+  if (adVal !== null && adVal > 0 && specific !== null && specific > 0) {
+    // Compound
+    const pct = (adVal * 100).toFixed(1).replace(/\.0$/, '');
+    const specDisplay = specific < 1 ? `${(specific * 100).toFixed(1)}¢` : `$${specific.toFixed(2)}`;
+    return `${pct}% + ${specDisplay}/${qtyUnit || 'unit'}`;
+  }
+  if (adVal !== null && adVal > 0) {
+    return `${(adVal * 100).toFixed(1).replace(/\.0$/, '')}%`;
+  }
+  if (specific !== null && specific > 0) {
+    if (specific < 0.01) {
+      return `${(specific * 100).toFixed(2)}¢/${qtyUnit || 'unit'}`;
+    } else if (specific < 1) {
+      return `${(specific * 100).toFixed(1)}¢/${qtyUnit || 'unit'}`;
+    }
+    return `$${specific.toFixed(2)}/${qtyUnit || 'unit'}`;
+  }
+  // Fallback to raw text
+  return mfnText || 'See HTS schedule';
+}
+
+// ── Main: Compute duty estimate ──────────────────────────
+
+export function computeDutyEstimate(
+  tariff: TariffDetails,
+  productValue: number | null,
+  quantity: number | null,
+  countryOfOrigin?: string
+): DutyEstimate {
+  const { name: treatmentName, short: treatmentShort } = cleanTreatmentName(tariff.treatmentApplied);
+  const qtyUnit = unitLabel(tariff.quantity1Code) || unitLabel(tariff.quantity2Code);
+  const rateCode = tariff.rateTypeCode;
+
+  // Determine if we need quantity
+  const isSpecificOnly = (rateCode === '1' || rateCode === '2') && (tariff.adValRate === null || tariff.adValRate === 0);
+  const isCompound = ['3', '4', '5', '6'].includes(rateCode || '');
+  const needsQuantity = (isSpecificOnly || isCompound) && !tariff.isFree;
+
+  // ── Calculate base duty ────────────────────────────────
+  let baseDuty: number | null = null;
+  if (tariff.isFree) {
+    baseDuty = 0;
+  } else if (tariff.adValRate !== null && tariff.adValRate > 0 && productValue !== null) {
+    baseDuty = tariff.adValRate * productValue;
+    if (isCompound && tariff.specificRate && quantity !== null) {
+      baseDuty += tariff.specificRate * quantity;
+    }
+  } else if (tariff.specificRate !== null && tariff.specificRate > 0 && quantity !== null) {
+    baseDuty = tariff.specificRate * quantity;
+  }
+
+  // ── Build duty lines ───────────────────────────────────
+  const dutyLines: DutyLine[] = [];
+  const rateDisplay = tariff.isFree ? 'Free' : formatRate(tariff.adValRate, tariff.specificRate, qtyUnit, tariff.mfnTextRate);
+
+  dutyLines.push({
+    label: 'Base Duty',
+    rateDisplay: rateDisplay,
+    amount: baseDuty,
+  });
+
+  // Additional duties (definitive — no "may apply")
+  const htsClean = tariff.htsCode.replace(/\./g, '');
+  const chapter = htsClean.substring(0, 2);
+  let additionalTotal = 0;
+
+  if (countryOfOrigin?.toLowerCase() === 'china') {
+    const s301Rate = 0.25;
+    const s301Amount = productValue !== null ? s301Rate * productValue : null;
+    if (s301Amount !== null) additionalTotal += s301Amount;
+    dutyLines.push({
+      label: 'Section 301 (China)',
+      rateDisplay: '+25%',
+      amount: s301Amount,
+    });
+  }
+
+  if (['72', '73'].includes(chapter)) {
+    const s232Rate = 0.25;
+    const s232Amount = productValue !== null ? s232Rate * productValue : null;
+    if (s232Amount !== null) additionalTotal += s232Amount;
+    dutyLines.push({
+      label: 'Section 232 (Steel)',
+      rateDisplay: '+25%',
+      amount: s232Amount,
+    });
+  } else if (chapter === '76') {
+    const s232Rate = 0.10;
+    const s232Amount = productValue !== null ? s232Rate * productValue : null;
+    if (s232Amount !== null) additionalTotal += s232Amount;
+    dutyLines.push({
+      label: 'Section 232 (Aluminum)',
+      rateDisplay: '+10%',
+      amount: s232Amount,
+    });
+  }
+
+  // ── Totals ─────────────────────────────────────────────
+  const totalDuty = baseDuty !== null ? baseDuty + additionalTotal : null;
+  const totalLandedCost = totalDuty !== null && productValue !== null ? productValue + totalDuty : null;
+
+  // Total rate display (only for ad valorem with multiple lines)
+  let totalRate: string | null = null;
+  if (dutyLines.length > 1 && tariff.adValRate !== null && tariff.adValRate > 0) {
+    let combinedPct = tariff.adValRate * 100;
+    if (countryOfOrigin?.toLowerCase() === 'china') combinedPct += 25;
+    if (['72', '73'].includes(chapter)) combinedPct += 25;
+    else if (chapter === '76') combinedPct += 10;
+    totalRate = `${combinedPct.toFixed(1).replace(/\.0$/, '')}%`;
+  }
+
+  // ── FTA savings ────────────────────────────────────────
+  let savingsAmount: number | null = null;
+  let savingsRateDisplay: string | null = null;
+
+  if (!treatmentShort.includes('MFN') && !treatmentShort.includes('Col 2')) {
+    const mfnAdVal = tariff._mfnAdValRate ?? null;
+    const mfnSpecific = tariff._mfnSpecificRate ?? null;
+    if (mfnAdVal !== null && mfnAdVal > 0 && productValue !== null) {
+      const mfnDuty = mfnAdVal * productValue;
+      const actualDuty = baseDuty ?? 0;
+      if (mfnDuty > actualDuty) {
+        savingsAmount = mfnDuty - actualDuty;
+        savingsRateDisplay = `${(mfnAdVal * 100).toFixed(1).replace(/\.0$/, '')}%`;
+      }
+    } else if (mfnAdVal !== null && mfnAdVal > 0) {
+      // No product value, but we can still show the rate savings
+      savingsRateDisplay = `${(mfnAdVal * 100).toFixed(1).replace(/\.0$/, '')}%`;
+    }
+  }
+
+  // ── Mode ───────────────────────────────────────────────
+  let mode: DutyEstimate['mode'];
+  if (tariff.isFree) {
+    mode = 'free';
+  } else if (totalDuty !== null) {
+    mode = 'calculated';
+  } else if (needsQuantity && quantity === null) {
+    mode = 'needs_quantity';
+  } else {
+    mode = 'rate_only';
+  }
+
+  return {
+    mode,
+    treatmentName,
+    treatmentShort,
+    isFree: tariff.isFree,
+    dutyLines,
+    totalRate,
+    totalDuty,
+    totalLandedCost,
+    savingsAmount,
+    savingsRateDisplay,
+    needsQuantity,
+    quantityUnit: qtyUnit,
+    quantityLabel: needsQuantity ? `Enter quantity in ${qtyUnit || 'units'} to calculate exact duty` : null,
   };
 }

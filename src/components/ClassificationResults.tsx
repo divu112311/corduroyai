@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, Package, MapPin, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Loader2, AlertTriangle } from 'lucide-react';
-import { getTariffDetails, TariffDetails } from '../lib/tariffService';
+import { useState, useEffect, useMemo } from 'react';
+import { CheckCircle, DollarSign, FileText, AlertCircle, ChevronDown, ChevronUp, ExternalLink, Shield, XCircle, Info, Loader2 } from 'lucide-react';
+import { getTariffDetails, TariffDetails, computeDutyEstimate } from '../lib/tariffService';
 
 export interface CbpRuling {
   ruling_number: string;
@@ -71,6 +71,19 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
   const [expandedAlternates, setExpandedAlternates] = useState<Set<number>>(new Set());
   const [tariffDetails, setTariffDetails] = useState<TariffDetails | null>(null);
   const [tariffLoading, setTariffLoading] = useState(false);
+  const [quantity, setQuantity] = useState<string>('');
+
+  // Compute duty estimate from tariff details
+  const dutyEstimate = useMemo(() => {
+    if (!tariffDetails) return null;
+    const qty = quantity ? parseFloat(quantity) : null;
+    return computeDutyEstimate(
+      tariffDetails,
+      result.parsed_data?.unit_cost ?? null,
+      qty,
+      result.parsed_data?.country_of_origin
+    );
+  }, [tariffDetails, result.parsed_data?.unit_cost, result.parsed_data?.country_of_origin, quantity]);
 
   // Fetch tariff details when HTS code is available
   useEffect(() => {
@@ -201,142 +214,138 @@ export function ClassificationResults({ result, onApprove, onReviewLater }: Clas
             </div>
           )}
           
-          {/* Tariff Information */}
+          {/* Duty Estimate */}
           <div className="pt-4 border-t border-green-200">
             {tariffLoading ? (
               <div className="flex items-center gap-2 text-green-600 text-sm py-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Loading tariff details...</span>
               </div>
-            ) : tariffDetails ? (
+            ) : dutyEstimate ? (
               <div className="space-y-3">
-                {/* Header row with title + treatment badge */}
+                {/* Header: title + treatment badge */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-green-700" />
-                    <h5 className="text-green-900 font-semibold text-sm">Tariff Information</h5>
+                    <h5 className="text-green-900 font-semibold text-sm">
+                      {dutyEstimate.mode === 'rate_only' || dutyEstimate.mode === 'needs_quantity'
+                        ? 'Duty Rate'
+                        : 'Duty Estimate'}
+                    </h5>
                   </div>
                   <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                    tariffDetails.isFree
+                    dutyEstimate.isFree
                       ? 'bg-emerald-100 text-emerald-700'
-                      : tariffDetails.treatmentApplied.includes('Column 2')
+                      : dutyEstimate.treatmentShort === 'Col 2'
                       ? 'bg-red-100 text-red-700'
-                      : tariffDetails.treatmentApplied.includes('MFN')
+                      : dutyEstimate.treatmentShort === 'MFN'
                       ? 'bg-blue-100 text-blue-700'
                       : 'bg-purple-100 text-purple-700'
                   }`}>
-                    {tariffDetails.treatmentApplied}
+                    {dutyEstimate.treatmentShort}
                   </span>
                 </div>
 
-                {/* Rate details grid */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <div className="text-green-600 text-xs mb-1">General (MFN) Rate</div>
-                    <div className="text-green-900 font-semibold text-sm">
-                      {tariffDetails.mfnTextRate || 'N/A'}
+                {/* FREE mode: green highlight box */}
+                {dutyEstimate.mode === 'free' ? (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-emerald-800 font-semibold">
+                      <CheckCircle className="w-5 h-5 text-emerald-600" />
+                      <span>
+                        DUTY FREE
+                        {dutyEstimate.treatmentName !== 'Standard Rate' && ` under ${dutyEstimate.treatmentName}`}
+                      </span>
                     </div>
+                    {dutyEstimate.savingsAmount !== null && (
+                      <p className="text-emerald-600 text-sm mt-2 ml-7">
+                        Saving ${dutyEstimate.savingsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs standard {dutyEstimate.savingsRateDisplay} rate
+                      </p>
+                    )}
+                    {dutyEstimate.savingsAmount === null && dutyEstimate.savingsRateDisplay && (
+                      <p className="text-emerald-600 text-sm mt-2 ml-7">
+                        Free vs standard {dutyEstimate.savingsRateDisplay} rate
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <div className="text-green-600 text-xs mb-1">Applicable Rate</div>
-                    <div className="text-green-900 font-semibold text-sm">
-                      {tariffDetails.isFree
-                        ? 'Free'
-                        : tariffDetails.adValRate !== null && tariffDetails.adValRate > 0
-                        ? `${(tariffDetails.adValRate * 100).toFixed(2)}%`
-                        : tariffDetails.specificRate !== null && tariffDetails.specificRate > 0
-                        ? `${tariffDetails.specificRate} per unit`
-                        : tariffDetails.mfnTextRate || 'See HTS'}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-green-600 text-xs mb-1">Rate Type</div>
-                    <div className="text-green-900 font-semibold text-sm">
-                      {tariffDetails.rateTypeCode ? `${tariffDetails.rateTypeCode} — ${tariffDetails.rateTypeDescription}` : 'N/A'}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Computed tariff amount if available from classification */}
-                {(result.tariff_amount !== null && result.tariff_amount !== undefined) && (
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <div className="text-green-600 text-xs mb-1">Tariff Amount</div>
-                      <div className="text-green-900 font-semibold text-sm">
-                        ${result.tariff_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ) : (
+                  /* CALCULATED or RATE_ONLY: duty breakdown */
+                  <div className="space-y-2">
+                    {dutyEstimate.dutyLines.map((line, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-green-800">{line.label}</span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-green-700 tabular-nums">{line.rateDisplay}</span>
+                          {line.amount !== null && (
+                            <span className="text-green-900 font-semibold w-28 text-right tabular-nums">
+                              ${line.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {result.total_cost !== null && result.total_cost !== undefined && (
-                      <div>
-                        <div className="text-green-600 text-xs mb-1">Total Landed Cost</div>
-                        <div className="text-green-900 font-semibold text-sm">
-                          ${result.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ))}
+
+                    {/* Total line (if multiple duty lines) */}
+                    {dutyEstimate.totalRate && (
+                      <div className="flex items-center justify-between text-sm pt-2 mt-1 border-t border-green-200 font-semibold">
+                        <span className="text-green-900">
+                          {dutyEstimate.mode === 'rate_only' || dutyEstimate.mode === 'needs_quantity'
+                            ? 'Effective Rate'
+                            : 'Total Duty'}
+                        </span>
+                        <div className="flex items-center gap-4">
+                          <span className="text-green-800 tabular-nums">{dutyEstimate.totalRate}</span>
+                          {dutyEstimate.totalDuty !== null && (
+                            <span className="text-green-900 w-28 text-right tabular-nums">
+                              ${dutyEstimate.totalDuty.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Special programs */}
-                {tariffDetails.specialProgramsText && (
-                  <div>
-                    <div className="text-green-600 text-xs mb-1">Special Programs</div>
-                    <div className="text-green-800 text-xs font-mono bg-green-100 rounded px-2 py-1">
-                      {tariffDetails.specialProgramsText}
+                {/* Quantity input (specific rates only) */}
+                {dutyEstimate.needsQuantity && (
+                  <div className="mt-3 pt-3 border-t border-green-100">
+                    <div className="flex items-center gap-3">
+                      <label className="text-green-800 text-sm font-medium">Quantity</label>
+                      <input
+                        type="number"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                        placeholder="Enter quantity"
+                        min="0"
+                        className="w-32 px-3 py-1.5 border border-green-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                      />
+                      <span className="text-green-600 text-sm">{dutyEstimate.quantityUnit || 'units'}</span>
                     </div>
+                    {!quantity && (
+                      <p className="text-green-500 text-xs mt-1.5 ml-0">
+                        Enter quantity to calculate exact duty amount
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {/* Additional duty flags */}
-                {tariffDetails.additionalDutyFlags.length > 0 && (
-                  <div className="space-y-1">
-                    {tariffDetails.additionalDutyFlags.map((flag, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1.5">
-                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                        <span>{flag}</span>
-                      </div>
-                    ))}
+                {/* Total Landed Cost */}
+                {dutyEstimate.totalLandedCost !== null && (
+                  <div className="flex items-center justify-between pt-3 mt-1 border-t border-green-200">
+                    <span className="text-green-900 font-semibold text-sm">Total Landed Cost</span>
+                    <span className="text-green-900 font-bold text-base tabular-nums">
+                      ${dutyEstimate.totalLandedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
                   </div>
                 )}
 
-                {/* Notes */}
-                {tariffDetails.notes.length > 0 && (
-                  <div className="text-green-600 text-xs">
-                    {tariffDetails.notes.map((note, idx) => (
-                      <div key={idx}>{note}</div>
-                    ))}
-                  </div>
+                {/* FTA savings note (non-free, but FTA savings exist) */}
+                {!dutyEstimate.isFree && dutyEstimate.savingsAmount !== null && (
+                  <p className="text-emerald-600 text-sm mt-1">
+                    Saving ${dutyEstimate.savingsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} vs standard {dutyEstimate.savingsRateDisplay} rate
+                  </p>
                 )}
               </div>
-            ) : (
-              /* Fallback: show old basic tariff if available, or nothing */
-              result.tariff_rate !== null && result.tariff_rate !== undefined ? (
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <div className="text-green-600 text-xs mb-1">Tariff Rate</div>
-                    <div className="text-green-900 font-semibold">
-                      {(result.tariff_rate * 100).toFixed(2)}%
-                    </div>
-                  </div>
-                  {result.tariff_amount !== null && result.tariff_amount !== undefined && (
-                    <div>
-                      <div className="text-green-600 text-xs mb-1">Tariff Amount</div>
-                      <div className="text-green-900 font-semibold">
-                        ${result.tariff_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  )}
-                  {result.total_cost !== null && result.total_cost !== undefined && (
-                    <div>
-                      <div className="text-green-600 text-xs mb-1">Total Cost</div>
-                      <div className="text-green-900 font-semibold">
-                        ${result.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : null
-            )}
+            ) : null}
           </div>
         </div>
 
