@@ -601,14 +601,16 @@ export function computeDutyEstimate(
   const totalDuty = baseDuty !== null ? baseDuty + additionalTotal : null;
   const totalLandedCost = totalDuty !== null && productValue !== null ? productValue + totalDuty : null;
 
-  // Total rate display (only for ad valorem with multiple lines)
+  // Total rate display (when multiple duty lines exist)
   let totalRate: string | null = null;
-  if (dutyLines.length > 1 && tariff.adValRate !== null && tariff.adValRate > 0) {
-    let combinedPct = tariff.adValRate * 100;
+  if (dutyLines.length > 1) {
+    let combinedPct = (tariff.adValRate !== null && tariff.adValRate > 0) ? tariff.adValRate * 100 : 0;
     if (countryOfOrigin?.toLowerCase() === 'china') combinedPct += 25;
     if (['72', '73'].includes(chapter)) combinedPct += 25;
     else if (chapter === '76') combinedPct += 10;
-    totalRate = `${combinedPct.toFixed(1).replace(/\.0$/, '')}%`;
+    if (combinedPct > 0) {
+      totalRate = `${combinedPct.toFixed(1).replace(/\.0$/, '')}%`;
+    }
   }
 
   // ── FTA savings ────────────────────────────────────────
@@ -632,8 +634,13 @@ export function computeDutyEstimate(
   }
 
   // ── Mode ───────────────────────────────────────────────
+  // If base is free but additional duties exist (Section 301/232),
+  // the total is NOT free — treat as calculated or rate_only
+  const hasAdditionalDuties = dutyLines.length > 1;
+  const trulyFree = tariff.isFree && !hasAdditionalDuties;
+
   let mode: DutyEstimate['mode'];
-  if (tariff.isFree) {
+  if (trulyFree) {
     mode = 'free';
   } else if (totalDuty !== null) {
     mode = 'calculated';
@@ -661,7 +668,7 @@ export function computeDutyEstimate(
     mode,
     treatmentName,
     treatmentShort,
-    isFree: tariff.isFree,
+    isFree: trulyFree,
     isColumn2,
     dutyLines,
     totalRate,
