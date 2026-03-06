@@ -80,13 +80,34 @@ function toNum(val: unknown): number | null {
 // ── Step 1: Lookup tariff rates ───────────────────────────
 
 async function lookupTariffRates(htsCode: string): Promise<Record<string, unknown> | null> {
-  const cleanCode = htsCode.replace(/\./g, '');
+  console.log('[tariff] Looking up HTS (original):', htsCode);
 
-  const { data, error } = await supabase
+  // Try with original format first — DB stores codes WITH dots (e.g., "6109.10.00")
+  let { data, error } = await supabase
     .from('tariff_rates')
     .select('*')
-    .eq('hts_code', cleanCode)
+    .eq('hts_code', htsCode)
     .maybeSingle();
+
+  // If not found, try converting to dotted format: 61091000 → 6109.10.00
+  if (!data && !error) {
+    const clean = htsCode.replace(/\./g, '');
+    // Truncate to 8 digits if longer (10-digit statistical suffix)
+    const code8 = clean.length > 8 ? clean.substring(0, 8) : clean.length === 6 ? clean + '00' : clean;
+    if (code8.length === 8) {
+      const dotted = `${code8.slice(0, 4)}.${code8.slice(4, 6)}.${code8.slice(6, 8)}`;
+      if (dotted !== htsCode) {
+        console.log('[tariff] Retrying with dotted format:', dotted);
+        ({ data, error } = await supabase
+          .from('tariff_rates')
+          .select('*')
+          .eq('hts_code', dotted)
+          .maybeSingle());
+      }
+    }
+  }
+
+  console.log('[tariff] HTS lookup result:', data ? 'found' : 'not found', error ? `error: ${error.message}` : 'no error');
 
   if (error) {
     console.error('Tariff rates lookup error:', error);
@@ -98,6 +119,7 @@ async function lookupTariffRates(htsCode: string): Promise<Record<string, unknow
 // ── Step 2: Get country treatment ─────────────────────────
 
 async function getCountryTreatment(countryName: string): Promise<CountryTreatment | null> {
+  console.log('[tariff] Looking up country treatment for:', countryName);
   // Join country_tariff_mapping with countries table, search by display_name
   const { data, error } = await supabase
     .from('country_tariff_mapping')

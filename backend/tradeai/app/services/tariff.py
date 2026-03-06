@@ -152,16 +152,25 @@ class TariffCalculator:
     # ── Step 1: Lookup HTS code ────────────────────────────────
 
     def lookup_rates(self, hts_code: str) -> Optional[dict]:
-        clean_code = hts_code.replace(".", "")
+        # DB stores codes WITH dots (e.g., "6109.10.00") — try original first
         rows = self._query("tariff_rates", {
-            "hts_code": f"eq.{clean_code}",
+            "hts_code": f"eq.{hts_code}",
             "select": "*",
         })
+        # If not found, try converting to dotted format: 61091000 → 6109.10.00
         if not rows:
-            rows = self._query("tariff_rates", {
-                "hts_code": f"eq.{hts_code}",
-                "select": "*",
-            })
+            clean = hts_code.replace(".", "")
+            if len(clean) > 8:
+                clean = clean[:8]
+            elif len(clean) == 6:
+                clean = clean + "00"
+            if len(clean) == 8:
+                dotted = f"{clean[:4]}.{clean[4:6]}.{clean[6:8]}"
+                if dotted != hts_code:
+                    rows = self._query("tariff_rates", {
+                        "hts_code": f"eq.{dotted}",
+                        "select": "*",
+                    })
         return rows[0] if rows else None
 
     # ── Step 2: Determine country treatment ────────────────────
